@@ -1,0 +1,27 @@
+/* 全局样式 */
+:root {
+    --primary-color: #4CAF50;
+    --secondary-color: #2196F3;
+    --accent-color: #FF9800;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .container {
+        padding: 0 15px;
+    }
+
+    .cards-grid,
+    .news-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .header .container {
+        flex-direction: column;
+        padding: 10px;
+    }
+
+    .el-menu {
+        margin: 10px 0;
+    }
+}
