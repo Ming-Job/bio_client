@@ -76,7 +76,20 @@ const routes = [
         name: 'DatasetManagement',
         component: () => import('@/views/admin/DatasetManagement.vue'),
         meta: { title: '数据集管理' }
-      }
+      },
+      {
+        path: 'profile',
+        name: 'UserProfile',
+        component: () => import('@/components/user/UserProfile.vue'),
+        meta: { title: '个人中心' }
+      },
+      {
+        path: 'account',
+        name: 'AccountSettings',
+        component: () => import('@/components/user/AccountSetting.vue'),
+        meta: { title: '账号设置' }
+      },
+
     ]
   },  
 

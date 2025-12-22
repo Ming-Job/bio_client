@@ -23,7 +23,7 @@
             <i class="el-icon-notebook-2"></i>
           </div>
           <div class="stat-content">
-            <div class="stat-value">56</div>
+            <div class="stat-value">{{ courseStats.total || 0 }}</div>
             <div class="stat-label">课程总数</div>
           </div>
         </div>
@@ -35,7 +35,7 @@
             <i class="el-icon-files"></i>
           </div>
           <div class="stat-content">
-            <div class="stat-value">89</div>
+            <div class="stat-value">{{ datasetStats.total || 0 }}</div>
             <div class="stat-label">数据集数</div>
           </div>
         </div>
@@ -47,8 +47,8 @@
             <i class="el-icon-time"></i>
           </div>
           <div class="stat-content">
-            <div class="stat-value">98%</div>
-            <div class="stat-label">系统运行率</div>
+            <div class="stat-value">{{ growthStats.totalNewUsers || 0 }}</div>
+            <div class="stat-label">今日新增</div>
           </div>
         </div>
       </el-col>
@@ -58,20 +58,60 @@
     <el-row :gutter="20" style="margin-top: 20px">
       <el-col :xs="24" :md="16">
         <div class="chart-card">
-          <h3>用户增长趋势</h3>
+          <div class="chart-header">
+            <h3>用户增长趋势</h3>
+            <div class="chart-controls">
+              <el-select
+                v-model="growthPeriod"
+                size="small"
+                @change="loadUserGrowthChart"
+                style="width: 120px"
+              >
+                <el-option label="最近7天" value="7d"></el-option>
+                <el-option label="最近30天" value="30d"></el-option>
+                <el-option label="最近90天" value="90d"></el-option>
+              </el-select>
+              <el-button
+                type="text"
+                icon="el-icon-refresh"
+                @click="loadUserGrowthChart"
+                :loading="chartLoading"
+              >
+                刷新
+              </el-button>
+            </div>
+          </div>
           <div style="height: 300px">
-            <!-- 这里可以放图表，暂时用图片替代 -->
-            <div class="placeholder-chart"></div>
+            <div
+              v-loading="chartLoading"
+              ref="growthChart"
+              style="height: 100%; width: 100%"
+            ></div>
           </div>
         </div>
       </el-col>
 
       <el-col :xs="24" :md="8">
         <div class="chart-card">
-          <h3>资源分布</h3>
+          <div class="chart-header">
+            <h3>资源分布</h3>
+            <el-button
+              type="text"
+              icon="el-icon-refresh"
+              @click="loadResourceDistribution"
+            >
+              刷新
+            </el-button>
+          </div>
           <div style="height: 300px">
-            <!-- 这里可以放饼图，暂时用图片替代 -->
-            <div class="placeholder-chart"></div>
+            <!-- 这里可以放饼图 -->
+            <div class="placeholder-chart">
+              <i
+                class="el-icon-pie-chart"
+                style="font-size: 48px; color: #c0c4cc"
+              ></i>
+              <p style="margin-top: 10px">资源分布图表</p>
+            </div>
           </div>
         </div>
       </el-col>
@@ -80,7 +120,8 @@
 </template>
 
 <script>
-import { getUserStatistics } from "@/api/user";
+import * as echarts from "echarts";
+import { getUserStatistics, getUserGrowthChart } from "@/api/user";
 
 export default {
   name: "DashboardPage",
@@ -89,28 +130,54 @@ export default {
       userStats: {
         total: 0,
       },
+      courseStats: {
+        total: 0,
+      },
+      datasetStats: {
+        total: 0,
+      },
+      growthStats: {
+        totalNewUsers: 0,
+      },
+      growthPeriod: "30d",
+      chartData: null,
+      chartLoading: false,
+      growthChart: null,
       loading: false,
     };
   },
 
   created() {
     this.loadUserStatistics();
+    this.loadUserGrowthChart();
+  },
+
+  mounted() {
+    // 监听窗口大小变化，重新渲染图表
+    window.addEventListener("resize", this.handleResize);
+  },
+
+  beforeDestroy() {
+    // 清理图表实例和事件监听
+    if (this.growthChart) {
+      this.growthChart.dispose();
+    }
+    window.removeEventListener("resize", this.handleResize);
   },
 
   methods: {
-
     // 统计用户数
     async loadUserStatistics() {
       try {
         this.loading = true;
         const response = await getUserStatistics();
 
-        // 后端返回数据 根据实际的api进行调整
-        console.log("返回的用户数据", response);
+        // 根据实际API响应结构调整
         if (response) {
-          this.userStats.total = response.totalUsers;
+          this.userStats.total = response.totalUsers || 0;
+          // 这里可以添加其他统计数据
         } else {
-          this.$message.error(response.message || "获取用户统计数据失败");
+          this.$message.error(response?.message || "获取用户统计数据失败");
         }
       } catch (error) {
         console.error("获取用户统计数据失败：", error);
@@ -118,6 +185,216 @@ export default {
       } finally {
         this.loading = false;
       }
+    },
+
+    // 加载用户增长图表
+    async loadUserGrowthChart() {
+      try {
+        this.chartLoading = true;
+
+        // 调用接口获取图表数据
+        const response = await getUserGrowthChart(this.growthPeriod);
+
+        console.log("返回的数据：", response);
+
+        if (response && response.code === 200) {
+          this.chartData = response.data;
+          this.renderGrowthChart();
+        } else {
+          this.$message.error(response?.message || "获取用户增长数据失败");
+        }
+      } catch (error) {
+        console.error("获取用户增长数据失败：", error);
+        this.$message.error("获取用户增长数据失败");
+      } finally {
+        this.chartLoading = false;
+      }
+    },
+
+    // 渲染用户增长图表
+    renderGrowthChart() {
+      // 如果图表实例不存在，初始化
+      if (!this.growthChart) {
+        this.growthChart = echarts.init(this.$refs.growthChart);
+      }
+
+      // 使用后端返回的数据
+      const { dates, newUsers, totalUsers } = this.chartData;
+
+      // 配置项
+      const option = {
+        tooltip: {
+          trigger: "axis",
+          backgroundColor: "rgba(255, 255, 255, 0.95)",
+          borderColor: "#eee",
+          borderWidth: 1,
+          textStyle: {
+            color: "#333",
+          },
+          formatter: function (params) {
+            let result = `<div style="font-weight: bold; margin-bottom: 5px">${params[0].axisValue}</div>`;
+            params.forEach((param) => {
+              const color = param.color;
+              result += `
+                <div style="display: flex; align-items: center; margin: 3px 0">
+                  <span style="display: inline-block; width: 10px; height: 10px; 
+                    border-radius: ${
+                      param.seriesName === "新增用户" ? "50%" : "0"
+                    }; 
+                    background: ${color}; margin-right: 8px"></span>
+                  ${
+                    param.seriesName
+                  }: <span style="font-weight: bold; margin-left: 5px">${
+                param.value
+              }</span>
+                </div>
+              `;
+            });
+            return result;
+          },
+        },
+        legend: {
+          data: ["新增用户", "累计用户"],
+          bottom: 10,
+          textStyle: {
+            fontSize: 12,
+          },
+        },
+        grid: {
+          left: "3%",
+          right: "4%",
+          bottom: "15%",
+          top: "10%",
+          containLabel: true,
+        },
+        xAxis: {
+          type: "category",
+          boundaryGap: false,
+          data: dates,
+          axisLine: {
+            lineStyle: {
+              color: "#dcdfe6",
+            },
+          },
+          axisLabel: {
+            color: "#606266",
+            fontSize: 12,
+          },
+        },
+        yAxis: [
+          {
+            type: "value",
+            name: "新增用户",
+            position: "left",
+            axisLine: {
+              show: true,
+              lineStyle: {
+                color: "#dcdfe6",
+              },
+            },
+            axisLabel: {
+              color: "#606266",
+              fontSize: 12,
+            },
+            splitLine: {
+              lineStyle: {
+                color: "#f0f0f0",
+                type: "dashed",
+              },
+            },
+          },
+          {
+            type: "value",
+            name: "累计用户",
+            position: "right",
+            axisLine: {
+              show: true,
+              lineStyle: {
+                color: "#dcdfe6",
+              },
+            },
+            axisLabel: {
+              color: "#606266",
+              fontSize: 12,
+            },
+            splitLine: {
+              show: false,
+            },
+          },
+        ],
+        series: [
+          {
+            name: "新增用户",
+            type: "line",
+            smooth: true,
+            symbol: "circle",
+            symbolSize: 6,
+            data: newUsers,
+            itemStyle: {
+              color: "#409EFF",
+            },
+            lineStyle: {
+              width: 2,
+            },
+            areaStyle: {
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: "rgba(64, 158, 255, 0.3)" },
+                { offset: 1, color: "rgba(64, 158, 255, 0.05)" },
+              ]),
+            },
+            emphasis: {
+              focus: "series",
+              itemStyle: {
+                color: "#FFF",
+                borderColor: "#409EFF",
+                borderWidth: 2,
+                shadowBlur: 10,
+                shadowColor: "rgba(64, 158, 255, 0.5)",
+              },
+            },
+          },
+          {
+            name: "累计用户",
+            type: "line",
+            yAxisIndex: 1,
+            smooth: true,
+            symbol: "circle",
+            symbolSize: 6,
+            data: totalUsers,
+            itemStyle: {
+              color: "#67C23A",
+            },
+            lineStyle: {
+              width: 2,
+            },
+            emphasis: {
+              focus: "series",
+              itemStyle: {
+                color: "#FFF",
+                borderColor: "#67C23A",
+                borderWidth: 2,
+                shadowBlur: 10,
+                shadowColor: "rgba(103, 194, 58, 0.5)",
+              },
+            },
+          },
+        ],
+      };
+      // 设置配置项并渲染
+      this.growthChart.setOption(option, true);
+    },
+
+    // 处理窗口大小变化
+    handleResize() {
+      if (this.growthChart) {
+        this.growthChart.resize();
+      }
+    },
+
+    // 加载资源分布（预留方法）
+    async loadResourceDistribution() {
+      // TODO: 实现资源分布图表的加载
+      this.$message.info("资源分布功能开发中");
     },
   },
 };
@@ -136,6 +413,13 @@ export default {
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
   display: flex;
   align-items: center;
+  transition: transform 0.3s, box-shadow 0.3s;
+  cursor: pointer;
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
 }
 
 .stat-icon {
@@ -154,11 +438,12 @@ export default {
   font-size: 24px;
   font-weight: bold;
   color: #333;
+  margin-bottom: 5px;
 }
 
 .stat-label {
   color: #999;
-  margin-top: 5px;
+  font-size: 14px;
 }
 
 .chart-card {
@@ -167,11 +452,27 @@ export default {
   padding: 20px;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
   margin-bottom: 20px;
+  height: 100%;
 }
 
-.chart-card h3 {
-  margin: 0 0 20px 0;
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.chart-header h3 {
+  margin: 0;
   color: #333;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.chart-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .placeholder-chart {
@@ -179,8 +480,36 @@ export default {
   border-radius: 4px;
   height: 100%;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   color: #909399;
+  padding: 20px;
+}
+
+.placeholder-chart p {
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .stat-card {
+    padding: 15px;
+  }
+
+  .stat-icon {
+    width: 50px;
+    height: 50px;
+    font-size: 20px;
+  }
+
+  .stat-value {
+    font-size: 20px;
+  }
+
+  .chart-card {
+    padding: 15px;
+  }
 }
 </style>

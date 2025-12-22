@@ -154,3 +154,22 @@ export function batchDeleteUsers(data) {
   });
 }
 
+// 获取用户增长图表数据
+export function getUserGrowthChart(period = '30d') {
+  return request({
+    url: '/api/statistics/user-growth/chart',
+    method: 'get',
+    params: { period }
+  })
+}
+
+// 获取用户增长原始数据
+export function getUserGrowthData(period = '30d') {
+  return request({
+    url: '/api/statistics/user-growth',
+    method: 'get',
+    params: { period }
+  })
+}
+
+

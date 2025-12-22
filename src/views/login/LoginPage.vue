@@ -403,71 +403,65 @@ export default {
           // 调用登录API
           login(loginData)
             .then((response) => {
-              console.log("登录响应:", response);
+              console.log("登录响应数据:", response);
 
-              if (response.success) {
-                this.$message({
-                  message: "登录成功",
-                  type: "success",
-                  duration: 2000,
-                });
+              if (!response.success) {
+                throw new Error(response.message || "登陆失败");
+              }
 
-                // 保存token和用户信息
-                if (response.token) {
-                  setToken(response.token);
+              // 登录成功处理
+              this.$message({
+                message: "登录成功",
+                type: "success",
+                duration: 2000,
+              });
+
+              // 保存token和用户信息
+              if (response.token) {
+                setToken(response.token);
+              }
+
+              // 保存用户信息到Vuex和localStorage
+              if (response.user) {
+                console.log("登录成功，保存用户信息:", response.user);
+
+                // 方法1：直接调用Vuex mutation
+                this.$store.commit("user/SET_USER_INFO", response.user);
+
+                // 同时保存到utils/auth.js（如果使用的话）
+                if (setUserInfo) {
+                  setUserInfo(response.user);
                 }
-
-                // 保存用户信息到Vuex和localStorage
-                if (response.user) {
-                  console.log("登录成功，保存用户信息:", response.user);
-
-                  // 方法1：直接调用Vuex mutation
-                  this.$store.commit("user/SET_USER_INFO", response.user);
-
-                  // 同时保存到utils/auth.js（如果使用的话）
-                  if (setUserInfo) {
-                    setUserInfo(response.user);
-                  }
-                }
-                // 如果选择了"记住我"，保存用户名
-                if (this.rememberMe) {
-                  localStorage.setItem(
-                    "rememberedUsername",
-                    this.loginForm.username
-                  );
-                } else {
-                  localStorage.removeItem("rememberedUsername");
-                }
-
-                // 跳转到首页或重定向页面
-                this.redirectToTarget(response.user);
+              }
+              // 如果选择了"记住我"，保存用户名
+              if (this.rememberMe) {
+                localStorage.setItem(
+                  "rememberedUsername",
+                  this.loginForm.username
+                );
               } else {
+                localStorage.removeItem("rememberedUsername");
+              }
+
+              // 跳转到首页或重定向页面
+              this.redirectToTarget(response.user);
+            })
+            .catch((error) => {
+              console.error("登录错误:", error);
+
+              // 只在特定情况下显示错误 防止重复显示（统一拦截器里显示过了）
+              // 例如：网络错误、超时等
+              if (!error.response) {
                 this.$message({
-                  message: response.message || "登录失败",
+                  message: "网络错误，请检查网络连接",
                   type: "error",
                   duration: 3000,
                 });
               }
             })
-            .catch((error) => {
-              console.error("登录错误:", error);
-
-              this.$message({
-                message:
-                  error.response?.data?.message || "密码重置失败，请稍后重试",
-                type: "error",
-                duration: 3000,
-              });
-            })
             .finally(() => {
               this.loading = false;
             });
-        } else {
-          this.$message({
-            message: "请填写正确的登录信息",
-            type: "warning",
-          });
-          return false;
         }
       });
     },

@@ -27,7 +27,7 @@
         </el-menu-item>
 
         <el-menu-item index="/admin/users">
-          <i class="el-icon-user menu-icon"></i>
+          <i class="el-icon-user-solid menu-icon"></i>
           <span slot="title">用户管理</span>
         </el-menu-item>
 
@@ -39,6 +39,16 @@
         <el-menu-item index="/admin/datasets">
           <i class="el-icon-files menu-icon"></i>
           <span slot="title">数据集管理</span>
+        </el-menu-item>
+
+        <el-menu-item index="/admin/profile">
+          <i class="el-icon-user menu-icon"></i>
+          <span slot="title">个人中心</span>
+        </el-menu-item>
+
+        <el-menu-item index="/admin/account">
+          <i class="el-icon-setting menu-icon"></i>
+          <span slot="title">账号设置</span>
         </el-menu-item>
       </el-menu>
 
@@ -120,9 +130,7 @@
                     size="mini"
                     :type="userInfo.role === 'admin' ? 'danger' : 'primary'"
                   >
-                    {{
-                      userInfo.role === "admin" ? "管理员" : userInfo.role
-                    }}
+                    {{ userInfo.role === "admin" ? "管理员" : userInfo.role }}
                   </el-tag>
                 </span>
               </div>
@@ -132,11 +140,9 @@
               <el-dropdown-item command="profile" class="dropdown-item">
                 <i class="el-icon-user"></i>个人中心
               </el-dropdown-item>
-              <el-dropdown-item command="settings" class="dropdown-item">
-                <i class="el-icon-setting"></i>系统设置
-              </el-dropdown-item>
-              <el-dropdown-item command="help" class="dropdown-item">
-                <i class="el-icon-question"></i>帮助中心
+              <el-dropdown-item command="account" class="dropdown-item">
+                <!-- 注意：这里改为 account 以匹配路由 -->
+                <i class="el-icon-setting"></i>账号设置
               </el-dropdown-item>
               <el-divider></el-divider>
               <el-dropdown-item command="logout" class="dropdown-item logout">
@@ -196,8 +202,15 @@ export default {
     },
   },
   watch: {
-    $route() {
-      this.activeMenu = this.$route.path;
+    $route: {
+      immediate: true,
+      handler(to) {
+        this.activeMenu = to.path;
+        // 如果是个人中心或账号设置页面，确保侧边栏展开
+        if (to.path === "/admin/profile" || to.path === "/admin/account") {
+          this.sidebarCollapsed = false;
+        }
+      },
     },
   },
   mounted() {
@@ -221,6 +234,22 @@ export default {
       this.sidebarCollapsed = !this.sidebarCollapsed;
     },
 
+    // 新增方法：安全导航
+    safeNavigate(path) {
+      // 展开侧边栏（如果需要）
+      if (path === "/admin/profile" || path === "/admin/account") {
+        this.sidebarCollapsed = false;
+      }
+
+      // 检查是否已经在目标页面
+      if (this.$route.path !== path) {
+        this.$router.push(path);
+      } else {
+        // 如果已经在当前页面，可以添加一些反馈（可选）
+        console.log(`已在 ${path} 页面`);
+      }
+    },
+
     handleCommand(command) {
       if (command === "logout") {
         this.$confirm("确定要退出登录吗？", "提示", {
@@ -234,11 +263,9 @@ export default {
           this.$router.push("/login");
         });
       } else if (command === "profile") {
-        this.$router.push("/admin/profile");
-      } else if (command === "settings") {
-        this.$message.info("系统设置功能开发中");
-      } else if (command === "help") {
-        this.$message.info("帮助中心功能开发中");
+        this.safeNavigate("/admin/profile");
+      } else if (command === "account") {
+        this.safeNavigate("/admin/account");
       }
     },
   },
@@ -546,13 +573,13 @@ export default {
 }
 
 .user-dropdown-menu {
-  min-width: 160px;
+  min-width: 140px;
 
   .dropdown-item {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
+    gap: 6px;
+    padding: 6px 12px;
     border-radius: 6px;
 
     i {
