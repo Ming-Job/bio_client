@@ -373,7 +373,7 @@ import {
 // 导入认证工具
 import { getAvatarUrl, getUserInfo, getUserId, clearAuth } from "@/utils/auth";
 // 导入用户详情组件
-import UserDetailDialog from "@/components/UserDetailDialog.vue";
+import UserDetailDialog from "@/components/user/UserDetailDialog.vue";
 
 export default {
   name: "UserManagement",

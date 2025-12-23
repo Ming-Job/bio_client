@@ -1,26 +1,16 @@
-<!-- AccountSetting.vue 示例 -->
+<!-- AccountSettings.vue - 账号设置组件 -->
 <template>
-  <div class="account-setting">
-    <!-- 必须有template部分 -->
-    <h1>账号设置</h1>
-    <!-- 其他内容 -->
+  <div class="account-settings">
+    <!-- 公共部分 -->
+    <div class="common-section">
+      <h3>账号安全</h3>
+      <!-- 修改密码、邮箱验证等公共功能 -->
+    </div>
   </div>
 </template>
 
 <script>
 export default {
-  name: "AccountSetting",
-  data() {
-    return {
-      // 数据
-    };
-  },
-  methods: {
-    // 方法
-  },
+  computed: {},
 };
 </script>
-
-<style scoped>
-/* 样式 */
-</style>

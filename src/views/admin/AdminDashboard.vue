@@ -124,7 +124,7 @@ import * as echarts from "echarts";
 import { getUserStatistics, getUserGrowthChart } from "@/api/user";
 
 export default {
-  name: "DashboardPage",
+  name: "AdminDashboard",
   data() {
     return {
       userStats: {

@@ -1,4 +1,6 @@
 <!-- views/admin/components/UserDetailDialog.vue -->
+<!-- 用户详情框 被用于：userManagement.vue -->
+
 <template>
   <el-dialog
     title="用户详情"

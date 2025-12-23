@@ -644,7 +644,7 @@ export default {
 
       // 根据用户角色决定跳转路径
       if (user.role === "admin") {
-        redirectPath = "/admin";
+        redirectPath = "/back/admin";
       } else {
         redirectPath = "/home";
       }

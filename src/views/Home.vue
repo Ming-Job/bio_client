@@ -12,12 +12,12 @@
 </template>
 
 <script>
-import Header from "@/components/Header.vue";
-import Carousel from "@/components/Carousel.vue";
-import FeatureCards from "@/components/FeatureCards.vue";
-import NewsSection from "@/components/NewsSection.vue";
-import ResourceGrid from "@/components/ResourceGrid.vue";
-import Footer from "@/components/Footer.vue";
+import Header from "@/components/home/Header.vue";
+import Carousel from "@/components/home/Carousel.vue";
+import FeatureCards from "@/components/home/FeatureCards.vue";
+import NewsSection from "@/components/home/NewsSection.vue";
+import ResourceGrid from "@/components/home/ResourceGrid.vue";
+import Footer from "@/components/home/Footer.vue";
 
 export default {
   name: "HomePage",
