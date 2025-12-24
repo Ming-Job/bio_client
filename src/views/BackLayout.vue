@@ -265,6 +265,16 @@
               <i class="el-icon-arrow-down dropdown-arrow"></i>
             </div>
             <el-dropdown-menu slot="dropdown" class="user-dropdown-menu">
+
+              <!-- 返回首页按钮（根据角色显示） -->
+              <el-dropdown-item
+                command="home"
+                class="dropdown-item"
+                v-if="userRole !== 'admin'"
+              >
+                <i class="el-icon-s-home"></i>返回首页
+              </el-dropdown-item>
+
               <el-dropdown-item command="profile" class="dropdown-item">
                 <i class="el-icon-user"></i>个人中心
               </el-dropdown-item>
@@ -475,7 +485,6 @@ export default {
     },
   },
   mounted() {
-    console.log("当前路由路径:", this.$route.path);
     this.activeMenu = this.$route.path;
     this.initFullscreenListener();
   },
@@ -508,7 +517,19 @@ export default {
         case "feedback":
           this.showFeedback();
           break;
+        case "home":
+          this.$router.push("/home");
       }
+    },
+    // 返回首页功能
+    goToHomePage() {
+      const homeRoute = this.getHomeRoute()
+      // 如果当前已经在首页，则不跳转
+      if (this.$route.path === homeRoute) {
+        this.$message.info('您已经在首页')
+        return
+      }
+      this.$router.push(homeRoute)
     },
 
     // 退出登录
@@ -1094,44 +1115,6 @@ export default {
   overflow: auto;
   display: flex;
   flex-direction: column;
-
-  .page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 24px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid #e2e8f0;
-
-    .page-title-section {
-      .page-title {
-        margin: 0;
-        font-size: 24px;
-        font-weight: 700;
-        color: #1e293b;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-
-        .page-icon {
-          color: #3b82f6;
-          font-size: 20px;
-        }
-      }
-
-      .page-subtitle {
-        margin-top: 4px;
-        color: #64748b;
-        font-size: 14px;
-      }
-    }
-
-    .page-actions {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-    }
-  }
 
   .router-view-container {
     flex: 1;

@@ -30,7 +30,7 @@ const MyCourses = () => import('@/views/student/MyCourses.vue')
 
 // 公共模块
 const UserProfile = () => import('@/components/user/UserProfile.vue')
-const AccountSettings = () => import('@/components/user/AccountSetting.vue')
+const AccountSetting = () => import('@/components/user/AccountSetting.vue')
 
 const routes = [
   {
@@ -55,6 +55,7 @@ const routes = [
       requiresAuth: false
     }
   },
+
   {
     path: '/home',
     name: 'HomePage',
@@ -66,6 +67,7 @@ const routes = [
     }
   },
 
+
   {
     path: '/back',
     name: 'BackLayout',
@@ -74,7 +76,7 @@ const routes = [
       requiresAuth: true
     },
     children: [
-      // 公共路由（所有登录用户可访问）
+      // 公共路由
       {
         path: 'profile',
         name: 'UserProfile',
@@ -86,8 +88,8 @@ const routes = [
       },
       {
         path: 'account',
-        name: 'AccountSettings',
-        component: AccountSettings,
+        name: 'AccountSetting',
+        component: AccountSetting,
         meta: {
           title: '账号设置',
           roles: ['admin', 'teacher', 'student']
@@ -96,132 +98,127 @@ const routes = [
       
       // 管理员路由
       {
-        path: 'admin',
-        meta: { roles: ['admin'] },
-        children: [
-          {
-            path: 'dashboard',
-            name: 'AdminDashboard',
-            component: AdminDashboard,
-            meta: {
-              title: '管理员仪表盘'
-            }
-          },
-          {
-            path: 'users',
-            name: 'UserManagement',
-            component: UserManagement,
-            meta: {
-              title: '用户管理'
-            }
-          },
-          {
-            path: 'courses',
-            name: 'CourseManagement',
-            component: CourseManagement,
-            meta: {
-              title: '课程管理'
-            }
-          },
-          {
-            path: 'datasets',
-            name: 'DatasetManagement',
-            component: DatasetManagement,
-            meta: {
-              title: '数据集管理'
-            }
-          }
-        ]
+        path: 'admin/dashboard',
+        name: 'AdminDashboard',
+        component: AdminDashboard,
+        meta: {
+          title: '管理员仪表盘',
+          roles: ['admin']
+        }
+      },
+      {
+        path: 'admin/users',
+        name: 'UserManagement',
+        component: UserManagement,
+        meta: {
+          title: '用户管理',
+          roles: ['admin']
+        }
+      },
+      {
+        path: 'admin/courses',
+        name: 'CourseManagement',
+        component: CourseManagement,
+        meta: {
+          title: '课程管理',
+          roles: ['admin']
+        }
+      },
+      {
+        path: 'admin/datasets',
+        name: 'DatasetManagement',
+        component: DatasetManagement,
+        meta: {
+          title: '数据集管理',
+          roles: ['admin']
+        }
       },
       
       // 教师路由
       {
-        path: 'teacher',
-        meta: { roles: ['teacher'] },
-        children: [
-          {
-            path: 'dashboard',
-            name: 'TeacherDashboard',
-            component: TeacherDashboard,
-            meta: {
-              title: '教师仪表盘'
-            }
-          },
-          {
-            path: 'courses',
-            name: 'TeachingCourses',
-            component: TeachingCourses,
-            meta: {
-              title: '授课管理'
-            }
-          },
-          {
-            path: 'students',
-            name: 'StudentManagement',
-            component: StudentManagement,
-            meta: {
-              title: '学生管理'
-            }
-          },
-          {
-            path: 'tasks',
-            name: 'TasksManagement',
-            component: TasksManagement,
-            meta: {
-              title: '作业管理'
-            }
-          }
-        ]
+        path: 'teacher/dashboard',
+        name: 'TeacherDashboard',
+        component: TeacherDashboard,
+        meta: {
+          title: '教师仪表盘',
+          roles: ['teacher']
+        }
+      },
+      {
+        path: 'teacher/courses',
+        name: 'TeachingCourses',
+        component: TeachingCourses,
+        meta: {
+          title: '授课管理',
+          roles: ['teacher']
+        }
+      },
+      {
+        path: 'teacher/students',
+        name: 'StudentManagement',
+        component: StudentManagement,
+        meta: {
+          title: '学生管理',
+          roles: ['teacher']
+        }
+      },
+      {
+        path: 'teacher/tasks',
+        name: 'TasksManagement',
+        component: TasksManagement,
+        meta: {
+          title: '作业管理',
+          roles: ['teacher']
+        }
       },
       
       // 学生路由
       {
-        path: 'student',
-        meta: { roles: ['student'] },
-        children: [
-          {
-            path: 'dashboard',
-            name: 'StudentDashboard',
-            component: StudentDashboard,
-            meta: {
-              title: '学生仪表盘'
-            }
-          },
-          {
-            path: 'learning-center',
-            name: 'LearningCenter',
-            component: LearningCenter,
-            meta: {
-              title: '学习中心'
-            }
-          },
-          {
-            path: 'courses',
-            name: 'StudentCourses',
-            component: MyCourses,
-            meta: {
-              title: '我的课程'
-            }
-          }
-        ]
+        path: 'student/dashboard',
+        name: 'StudentDashboard',
+        component: StudentDashboard,
+        meta: {
+          title: '学生仪表盘',
+          roles: ['student']
+        }
+      },
+      {
+        path: 'student/learning-center',
+        name: 'LearningCenter',
+        component: LearningCenter,
+        meta: {
+          title: '学习中心',
+          roles: ['student']
+        }
+      },
+      {
+        path: 'student/courses',
+        name: 'StudentCourses',
+        component: MyCourses,
+        meta: {
+          title: '我的课程',
+          roles: ['student']
+        }
       },
       
-      // 默认重定向到用户类型的仪表盘
+      // 默认重定向
       {
         path: '',
         redirect: () => {
-          // 这里可以根据用户角色动态重定向
-          const userRole = store.getters.userRole // 假设从 Vuex 获取用户角色
+          const userRole = store.getters.userRole || localStorage.getItem('userRole')
+          console.log('当前用户角色:', userRole)
           switch (userRole) {
-            case 'admin': return '/app/admin/dashboard'
-            case 'teacher': return '/app/teacher/dashboard'
-            case 'student': return '/app/student/dashboard'
+            case 'admin': return '/back/admin/dashboard'
+            case 'teacher': return '/back/teacher/dashboard'
+            case 'student': return '/back/student/dashboard'
             default: return '/login'
           }
         }
       }
     ]
   },
+
+
   {
     path: '/404',
     name: 'NotFound',
@@ -236,6 +233,8 @@ const routes = [
     redirect: '/404'
   }
 ]
+
+
 
 const router = new VueRouter({
   mode: 'history',
