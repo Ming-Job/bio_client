@@ -270,7 +270,7 @@
               <el-dropdown-item
                 command="home"
                 class="dropdown-item"
-                v-if="userRole !== 'admin'"
+                v-if="userInfo.role !== 'admin'"
               >
                 <i class="el-icon-s-home"></i>返回首页
               </el-dropdown-item>

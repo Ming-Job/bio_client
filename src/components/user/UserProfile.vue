@@ -12,7 +12,11 @@
       <div class="profile-sidebar">
         <div class="avatar-section">
           <div class="avatar-wrapper">
-            <el-avatar :size="120" :src="userInfo.avatar || defaultAvatar" class="avatar" />
+            <el-avatar
+              :size="120"
+              :src="userInfo.avatar || defaultAvatar"
+              class="avatar"
+            />
             <el-upload
               class="avatar-uploader"
               action="/api/upload/avatar"
@@ -20,17 +24,23 @@
               :on-success="handleAvatarSuccess"
               :before-upload="beforeAvatarUpload"
             >
-              <el-button size="small" type="primary" icon="el-icon-upload">更换头像</el-button>
+              <el-button size="small" type="primary" icon="el-icon-upload"
+                >更换头像</el-button
+              >
             </el-upload>
           </div>
           <div class="user-basic-info">
             <h3>{{ userInfo.username }}</h3>
             <p class="user-role">
-              <el-tag :type="roleType">{{ userInfo.role || '普通用户' }}</el-tag>
+              <el-tag :type="roleType">{{
+                userInfo.role || "普通用户"
+              }}</el-tag>
             </p>
             <p class="user-status">
-              <span :class="['status-dot', userInfo.status ? 'active' : 'inactive']"></span>
-              {{ userInfo.status ? '正常' : '禁用' }}
+              <span
+                :class="['status-dot', userInfo.status ? 'active' : 'inactive']"
+              ></span>
+              {{ userInfo.status ? "正常" : "禁用" }}
             </p>
           </div>
         </div>
@@ -39,11 +49,13 @@
           <h4>登录信息</h4>
           <div class="info-item">
             <span class="label">最后登录时间:</span>
-            <span class="value">{{ formatTime(userInfo.last_login_time) || '从未登录' }}</span>
+            <span class="value">{{
+              formatTime(userInfo.lastLoginTime) || "从未登录"
+            }}</span>
           </div>
           <div class="info-item">
             <span class="label">注册时间:</span>
-            <span class="value">{{ formatTime(userInfo.create_time) }}</span>
+            <span class="value">{{ formatTime(userInfo.createTime) }}</span>
           </div>
         </div>
       </div>
@@ -53,30 +65,55 @@
         <el-tabs v-model="activeTab" type="card">
           <!-- 基本信息 -->
           <el-tab-pane label="基本信息" name="basic">
-            <el-form ref="basicForm" :model="userInfo" :rules="basicRules" label-width="100px" class="profile-form">
+            <el-form
+              ref="basicForm"
+              :model="userInfo"
+              :rules="basicRules"
+              label-width="100px"
+              class="profile-form"
+            >
               <el-form-item label="用户名" prop="username">
-                <el-input v-model="userInfo.username" placeholder="请输入用户名" maxlength="50" />
+                <el-input
+                  v-model="userInfo.username"
+                  placeholder="请输入用户名"
+                  maxlength="50"
+                />
               </el-form-item>
-              
+
               <el-form-item label="邮箱" prop="email">
-                <el-input v-model="userInfo.email" placeholder="请输入邮箱" maxlength="100" />
+                <el-input
+                  v-model="userInfo.email"
+                  placeholder="请输入邮箱"
+                  maxlength="100"
+                />
               </el-form-item>
-              
+
               <el-form-item label="手机号" prop="phone">
-                <el-input v-model="userInfo.phone" placeholder="请输入手机号" maxlength="20" />
+                <el-input
+                  v-model="userInfo.phone"
+                  placeholder="请输入手机号"
+                  maxlength="20"
+                />
               </el-form-item>
-              
+
               <el-form-item label="用户角色" prop="role">
-                <el-select v-model="userInfo.role" placeholder="请选择角色" style="width: 100%;">
+                <el-select
+                  v-model="userInfo.role"
+                  placeholder="请选择角色"
+                  style="width: 100%"
+                >
                   <el-option label="管理员" value="admin" />
-                  <el-option label="普通用户" value="user" />
-                  <el-option label="编辑" value="editor" />
-                  <el-option label="访客" value="guest" />
+                  <el-option label="教师" value="teacher" />
+                  <el-option label="学生" value="student" />
                 </el-select>
               </el-form-item>
-              
+
               <el-form-item>
-                <el-button type="primary" @click="saveBasicInfo" :loading="saving">
+                <el-button
+                  type="primary"
+                  @click="saveBasicInfo"
+                  :loading="saving"
+                >
                   保存修改
                 </el-button>
                 <el-button @click="resetBasicInfo">重置</el-button>
@@ -90,156 +127,165 @@
 </template>
 
 <script>
+import { mapState } from "vuex";
+import { formatDateTime } from "@/utils/date";
+import { updateUser } from "@/api/user";
+
 export default {
-  name: 'UserProfile',
+  name: "UserProfile",
   data() {
     const validatePassword = (rule, value, callback) => {
       if (value !== this.passwordForm.newPassword) {
-        callback(new Error('两次输入密码不一致!'));
+        callback(new Error("两次输入密码不一致!"));
       } else {
         callback();
       }
     };
 
     return {
-      activeTab: 'basic',
+      activeTab: "basic",
       saving: false,
       changingPassword: false,
-      defaultAvatar: 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png',
-      
-      userInfo: {
-        id: 1,
-        username: '张三',
-        role: 'admin',
-        create_time: '2024-01-15 10:30:00',
-        update_time: '2024-03-20 14:25:00',
-        avatar: '',
-        email: 'zhangsan@example.com',
-        phone: '13800138000',
-        status: 1,
-        last_login_time: '2024-03-20 14:20:00'
-      },
-      
+      defaultAvatar:
+        "https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png",
+
       passwordForm: {
-        oldPassword: '',
-        newPassword: '',
-        confirmPassword: ''
+        oldPassword: "",
+        newPassword: "",
+        confirmPassword: "",
       },
-      
-      loginHistory: [
-        {
-          time: '2024-03-20 14:20:00',
-          type: 'login',
-          ip: '192.168.1.100',
-          device: 'Windows 10',
-          browser: 'Chrome 122'
-        },
-        {
-          time: '2024-03-19 09:15:00',
-          type: 'login',
-          ip: '192.168.1.100',
-          device: 'iPhone 13',
-          browser: 'Safari 17'
-        }
-      ],
-      
+
       basicRules: {
         username: [
-          { required: true, message: '请输入用户名', trigger: 'blur' },
-          { min: 3, max: 50, message: '长度在 3 到 50 个字符', trigger: 'blur' }
+          { required: true, message: "请输入用户名", trigger: "blur" },
+          {
+            min: 3,
+            max: 50,
+            message: "长度在 3 到 50 个字符",
+            trigger: "blur",
+          },
         ],
         email: [
-          { required: true, message: '请输入邮箱地址', trigger: 'blur' },
-          { type: 'email', message: '请输入正确的邮箱地址', trigger: ['blur', 'change'] }
+          { required: true, message: "请输入邮箱地址", trigger: "blur" },
+          {
+            type: "email",
+            message: "请输入正确的邮箱地址",
+            trigger: ["blur", "change"],
+          },
         ],
         phone: [
-          { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号码', trigger: 'blur' }
-        ]
+          {
+            pattern: /^1[3-9]\d{9}$/,
+            message: "请输入正确的手机号码",
+            trigger: "blur",
+          },
+        ],
       },
-      
+
       passwordRules: {
         oldPassword: [
-          { required: true, message: '请输入当前密码', trigger: 'blur' }
+          { required: true, message: "请输入当前密码", trigger: "blur" },
         ],
         newPassword: [
-          { required: true, message: '请输入新密码', trigger: 'blur' },
-          { min: 8, max: 32, message: '长度在 8 到 32 个字符', trigger: 'blur' }
+          { required: true, message: "请输入新密码", trigger: "blur" },
+          {
+            min: 8,
+            max: 32,
+            message: "长度在 8 到 32 个字符",
+            trigger: "blur",
+          },
         ],
         confirmPassword: [
-          { required: true, message: '请确认密码', trigger: 'blur' },
-          { validator: validatePassword, trigger: 'blur' }
-        ]
-      }
+          { required: true, message: "请确认密码", trigger: "blur" },
+          { validator: validatePassword, trigger: "blur" },
+        ],
+      },
     };
   },
-  
+
   computed: {
+    // 修复：从Vuex的user模块获取状态
+    ...mapState("user", {
+      isLoggedIn: (state) => state.isLoggedIn,
+      userInfo: (state) => state.userInfo,
+    }),
     roleType() {
       const roleMap = {
-        admin: 'danger',
-        user: 'info',
-        editor: 'warning',
-        guest: 'success'
+        admin: "danger",
+        user: "info",
+        editor: "warning",
+        guest: "success",
       };
-      return roleMap[this.userInfo.role] || 'info';
-    }
+      return roleMap[this.userInfo.role] || "info";
+    },
   },
-  
+
   methods: {
     // 格式化时间显示
     formatTime(time) {
-      if (!time) return '';
-      return new Date(time).toLocaleString('zh-CN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      });
+      return formatDateTime(time);
     },
-    
+
     // 头像上传成功
     handleAvatarSuccess(res) {
       this.userInfo.avatar = res.data.url;
-      this.$message.success('头像上传成功');
+      this.$message.success("头像上传成功");
     },
-    
+
     // 头像上传前验证
     beforeAvatarUpload(file) {
-      const isJPG = file.type === 'image/jpeg';
-      const isPNG = file.type === 'image/png';
+      const isJPG = file.type === "image/jpeg";
+      const isPNG = file.type === "image/png";
       const isLt2M = file.size / 1024 / 1024 < 2;
 
       if (!isJPG && !isPNG) {
-        this.$message.error('上传头像图片只能是 JPG/PNG 格式!');
+        this.$message.error("上传头像图片只能是 JPG/PNG 格式!");
       }
       if (!isLt2M) {
-        this.$message.error('上传头像图片大小不能超过 2MB!');
+        this.$message.error("上传头像图片大小不能超过 2MB!");
       }
       return (isJPG || isPNG) && isLt2M;
     },
-    
+
     // 保存基本信息
     saveBasicInfo() {
       this.$refs.basicForm.validate((valid) => {
         if (valid) {
           this.saving = true;
-          // 模拟API调用
-          setTimeout(() => {
-            this.userInfo.update_time = new Date().toISOString();
-            this.$message.success('个人信息更新成功');
-            this.saving = false;
-          }, 1000);
+
+          // 准备提交数据
+          const submitData = {
+            username: this.basicForm.username,
+            role: this.basicForm.role,
+            email: this.basicForm.email,
+            phone: this.basicForm.phone,
+          };
+
+          console.log("准备提交的数据:", submitData);
+
+          updateUser(submitData)
+            .then((response) => {
+              console.log("API响应的数据：", response);
+              this.$message.success("个人信息更新成功");
+            })
+            .catch((error) => {
+              console.error("操作失败:", error);
+            })
+            .finally(() => {
+              this.saving = false;
+            });
+        } else {
+          console.log("表单验证失败");
+          return false;
         }
       });
     },
-    
+
     // 重置基本信息
     resetBasicInfo() {
       this.$refs.basicForm.resetFields();
     },
-    
+
     // 修改密码
     changePassword() {
       this.$refs.passwordForm.validate((valid) => {
@@ -247,19 +293,19 @@ export default {
           this.changingPassword = true;
           // 模拟API调用
           setTimeout(() => {
-            this.$message.success('密码修改成功');
+            this.$message.success("密码修改成功");
             this.resetPasswordForm();
             this.changingPassword = false;
           }, 1000);
         }
       });
     },
-    
+
     // 重置密码表单
     resetPasswordForm() {
       this.$refs.passwordForm.resetFields();
-    }
-  }
+    },
+  },
 };
 </script>
 
@@ -267,7 +313,6 @@ export default {
 .user-profile {
   padding: 20px 20px 5px 20px;
   height: 100%;
-
 
   .common-section {
     margin-bottom: 10px;

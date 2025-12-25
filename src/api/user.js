@@ -112,7 +112,7 @@ export function updateUserStatus(data) {
   })
 }
 
-// 更新用户
+// 修改用户信息
 export function updateUser(data){
   return request({
     url: '/api/user/update',
