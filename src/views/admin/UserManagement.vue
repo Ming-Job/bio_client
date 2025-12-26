@@ -280,6 +280,40 @@
           ></el-input>
         </el-form-item>
 
+        <!-- ========== 新增：用户头像上传 ========== -->
+        <el-form-item label="用户头像" prop="avatar">
+          <el-upload
+            class="avatar-uploader"
+            action="javascript:void(0)"
+            :show-file-list="false"
+            :before-upload="beforeAvatarUpload"
+            :http-request="handleAvatarUpload"
+            :disabled="
+              submitting || uploadingAvatar || (isAddMode && !formData.id)
+            "
+          >
+            <!-- 头像容器（新增提示层） -->
+            <div class="avatar-container">
+              <img v-if="avatarUrl" :src="avatarUrl" class="avatar" />
+              <i v-else class="el-icon-plus avatar-uploader-icon"></i>
+              <!-- 鼠标hover时显示的+提示 -->
+              <div
+                class="avatar-tip"
+                v-if="
+                  !submitting &&
+                  !uploadingAvatar &&
+                  !(isAddMode && !formData.id)
+                "
+              >
+                <i class="el-icon-plus"></i>
+              </div>
+            </div>
+            <div slot="tip" class="el-upload__tip">
+              只能上传jpg/png文件，且不超过2MB
+            </div>
+          </el-upload>
+        </el-form-item>
+
         <!-- 密码字段 - 新增模式显示 -->
         <el-form-item label="密码" prop="password" v-if="isAddMode">
           <el-input
@@ -370,6 +404,8 @@ import {
   batchDeleteUsers,
   batchUpdateUserStatus,
 } from "@/api/user";
+// 导入头像上传接口
+import { updateUserAvatar } from "@/api/user";
 // 导入认证工具
 import { getAvatarUrl, getUserInfo, getUserId, clearAuth } from "@/utils/auth";
 // 导入用户详情组件
@@ -452,6 +488,7 @@ export default {
         email: "",
         phone: "",
         status: "1",
+        avatar: "", // ========== 新增：头像路径 ==========
       },
       formRules: {
         username: [
@@ -499,8 +536,13 @@ export default {
             trigger: "blur",
           },
         ],
+        avatar: [{ required: false }], // ========== 新增：头像非必选 ==========
       },
       currentUser: null,
+      // ========== 新增：头像相关变量 ==========
+      avatarUrl: "", // 头像预览URL
+      uploadingAvatar: false, // 头像上传加载状态
+      avatarFile: null, // 暂存选择的头像文件（新增用户时用）
     };
   },
   mounted() {
@@ -667,7 +709,11 @@ export default {
         email: row.email || "",
         phone: row.phone || "",
         status: row.status != null ? `${row.status}` : "1",
+        avatar: row.avatar || "", // ========== 新增：加载用户现有头像 ==========
       };
+
+      // ========== 新增：加载头像预览 ==========
+      this.avatarUrl = this.getRealAvatarUrl(row.avatar);
 
       console.log("表单数据: ", this.formData);
 
@@ -749,6 +795,78 @@ export default {
         });
     },
 
+    // ========== 新增：头像上传前置校验 ==========
+    beforeAvatarUpload(file) {
+      const isJPG = file.type === "image/jpeg" || file.type === "image/png";
+      const isLt2M = file.size / 1024 / 1024 < 2;
+
+      if (!isJPG) {
+        this.$message.error("头像图片只能是 JPG/PNG 格式!");
+        return false;
+      }
+      if (!isLt2M) {
+        this.$message.error("头像图片大小不能超过 2MB!");
+        return false;
+      }
+
+      // 暂存文件（新增用户时用）
+      this.avatarFile = file;
+      return true;
+    },
+
+    // ========== 新增：处理头像上传 ==========
+    handleAvatarUpload(options) {
+      const file = options.file;
+      this.uploadingAvatar = true;
+
+      // 构建FormData
+      const formData = new FormData();
+      formData.append("avatar", file);
+      formData.append("userId", this.formData.id);
+
+      updateUserAvatar(formData)
+        .then((response) => {
+          if (response.code === 200) {
+            this.avatarUrl = this.getRealAvatarUrl(response.data);
+            this.formData.avatar = response.data;
+            this.$message.success("头像上传成功！");
+          } else {
+            this.$message.error(response.message || "头像上传失败");
+          }
+        })
+        .catch((error) => {
+          console.error("头像上传失败:", error);
+          this.$message.error("头像上传失败，请重试");
+        })
+        .finally(() => {
+          this.uploadingAvatar = false;
+        });
+    },
+
+    // ========== 新增：新增用户后补传头像 ==========
+    uploadAvatarAfterAdd(newUserId) {
+      if (this.avatarFile && newUserId) {
+        const formData = new FormData();
+        formData.append("avatar", this.avatarFile);
+        formData.append("userId", newUserId);
+
+        updateUserAvatar(formData)
+          .then((response) => {
+            if (response.code === 200) {
+              this.$message.success("用户创建成功，头像上传完成！");
+              // 刷新用户列表
+              this.fetchUsers();
+            } else {
+              this.$message.warning("用户创建成功，但头像上传失败");
+            }
+          })
+          .catch((error) => {
+            console.error("新增用户后头像上传失败:", error);
+            this.$message.warning("用户创建成功，但头像上传失败");
+          });
+      }
+    },
+
     // 提交表单（新增/编辑）
     handleSubmit() {
       this.$refs.userForm.validate((valid) => {
@@ -762,6 +880,7 @@ export default {
             email: this.formData.email,
             phone: this.formData.phone,
             status: this.formData.status,
+            avatar: this.formData.avatar, // ========== 新增：提交头像路径 ==========
           };
 
           let isCurrentUserPasswordChange = false;
@@ -801,6 +920,14 @@ export default {
 
               this.$message.success(this.isAddMode ? "新增成功" : "更新成功");
               this.dialogVisible = false;
+
+              // ========== 新增：新增用户后上传头像（因为新增时无userId） ==========
+              if (this.isAddMode && this.avatarFile) {
+                const newUserId = response.data?.id; // 假设后端返回新增用户的ID
+                if (newUserId) {
+                  this.uploadAvatarAfterAdd(newUserId);
+                }
+              }
 
               // 如果是新增，重置到第一页显示最新的数据
               if (this.isAddMode) {
@@ -888,7 +1015,12 @@ export default {
         email: "",
         phone: "",
         status: "1",
+        avatar: "", // ========== 新增：重置头像路径 ==========
       };
+      // ========== 新增：重置头像相关变量 ==========
+      this.avatarUrl = "";
+      this.uploadingAvatar = false;
+      this.avatarFile = null;
     },
 
     // 多选框选择变化事件
@@ -1474,6 +1606,103 @@ export default {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* ========== 新增：头像上传样式 ========== */
+.avatar-uploader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 5px;
+}
+
+/* 头像容器（用于包裹头像和提示层） */
+.avatar-container {
+  position: relative;
+  cursor: pointer;
+  height: 100px;
+}
+
+.avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e8eaec;
+  transition: all 0.3s;
+}
+
+/* 鼠标hover时头像效果 */
+.avatar-container:hover .avatar {
+  border-color: #409eff;
+  box-shadow: 0 0 12px rgba(64, 158, 255, 0.3);
+  opacity: 0.8; /* 头像轻微透明，突出提示 */
+}
+
+.avatar-uploader-icon {
+  font-size: 28px;
+  color: #8c939d;
+  width: 100px;
+  height: 100px;
+  line-height: 100px;
+  text-align: center;
+  border: 1px dashed #d9d9d9;
+  border-radius: 50%;
+  cursor: pointer;
+  background-color: #fbfbfb;
+  transition: all 0.3s;
+}
+
+.avatar-container:hover .avatar-uploader-icon {
+  color: #409eff;
+  border-color: #409eff;
+  background-color: #f5f7fa;
+}
+
+/* 头像hover提示（+号） */
+.avatar-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0; /* 默认隐藏 */
+  transition: opacity 0.3s;
+  pointer-events: none; /* 不影响点击事件 */
+}
+
+.avatar-tip i {
+  font-size: 24px;
+  color: white;
+  background: rgba(64, 158, 255, 0.8);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* 鼠标hover时显示提示 */
+.avatar-container:hover .avatar-tip {
+  opacity: 1;
+}
+
+/* 禁用状态下隐藏提示 */
+.el-upload.is-disabled .avatar-tip {
+  display: none;
+}
+
+.el-upload__tip {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #909399;
 }
 
 /* 响应式调整 */

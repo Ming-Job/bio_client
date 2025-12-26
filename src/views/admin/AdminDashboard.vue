@@ -405,11 +405,32 @@ export default {
   padding: 20px;
 }
 
+h2 {
+  margin: 0 0 16px 0;
+  padding: 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: #303133;
+  position: relative;
+
+  &::after {
+    content: "";
+    position: absolute;
+    bottom: -8px;
+    left: 0;
+    width: 45px;
+    height: 4px;
+    background: linear-gradient(135deg, #409eff 0%, #1890ff 100%);
+    border-radius: 2px;
+  }
+}
+
 .stat-card {
   background: white;
   border-radius: 8px;
   padding: 20px;
-  margin-bottom: 20px;
+  margin-top: 15px;
+  margin-bottom: 5px;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
   display: flex;
   align-items: center;

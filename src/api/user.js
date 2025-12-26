@@ -172,4 +172,21 @@ export function getUserGrowthData(period = '30d') {
   })
 }
 
+// /api/user.js
+export function updateUserAvatar(data) {
+  return request({
+    url: "/api/user/avatar/update",
+    method: 'post',
+    data
+  })
+}
+
+export function updateUserInfo(data) {
+  return request({
+    url: "/api/user/info/update",
+    method: 'post',
+    data
+  })
+}
+
 
