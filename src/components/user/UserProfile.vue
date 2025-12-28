@@ -333,7 +333,7 @@ $transition-base: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       position: absolute;
       left: 0;
       bottom: 0;
-      width: 40px;
+      width: 47px;
       height: 3px;
       background-color: $primary-color;
       border-radius: $radius-sm;

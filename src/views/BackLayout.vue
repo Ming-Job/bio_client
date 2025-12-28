@@ -117,14 +117,6 @@
 
       <!-- 侧边栏底部 -->
       <div class="sidebar-footer" v-if="!sidebarCollapsed">
-        <div class="quick-actions">
-          <el-tooltip content="切换主题" placement="right">
-            <i class="el-icon-moon" @click="toggleTheme"></i>
-          </el-tooltip>
-          <el-tooltip content="系统设置" placement="right">
-            <i class="el-icon-s-tools" @click="showSettings"></i>
-          </el-tooltip>
-        </div>
         <div class="version-info">
           <i class="el-icon-info"></i>
           <span>{{ userRoleText }}端 v1.0.0</span>
@@ -151,7 +143,7 @@
           <!-- 面包屑导航 -->
           <el-breadcrumb separator="/" class="breadcrumb">
             <el-breadcrumb-item :to="{ path: getDashboardPath }">
-              {{ userRoleText }}首页
+              {{ userRoleText }}后台
             </el-breadcrumb-item>
             <el-breadcrumb-item
               v-for="(item, index) in breadcrumbs"
@@ -164,25 +156,6 @@
         </div>
 
         <div class="header-right">
-          <!-- 全局搜索 -->
-          <el-autocomplete
-            v-model="searchText"
-            :fetch-suggestions="querySearch"
-            placeholder="搜索功能、内容..."
-            class="global-search"
-            size="small"
-            @select="handleSelect"
-          >
-            <i slot="prefix" class="el-icon-search search-icon"></i>
-            <template slot-scope="{ item }">
-              <div class="search-result-item">
-                <i :class="item.icon"></i>
-                <span class="title">{{ item.title }}</span>
-                <span class="type">{{ item.type }}</span>
-              </div>
-            </template>
-          </el-autocomplete>
-
           <!-- 快捷操作 全屏/刷新 -->
           <div class="quick-actions-header">
             <el-tooltip content="全屏" placement="bottom">
@@ -265,7 +238,6 @@
               <i class="el-icon-arrow-down dropdown-arrow"></i>
             </div>
             <el-dropdown-menu slot="dropdown" class="user-dropdown-menu">
-
               <!-- 返回首页按钮（根据角色显示） -->
               <el-dropdown-item
                 command="home"
@@ -523,13 +495,13 @@ export default {
     },
     // 返回首页功能
     goToHomePage() {
-      const homeRoute = this.getHomeRoute()
+      const homeRoute = this.getHomeRoute();
       // 如果当前已经在首页，则不跳转
       if (this.$route.path === homeRoute) {
-        this.$message.info('您已经在首页')
-        return
+        this.$message.info("您已经在首页");
+        return;
       }
-      this.$router.push(homeRoute)
+      this.$router.push(homeRoute);
     },
 
     // 退出登录
@@ -762,32 +734,15 @@ export default {
 }
 
 .sidebar-footer {
-  padding: 16px;
+  padding: 30px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
-
-  .quick-actions {
-    display: flex;
-    justify-content: space-around;
-    margin-bottom: 12px;
-
-    i {
-      color: #94a3b8;
-      font-size: 18px;
-      cursor: pointer;
-      transition: color 0.3s;
-
-      &:hover {
-        color: #3b82f6;
-      }
-    }
-  }
 
   .version-info {
     display: flex;
     align-items: center;
     justify-content: center;
     color: #94a3b8;
-    font-size: 12px;
+    font-size: 14px;
 
     i {
       margin-right: 8px;

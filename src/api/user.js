@@ -49,7 +49,7 @@ export function changePassword(data) {
   return request({
     url: '/api/user/change-password',
     method: 'post',
-    data
+    params: data
   })
 }
 

@@ -280,31 +280,22 @@
           ></el-input>
         </el-form-item>
 
-        <!-- ========== 新增：用户头像上传 ========== -->
-        <el-form-item label="用户头像" prop="avatar">
+        <!-- ========== 只在编辑模式下显示头像上传 ========== -->
+        <el-form-item label="用户头像" prop="avatar" v-if="!isAddMode">
           <el-upload
             class="avatar-uploader"
             action="javascript:void(0)"
             :show-file-list="false"
             :before-upload="beforeAvatarUpload"
             :http-request="handleAvatarUpload"
-            :disabled="
-              submitting || uploadingAvatar || (isAddMode && !formData.id)
-            "
+            :disabled="submitting || uploadingAvatar"
           >
             <!-- 头像容器（新增提示层） -->
             <div class="avatar-container">
               <img v-if="avatarUrl" :src="avatarUrl" class="avatar" />
               <i v-else class="el-icon-plus avatar-uploader-icon"></i>
               <!-- 鼠标hover时显示的+提示 -->
-              <div
-                class="avatar-tip"
-                v-if="
-                  !submitting &&
-                  !uploadingAvatar &&
-                  !(isAddMode && !formData.id)
-                "
-              >
+              <div class="avatar-tip" v-if="!submitting && !uploadingAvatar">
                 <i class="el-icon-plus"></i>
               </div>
             </div>
@@ -488,7 +479,7 @@ export default {
         email: "",
         phone: "",
         status: "1",
-        avatar: "", // ========== 新增：头像路径 ==========
+        avatar: "", // 头像路径
       },
       formRules: {
         username: [
@@ -536,13 +527,12 @@ export default {
             trigger: "blur",
           },
         ],
-        avatar: [{ required: false }], // ========== 新增：头像非必选 ==========
+        avatar: [{ required: false }],
       },
       currentUser: null,
-      // ========== 新增：头像相关变量 ==========
+      // 头像相关变量（只在编辑模式使用）
       avatarUrl: "", // 头像预览URL
       uploadingAvatar: false, // 头像上传加载状态
-      avatarFile: null, // 暂存选择的头像文件（新增用户时用）
     };
   },
   mounted() {
@@ -709,10 +699,10 @@ export default {
         email: row.email || "",
         phone: row.phone || "",
         status: row.status != null ? `${row.status}` : "1",
-        avatar: row.avatar || "", // ========== 新增：加载用户现有头像 ==========
+        avatar: row.avatar || "", // 加载用户现有头像
       };
 
-      // ========== 新增：加载头像预览 ==========
+      // 加载头像预览（只在编辑模式）
       this.avatarUrl = this.getRealAvatarUrl(row.avatar);
 
       console.log("表单数据: ", this.formData);
@@ -795,7 +785,7 @@ export default {
         });
     },
 
-    // ========== 新增：头像上传前置校验 ==========
+    // 头像上传前置校验
     beforeAvatarUpload(file) {
       const isJPG = file.type === "image/jpeg" || file.type === "image/png";
       const isLt2M = file.size / 1024 / 1024 < 2;
@@ -809,12 +799,10 @@ export default {
         return false;
       }
 
-      // 暂存文件（新增用户时用）
-      this.avatarFile = file;
       return true;
     },
 
-    // ========== 新增：处理头像上传 ==========
+    // 处理头像上传（只在编辑模式使用）
     handleAvatarUpload(options) {
       const file = options.file;
       this.uploadingAvatar = true;
@@ -822,7 +810,7 @@ export default {
       // 构建FormData
       const formData = new FormData();
       formData.append("avatar", file);
-      formData.append("userId", this.formData.id);
+      formData.append("userId", this.formData.id); // 使用当前编辑的用户ID
 
       updateUserAvatar(formData)
         .then((response) => {
@@ -843,30 +831,6 @@ export default {
         });
     },
 
-    // ========== 新增：新增用户后补传头像 ==========
-    uploadAvatarAfterAdd(newUserId) {
-      if (this.avatarFile && newUserId) {
-        const formData = new FormData();
-        formData.append("avatar", this.avatarFile);
-        formData.append("userId", newUserId);
-
-        updateUserAvatar(formData)
-          .then((response) => {
-            if (response.code === 200) {
-              this.$message.success("用户创建成功，头像上传完成！");
-              // 刷新用户列表
-              this.fetchUsers();
-            } else {
-              this.$message.warning("用户创建成功，但头像上传失败");
-            }
-          })
-          .catch((error) => {
-            console.error("新增用户后头像上传失败:", error);
-            this.$message.warning("用户创建成功，但头像上传失败");
-          });
-      }
-    },
-
     // 提交表单（新增/编辑）
     handleSubmit() {
       this.$refs.userForm.validate((valid) => {
@@ -880,7 +844,6 @@ export default {
             email: this.formData.email,
             phone: this.formData.phone,
             status: this.formData.status,
-            avatar: this.formData.avatar, // ========== 新增：提交头像路径 ==========
           };
 
           let isCurrentUserPasswordChange = false;
@@ -888,9 +851,11 @@ export default {
           if (this.isAddMode) {
             // 新增模式：添加密码
             submitData.password = this.formData.password;
+            // 新增模式不需要上传头像
           } else {
-            // 编辑模式：添加ID
+            // 编辑模式：添加ID和头像
             submitData.id = this.formData.id;
+            submitData.avatar = this.formData.avatar; // 包含头像路径
 
             // 如果有填写新密码，则添加
             if (
@@ -920,14 +885,6 @@ export default {
 
               this.$message.success(this.isAddMode ? "新增成功" : "更新成功");
               this.dialogVisible = false;
-
-              // ========== 新增：新增用户后上传头像（因为新增时无userId） ==========
-              if (this.isAddMode && this.avatarFile) {
-                const newUserId = response.data?.id; // 假设后端返回新增用户的ID
-                if (newUserId) {
-                  this.uploadAvatarAfterAdd(newUserId);
-                }
-              }
 
               // 如果是新增，重置到第一页显示最新的数据
               if (this.isAddMode) {
@@ -1015,12 +972,12 @@ export default {
         email: "",
         phone: "",
         status: "1",
-        avatar: "", // ========== 新增：重置头像路径 ==========
+        avatar: "", // 重置头像路径
       };
-      // ========== 新增：重置头像相关变量 ==========
+
+      // 重置头像相关变量
       this.avatarUrl = "";
       this.uploadingAvatar = false;
-      this.avatarFile = null;
     },
 
     // 多选框选择变化事件
@@ -1237,7 +1194,7 @@ export default {
       position: absolute;
       bottom: -8px;
       left: 0;
-      width: 60px;
+      width: 47px;
       height: 4px;
       background: linear-gradient(135deg, #409eff 0%, #1890ff 100%);
       border-radius: 2px;
@@ -1608,7 +1565,7 @@ export default {
   }
 }
 
-/* ========== 新增：头像上传样式 ========== */
+/* ========== 头像上传样式 ========== */
 .avatar-uploader {
   display: flex;
   flex-direction: column;
