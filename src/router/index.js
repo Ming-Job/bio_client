@@ -7,10 +7,10 @@ Vue.use(VueRouter)
 // 路由懒加载
 const Login = () => import('@/views/login/LoginPage.vue')
 const Register = () => import('@/views/login/RegisterPage.vue')
-const HomePage = () => import('@/views/Home.vue')
-const BackLayout = () => import('@/views/BackLayout.vue')
 const NotFound = () => import('@/views/error/404Page.vue')
 
+
+const BackLayout = () => import('@/views/BackLayout.vue')
 // 管理员模块
 const AdminDashboard = () => import('@/views/admin/AdminDashboard.vue')
 const UserManagement = () => import('@/views/admin/UserManagement.vue')
@@ -32,6 +32,10 @@ const MyCourses = () => import('@/views/student/MyCourses.vue')
 const UserProfile = () => import('@/components/user/UserProfile.vue')
 const AccountSetting = () => import('@/components/user/AccountSetting.vue')
 
+
+const HomePage = () => import('@/views/Home.vue')
+const MainLayout = () => import('@/components/MainLayout.vue')
+const CourseList = () => import('@/views/course/CourseList.vue');
 
 
 const routes = [
@@ -62,17 +66,42 @@ const routes = [
     }
   },
 
-  // 首页
+
+  // 前台
   {
-    path: '/home',
-    name: 'HomePage',
-    component: HomePage,
-    meta: {
-      title: '首页 - 生物信息教育平台',
-      requiresAuth: true,
-      breadcrumb: '首页'
-    }
-  },
+      // 父路由：使用MainLayout布局
+      path: "/",
+      name: "MainLayout",
+      component: MainLayout,
+      // 子路由：所有需要保留Header/Footer的页面都放在children中
+      children: [
+        {
+          // 首页：子路由path为空，对应父路由的默认页面
+          path: "home",
+          name: "HomePage",
+          component: HomePage
+        },
+        {
+          // 课程列表：子路由path为courses，与你的原有配置一致
+          path: "courses",
+          name: "CourseList",
+          component: CourseList,
+          meta: { title: "课程列表" }
+        }
+        // 后续可添加：科普视频、科研动态等页面，只需在这里补充子路由即可
+        // {
+        //   path: "videos",
+        //   name: "ScienceVideo",
+        //   component: () => import('@/views/video/ScienceVideo.vue')
+        // }
+      ]
+    },
+
+
+
+
+
+
 
   // 后台
   {
@@ -224,14 +253,6 @@ const routes = [
       }
     ]
   },
-
-// 课程相关路由
-    {
-      path: '/courses',
-      name: 'CourseList',
-      component: () => import('@/views/course/CourseList.vue'),
-      meta: { title: '课程列表' }
-    },
 
 
   {

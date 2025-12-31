@@ -45,7 +45,7 @@
             <!-- 用户已登录：显示用户头像 -->
             <el-avatar
               v-if="isLoggedIn && userInfo.avatar"
-              :src="avatarFullUrl"
+              :src="getAvatarFullUrl(userInfo.avatar)"
               :size="40"
               class="user-avatar"
               @error="handleAvatarError"
@@ -106,12 +106,13 @@
 
 <script>
 import { mapState, mapActions } from "vuex";
+import { getAvatarUrl } from "@/utils/auth";
 
 export default {
   name: "HeaderPage",
   data() {
     return {
-      activeIndex: "3",
+      activeIndex: "1",
       searchKeyword: "",
       avatarLoadError: false,
     };
@@ -122,29 +123,6 @@ export default {
       isLoggedIn: (state) => state.isLoggedIn,
       userInfo: (state) => state.userInfo,
     }),
-
-    // 计算属性：获取完整头像URL
-    avatarFullUrl() {
-      // 检查Vuex状态是否已加载
-      if (
-        !this.isLoggedIn ||
-        !this.userInfo ||
-        !this.userInfo.avatar ||
-        this.avatarLoadError
-      ) {
-        console.log("头像条件不满足:", {
-          isLoggedIn: this.isLoggedIn,
-          userInfo: this.userInfo,
-          avatar: this.userInfo?.avatar,
-          avatarLoadError: this.avatarLoadError,
-        });
-        return "";
-      }
-
-      const url = this.getAvatarUrl(this.userInfo.avatar);
-      console.log("头像URL:", url);
-      return url;
-    },
   },
   created() {
     console.log("Header组件创建，检查登录状态");
@@ -163,30 +141,28 @@ export default {
     }, 100);
   },
   methods: {
-    // 修复：映射user模块的actions
+    // 映射user模块的actions
     ...mapActions("user", ["checkLoginStatus", "logout", "setUserInfo"]),
-
-    // 获取头像URL
-    getAvatarUrl(avatarPath) {
-      if (!avatarPath) {
-        console.log("无头像路径，返回默认");
-        return "https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png";
-      }
-
-      console.log("处理头像路径:", avatarPath);
-
-      // 如果已经是完整URL，直接返回
-      if (avatarPath.startsWith("http")) {
-        return avatarPath;
-      }
-
-      // 使用环境变量或默认的后端地址
-      const baseUrl = process.env.VUE_APP_API_URL || "http://localhost:8080";
-      return `${baseUrl}${avatarPath}`;
-    },
 
     handleSearch() {
       // 搜索逻辑...
+    },
+
+    // 菜单选择事件，实现路由跳转
+    handleSelect(index) {
+      // 建立菜单index和路由的映射表
+      const menuRouteMap = {
+        1: { path: "/" }, // 首页对应根路径
+        3: { name: "CourseList" }, // 课程列表对应CourseList路由（优先使用name，更稳定）
+      };
+      // 获取当前选中index对应的路由配置
+      const targetRoute = menuRouteMap[index];
+      if (targetRoute) {
+        // 更新当前激活的菜单索引
+        this.activeIndex = index;
+        // 跳转到对应路由界面
+        this.$router.push(targetRoute);
+      }
     },
 
     handleLogin() {
@@ -277,6 +253,11 @@ export default {
       return `role-${role}`;
     },
 
+    // 计算属性：获取完整头像URL
+    getAvatarFullUrl(avatar) {
+      return getAvatarUrl(avatar);
+    },
+
     handleAvatarError() {
       console.warn("头像加载失败");
       this.avatarLoadError = true;
@@ -294,6 +275,19 @@ export default {
       // 当路由变化时，重新检查登录状态
       if (to.name === "LoginPage" || to.name === "Logout") {
         this.checkLoginStatus();
+      }
+
+      // 同步路由与菜单高亮状态（核心：路由→菜单index映射）
+      const routeMenuMap = {
+        "/": "1", // 根路径对应首页index="1"
+        "/courses": "3", // 课程列表路径对应index="3"
+        // 其他路由可后续补充
+      };
+
+      // 更新激活的菜单索引
+      const currentMenuIndex = routeMenuMap[to.path];
+      if (currentMenuIndex) {
+        this.activeIndex = currentMenuIndex;
       }
     },
   },
