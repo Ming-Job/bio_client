@@ -45,12 +45,6 @@ export default {
           icon: "el-icon-connection",
           color: "#9C27B0",
         },
-        {
-          title: "专家讲座",
-          description: "生物学领域专家在线讲座与答疑",
-          icon: "el-icon-microphone",
-          color: "#FF9800",
-        },
       ],
     };
   },

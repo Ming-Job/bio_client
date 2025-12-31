@@ -118,7 +118,6 @@ export default {
         { text: "知识测验", icon: "el-icon-question", url: "/quiz" },
         { text: "科学论坛", icon: "el-icon-chat-line-square", url: "/forum" },
         { text: "科普文章", icon: "el-icon-reading", url: "/articles" },
-        { text: "教师社区", icon: "el-icon-user", url: "/community" },
       ],
     };
   },

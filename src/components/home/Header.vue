@@ -26,7 +26,7 @@
           <el-menu-item index="2-3">微生物</el-menu-item>
           <el-menu-item index="2-4">人体生物学</el-menu-item>
         </el-submenu>
-        <el-menu-item index="3">教学资源</el-menu-item>
+        <el-menu-item index="3">课程列表</el-menu-item>
         <el-menu-item index="4">科普视频</el-menu-item>
         <el-menu-item index="5">科研动态</el-menu-item>
       </el-menu>
@@ -111,7 +111,7 @@ export default {
   name: "HeaderPage",
   data() {
     return {
-      activeIndex: "1",
+      activeIndex: "3",
       searchKeyword: "",
       avatarLoadError: false,
     };
@@ -432,7 +432,7 @@ export default {
   ::v-deep .el-menu {
     flex: 1;
     margin: 0 40px;
-    
+
     &.el-menu--horizontal {
       border-bottom: none;
     }

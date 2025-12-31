@@ -32,11 +32,15 @@ const MyCourses = () => import('@/views/student/MyCourses.vue')
 const UserProfile = () => import('@/components/user/UserProfile.vue')
 const AccountSetting = () => import('@/components/user/AccountSetting.vue')
 
+
+
 const routes = [
   {
     path: '/',
     redirect: '/login'
   },
+
+  // 登录
   {
     path: '/login',
     name: 'LoginPage',
@@ -46,6 +50,8 @@ const routes = [
       requiresAuth: false
     }
   },
+
+  // 注册
   {
     path: '/register',
     name: 'RegisterPage',
@@ -56,6 +62,7 @@ const routes = [
     }
   },
 
+  // 首页
   {
     path: '/home',
     name: 'HomePage',
@@ -67,7 +74,7 @@ const routes = [
     }
   },
 
-
+  // 后台
   {
     path: '/back',
     name: 'BackLayout',
@@ -217,6 +224,14 @@ const routes = [
       }
     ]
   },
+
+// 课程相关路由
+    {
+      path: '/courses',
+      name: 'CourseList',
+      component: () => import('@/views/course/CourseList.vue'),
+      meta: { title: '课程列表' }
+    },
 
 
   {
