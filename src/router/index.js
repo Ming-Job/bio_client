@@ -4,6 +4,18 @@ import store from '@/store' // 假设您有 Vuex store
 
 Vue.use(VueRouter)
 
+
+const originalPush = VueRouter.prototype.push
+VueRouter.prototype.push = function push(location) {
+  return originalPush.call(this, location).catch(err => err) // 错误被捕获，不会显示警告
+}
+
+// 对于 replace 方法也做同样处理
+const originalReplace = VueRouter.prototype.replace
+VueRouter.prototype.replace = function replace(location) {
+  return originalReplace.call(this, location).catch(err => err)
+}
+
 // 路由懒加载
 const Login = () => import('@/views/login/LoginPage.vue')
 const Register = () => import('@/views/login/RegisterPage.vue')
@@ -82,11 +94,14 @@ const routes = [
           component: HomePage
         },
         {
-          // 课程列表：子路由path为courses，与你的原有配置一致
+          // 课程列表：子路由path为courses，
           path: "courses",
           name: "CourseList",
           component: CourseList,
-          meta: { title: "课程列表" }
+          meta: { title: "课程列表" },
+
+          children: [
+          ]
         }
         // 后续可添加：科普视频、科研动态等页面，只需在这里补充子路由即可
         // {

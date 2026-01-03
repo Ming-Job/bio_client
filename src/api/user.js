@@ -172,6 +172,14 @@ export function getUserGrowthData(period = '30d') {
   })
 }
 
+// 根据ID查找用户名
+export function getUsername(id){
+  return request({
+    url: `/api/user/get-username/${id}`,
+    method: 'get'
+  })
+}
+
 // /api/user.js
 export function updateUserAvatar(data) {
   return request({

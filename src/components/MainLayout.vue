@@ -40,8 +40,8 @@ html,
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: url("@/assets/carousel/backgroud.png") no-repeat center center
-    fixed;
+  /* background: url("@/assets/carousel/backgroud.png") no-repeat center center fixed; */
+  background-color: #d8d8d8;
   background-size: cover;
   /* 新增：给布局容器添加内边距，避免底部内容被固定Footer遮挡 */
   padding-bottom: 60px; /* 数值等于Footer的高度，根据你的Footer调整 */

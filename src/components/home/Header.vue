@@ -152,7 +152,7 @@ export default {
     handleSelect(index) {
       // 建立菜单index和路由的映射表
       const menuRouteMap = {
-        1: { path: "/" }, // 首页对应根路径
+        1: { name: "HomePage" }, // 首页对应根路径
         3: { name: "CourseList" }, // 课程列表对应CourseList路由（优先使用name，更稳定）
       };
       // 获取当前选中index对应的路由配置

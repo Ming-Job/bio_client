@@ -1,470 +1,521 @@
 <template>
   <div class="course-list-container">
-    <!-- 搜索和筛选区域 -->
-    <div class="search-filter-container">
-      <el-card>
-        <div class="filter-content">
-          <!-- 搜索框 -->
-          <div class="search-box">
-            <el-input
-              v-model="searchKeyword"
-              placeholder="搜索课程..."
-              prefix-icon="el-icon-search"
-              @keyup.enter.native="handleSearch"
-              style="width: 300px"
-            >
-              <el-button
-                slot="append"
-                icon="el-icon-search"
-                @click="handleSearch"
-              ></el-button>
-            </el-input>
-          </div>
-
-          <!-- 筛选条件 -->
-          <div class="filter-options">
-            <el-select
-              v-model="filter.category"
-              placeholder="全部分类"
-              clearable
-              @change="loadCourses"
-            >
-              <el-option label="DNA分析" value="DNA分析"></el-option>
-              <el-option label="RNA分析" value="RNA分析"></el-option>
-              <el-option label="蛋白质分析" value="蛋白质分析"></el-option>
-              <el-option label="基因组学" value="基因组学"></el-option>
-              <el-option label="转录组学" value="转录组学"></el-option>
-              <el-option label="蛋白质组学" value="蛋白质组学"></el-option>
-            </el-select>
-
-            <el-select
-              v-model="filter.difficulty"
-              placeholder="全部难度"
-              clearable
-              @change="loadCourses"
-              style="margin-left: 10px"
-            >
-              <el-option label="初级" value="1"></el-option>
-              <el-option label="中级" value="2"></el-option>
-              <el-option label="高级" value="3"></el-option>
-            </el-select>
-          </div>
-        </div>
-      </el-card>
+    <h2 class="page-title">全部课程</h2>
+    
+    <!-- 加载状态 -->
+    <div v-if="loading" class="loading-container">
+      <el-skeleton :rows="6" animated />
     </div>
 
-    <!-- 课程列表 -->
-    <div class="course-list-content">
-      <div v-if="loading" class="loading-container">
-        <el-skeleton :rows="6" animated />
-      </div>
+    <!-- 按类别分组的课程列表 -->
+    <div v-else-if="Object.keys(groupedCourses).length > 0" class="category-groups">
+      <div 
+        v-for="(courses, categoryName) in groupedCourses" 
+        :key="categoryName" 
+        class="category-group"
+      >
+        <!-- 类别标题 -->
+        <div class="category-header">
+          <div class="category-title-wrapper">
+            <i class="el-icon-collection-tag category-icon"></i>
+            <h3 class="category-title">{{ categoryName || '未分类' }}</h3>
+            <span class="course-count">({{ courses.length }}门课程)</span>
+          </div>
+          <el-divider class="category-divider" />
+        </div>
 
-      <div v-else-if="courses.length === 0" class="empty-container">
-        <el-empty description="暂无课程" />
-      </div>
-
-      <div v-else class="course-grid">
-        <el-row :gutter="20">
-          <el-col
-            v-for="course in courses"
-            :key="course.id"
-            :xs="24"
-            :sm="12"
-            :md="8"
-            :lg="6"
-            style="margin-bottom: 20px"
+        <!-- 横向课程列表 -->
+        <div class="horizontal-course-list">
+          <div 
+            v-for="course in courses" 
+            :key="course.id" 
+            class="course-card-horizontal"
           >
-            <el-card class="course-card" shadow="hover">
-              <!-- 课程封面 -->
-              <div class="course-cover" @click="goToDetail(course.id)">
-                <img
-                  v-if="course.coverImage"
-                  :src="course.coverImage"
-                  :alt="course.title"
-                />
-                <div v-else class="default-cover">
-                  <i class="el-icon-notebook-2"></i>
-                  <span>{{ course.category }}</span>
+            <!-- 课程封面 -->
+            <div class="course-cover-wrapper">
+              <el-image
+                v-if="course.coverImage"
+                :src="getCoverUrl(course.coverImage)"
+                :alt="course.title"
+                fit="cover"
+                class="course-cover-img"
+              >
+                <div slot="error" class="image-error">
+                  <i class="el-icon-picture-outline"></i>
+                  <span>加载失败</span>
                 </div>
-                <div class="course-status">
-                  <el-tag v-if="course.status === 0" type="info" size="mini"
-                    >草稿</el-tag
-                  >
-                  <el-tag v-if="course.status === 1" type="success" size="mini"
-                    >已发布</el-tag
-                  >
+              </el-image>
+              <div v-else class="no-cover-img">
+                <i class="el-icon-picture-outline"></i>
+                <span>无封面</span>
+              </div>
+              
+              <!-- 分类标签 -->
+              <div v-if="course.category" class="cover-category-tag">
+                <el-tag size="mini" type="info">{{ course.category }}</el-tag>
+              </div>
+            </div>
+
+            <!-- 课程信息 -->
+            <div class="course-info-horizontal">
+              <h4 class="course-title-horizontal" :title="course.title">
+                {{ course.title }}
+              </h4>
+              
+              <div class="course-meta">
+                <!-- 教师信息 -->
+                <div class="meta-item">
+                  <i class="el-icon-user meta-icon"></i>
+                  <span class="meta-text">{{ teacherNames[course.teacherId] || '加载中...' }}</span>
+                </div>
+
+                <!-- 创建时间 -->
+                <div class="meta-item">
+                  <i class="el-icon-time meta-icon"></i>
+                  <span class="meta-text">{{ formatTime(course.createTime) }}</span>
+                </div>
+
+                <!-- 学生数量 -->
+                <div class="meta-item">
+                  <i class="el-icon-user-solid meta-icon"></i>
+                  <span class="meta-text">{{ course.studentCount }}人</span>
                 </div>
               </div>
 
-              <!-- 课程信息 -->
-              <div class="course-info">
-                <h3 class="course-title" @click="goToDetail(course.id)">
-                  {{ course.title }}
-                </h3>
-
-                <div class="course-meta">
-                  <div class="meta-item">
-                    <i class="el-icon-user"></i>
-                    <span>{{ course.teacherName || "未知教师" }}</span>
-                  </div>
-                  <div class="meta-item">
-                    <i class="el-icon-s-custom"></i>
-                    <span>{{ course.studentCount }}人学习</span>
-                  </div>
-                </div>
-
-                <div class="course-tags">
-                  <el-tag size="mini">{{ course.category }}</el-tag>
-                  <el-tag
-                    v-if="course.difficulty"
-                    :type="getDifficultyTagType(course.difficulty)"
-                    size="mini"
-                  >
-                    {{ getDifficultyText(course.difficulty) }}
-                  </el-tag>
-                </div>
-
-                <!-- 操作按钮 -->
-                <div class="course-actions">
-                  <el-button
-                    v-if="
-                      userRole === 'teacher' &&
-                      course.teacherId === currentUserId
-                    "
-                    type="primary"
-                    size="small"
-                    icon="el-icon-edit"
-                    @click="editCourse(course.id)"
-                    >编辑</el-button
-                  >
-
-                  <el-button
-                    v-else-if="userRole === 'student'"
-                    :type="course.selected ? 'success' : 'primary'"
-                    :icon="course.selected ? 'el-icon-check' : 'el-icon-plus'"
-                    size="small"
-                    @click="handleSelectCourse(course)"
-                    :loading="selectingCourseId === course.id"
-                  >
-                    {{ course.selected ? "已选课" : "选课" }}
-                  </el-button>
-
-                  <el-button
-                    type="text"
-                    icon="el-icon-view"
-                    @click="goToDetail(course.id)"
-                    >详情</el-button
-                  >
-                </div>
+              <!-- 操作按钮 -->
+              <div class="course-actions-horizontal">
+                <el-button 
+                  type="primary" 
+                  size="mini" 
+                  plain 
+                  class="action-btn"
+                  @click="viewCourseDetail(course.id)"
+                >
+                  查看详情
+                </el-button>
               </div>
-            </el-card>
-          </el-col>
-        </el-row>
-
-        <!-- 分页 -->
-        <div class="pagination-container">
-          <el-pagination
-            :current-page="pagination.current"
-            :page-size="pagination.size"
-            :total="pagination.total"
-            :page-sizes="[12, 24, 36, 48]"
-            layout="total, sizes, prev, pager, next, jumper"
-            @size-change="handleSizeChange"
-            @current-change="handleCurrentChange"
-          />
+            </div>
+          </div>
         </div>
       </div>
+    </div>
+
+    <!-- 无数据状态 -->
+    <div v-else class="empty-container">
+      <el-empty description="暂无课程数据" />
     </div>
   </div>
 </template>
 
 <script>
+import { getCourses } from '@/api/course'
+import { getAvatarUrl } from '@/utils/auth';
+import { getUsername } from '@/api/user'
+
 export default {
-  name: "CourseList",
+  name: 'CourseList',
   data() {
     return {
-      loading: false,
       courses: [],
-      searchKeyword: "",
-      filter: {
-        category: "",
-        difficulty: "",
-      },
-      pagination: {
-        current: 1,
-        size: 12,
-        total: 0,
-      },
-      selectingCourseId: null,
-      currentUserId: null,
-      userRole: "",
-    };
+      teacherNames: {},
+      loading: false,
+      groupedCourses: {}
+    }
   },
   created() {
-    // 获取用户信息
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
-    this.currentUserId = user.id;
-    this.userRole = user.role;
-
-    this.loadCourses();
+    this.fetchCourses()
+    console.log('CourseList component created.')
   },
   methods: {
-    // 加载课程列表
-    async loadCourses() {
-      this.loading = true;
+    async fetchCourses() {
+      this.loading = true
       try {
-        const params = {
-          pageNum: this.pagination.current,
-          pageSize: this.pagination.size,
-          ...this.filter,
-        };
-
-        if (this.searchKeyword) {
-          params.keyword = this.searchKeyword;
-        }
-
-        const response = await this.$http.get("/api/courses", { params });
-        if (response.data.code === 200) {
-          this.courses = response.data.data.records || [];
-          this.pagination.total = response.data.data.total || 0;
-        } else {
-          this.$message.error(response.data.message);
-        }
-      } catch (error) {
-        console.error("加载课程失败:", error);
-        this.$message.error("加载课程失败");
+        const data = await getCourses()
+        this.courses = data.data.records
+        
+        // 获取所有不重复的教师ID
+        const teacherIds = [...new Set(
+          this.courses.map(course => course.teacherId).filter(id => id)
+        )]
+        
+        // 批量获取教师姓名
+        await this.batchFetchTeachers(teacherIds)
+        
+        // 按类别分组
+        this.groupCoursesByCategory()
+        
+      } catch (err) {
+        console.error('获取课程失败:', err)
+        this.$message.error('获取课程列表失败，请重试')
       } finally {
-        this.loading = false;
+        this.loading = false
       }
     },
 
-    // 搜索课程
-    handleSearch() {
-      this.pagination.current = 1;
-      this.loadCourses();
+    groupCoursesByCategory() {
+      const grouped = {}
+      
+      this.courses.forEach(course => {
+        const category = course.category || '未分类'
+        
+        if (!grouped[category]) {
+          grouped[category] = []
+        }
+        
+        grouped[category].push(course)
+      })
+      
+      // 排序：有类别的按字母排序，未分类放在最后
+      this.groupedCourses = Object.keys(grouped)
+        .sort((a, b) => {
+          if (a === '未分类') return 1
+          if (b === '未分类') return -1
+          return a.localeCompare(b)
+        })
+        .reduce((acc, key) => {
+          acc[key] = grouped[key]
+          return acc
+        }, {})
     },
 
-    // 查看课程详情
-    goToDetail(courseId) {
-      this.$router.push(`/course/${courseId}`);
-    },
-
-    // 编辑课程（教师）
-    editCourse(courseId) {
-      this.$router.push(`/teacher/course/${courseId}/edit`);
-    },
-
-    // 学生选课
-    async handleSelectCourse(course) {
-      if (this.userRole !== "student") {
-        this.$message.warning("只有学生可以选课");
-        return;
-      }
-
-      if (course.selected) {
-        this.$message.info("您已经选过这门课程了");
-        return;
-      }
-
-      this.selectingCourseId = course.id;
-      try {
-        const response = await this.$http.post(
-          `/api/selections/course/${course.id}/select`,
-          null,
-          {
-            params: { studentId: this.currentUserId },
+    async batchFetchTeachers(teacherIds) {
+      if (!teacherIds.length) return
+      
+      const promises = teacherIds.map(async (id) => {
+        try {
+          const response = await getUsername(id)
+          if (response.code === 200) {
+            this.$set(this.teacherNames, id, response.data)
           }
-        );
-
-        if (response.data.code === 200) {
-          this.$message.success("选课成功");
-          course.selected = true;
-          course.studentCount += 1;
-        } else {
-          this.$message.error(response.data.message);
+        } catch (error) {
+          console.error(`获取教师${id}失败:`, error)
+          this.$set(this.teacherNames, id, '未知教师')
         }
-      } catch (error) {
-        console.error("选课失败:", error);
-        this.$message.error("选课失败");
-      } finally {
-        this.selectingCourseId = null;
+      })
+      
+      await Promise.all(promises)
+    },
+    
+    getCoverUrl(cover) {
+      return getAvatarUrl(cover)
+    },
+
+    formatTime(time) {
+      if (!time) return '-'
+      try {
+        const date = new Date(time)
+        return date.toLocaleDateString('zh-CN')
+      } catch (e) {
+        return time
       }
     },
-
-    // 获取难度标签类型
-    getDifficultyTagType(difficulty) {
-      const map = { 1: "success", 2: "warning", 3: "danger" };
-      return map[difficulty] || "info";
-    },
-
-    // 获取难度文本
-    getDifficultyText(difficulty) {
-      const map = { 1: "初级", 2: "中级", 3: "高级" };
-      return map[difficulty] || "未知";
-    },
-
-    // 分页大小改变
-    handleSizeChange(size) {
-      this.pagination.size = size;
-      this.pagination.current = 1;
-      this.loadCourses();
-    },
-
-    // 页码改变
-    handleCurrentChange(page) {
-      this.pagination.current = page;
-      this.loadCourses();
-    },
-  },
-};
+    
+    viewCourseDetail(courseId) {
+      // 跳转到课程详情页
+      this.$router.push(`/course/detail/${courseId}`)
+    }
+  }
+}
 </script>
 
 <style scoped>
 .course-list-container {
   padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
+  max-width: 1400px;
+  margin: 0 150px;
+  min-height: calc(100vh - 60px);
 }
 
-.search-filter-container {
-  margin-bottom: 20px;
+.page-title {
+  margin: 0 0 30px 0;
+  color: #303133;
+  font-size: 28px;
+  font-weight: 600;
+  text-align: center;
 }
 
-.filter-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 15px;
+.loading-container {
+  padding: 20px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
 }
 
-.course-grid {
-  min-height: 500px;
-}
-
-.course-card {
-  height: 100%;
-  transition: all 0.3s;
-}
-
-.course-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
-}
-
-.course-cover {
-  position: relative;
-  height: 160px;
-  background: #f5f7fa;
-  border-radius: 4px;
-  overflow: hidden;
-  cursor: pointer;
-}
-
-.course-cover img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.default-cover {
+/* 类别分组样式 */
+.category-groups {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  gap: 30px;
+}
+
+.category-group {
+  background: #fbfbfb;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.category-group:hover {
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* 类别标题样式 */
+.category-header {
+  padding: 20px 24px 0;
+}
+
+.category-title-wrapper {
+  display: flex;
   align-items: center;
-  height: 100%;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.category-icon {
+  font-size: 24px;
+  color: #409EFF;
+}
+
+.category-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  color: #303133;
+  line-height: 1.2;
+}
+
+.course-count {
+  font-size: 14px;
   color: #909399;
+  margin-left: 4px;
+}
+
+.category-divider {
+  margin: 0;
+}
+
+/* 横向课程列表样式 */
+.horizontal-course-list {
+  display: flex;
+  gap: 20px;
+  padding: 24px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #c1c1c1 #f5f5f5;
+}
+
+/* 自定义滚动条样式 */
+.horizontal-course-list::-webkit-scrollbar {
+  height: 8px;
+}
+
+.horizontal-course-list::-webkit-scrollbar-track {
+  background: #f5f5f5;
+  border-radius: 4px;
+}
+
+.horizontal-course-list::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.horizontal-course-list::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* 横向课程卡片样式 */
+.course-card-horizontal {
+  flex: 0 0 auto;
+  width: 280px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  transition: all 0.3s ease;
+  border: 1px solid #ebeef5;
+  display: flex;
+  flex-direction: column;
+}
+
+.course-card-horizontal:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* 课程封面区域 */
+.course-cover-wrapper {
+  position: relative;
+  width: 100%;
+  height: 160px;
+  overflow: hidden;
+}
+
+.course-cover-img,
+.no-cover-img {
+  width: 100%;
+  height: 100%;
+}
+
+.image-error,
+.no-cover-img {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  color: #909399;
+}
+
+.image-error i,
+.no-cover-img i {
+  font-size: 48px;
+  margin-bottom: 10px;
+  opacity: 0.7;
+}
+
+.image-error span,
+.no-cover-img span {
   font-size: 14px;
 }
 
-.default-cover i {
-  font-size: 48px;
-  margin-bottom: 10px;
-}
-
-.course-status {
+/* 封面上的分类标签 */
+.cover-category-tag {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 12px;
+  right: 12px;
 }
 
-.course-info {
-  padding: 15px 0 0;
+/* 课程信息区域 */
+.course-info-horizontal {
+  flex: 1;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
 }
 
-.course-title {
-  margin: 0 0 10px;
+.course-title-horizontal {
+  margin: 0 0 12px 0;
   font-size: 16px;
   font-weight: 600;
   color: #303133;
   line-height: 1.4;
-  cursor: pointer;
-  transition: color 0.3s;
+  height: 44px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  text-overflow: ellipsis;
 }
 
-.course-title:hover {
-  color: #409eff;
-}
-
+/* 课程元信息 */
 .course-meta {
+  flex: 1;
   display: flex;
-  justify-content: space-between;
-  margin-bottom: 10px;
-  color: #909399;
-  font-size: 12px;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
 }
 
 .meta-item {
   display: flex;
   align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #606266;
 }
 
-.meta-item i {
-  margin-right: 4px;
-}
-
-.course-tags {
-  margin-bottom: 15px;
-}
-
-.course-tags .el-tag {
-  margin-right: 5px;
-  margin-bottom: 5px;
-}
-
-.course-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-top: 10px;
-  border-top: 1px solid #ebeef5;
-}
-
-.pagination-container {
-  margin-top: 30px;
+.meta-icon {
+  color: #909399;
+  font-size: 14px;
+  width: 16px;
   text-align: center;
 }
 
-.loading-container {
-  padding: 40px 0;
+.meta-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
+/* 操作按钮 */
+.course-actions-horizontal {
+  padding-top: 12px;
+  border-top: 1px solid #ebeef5;
+}
+
+.action-btn {
+  width: 100%;
+}
+
+/* 空状态 */
 .empty-container {
-  padding: 60px 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+/* 响应式设计 */
+@media (max-width: 1200px) {
+  .course-list-container {
+    padding: 16px;
+  }
+  
+  .course-card-horizontal {
+    width: 260px;
+  }
 }
 
 @media (max-width: 768px) {
-  .filter-content {
+  .page-title {
+    font-size: 24px;
+    margin-bottom: 20px;
+  }
+  
+  .category-groups {
+    gap: 20px;
+  }
+  
+  .category-header {
+    padding: 16px 20px 0;
+  }
+  
+  .category-title {
+    font-size: 20px;
+  }
+  
+  .horizontal-course-list {
+    padding: 20px 16px;
+    gap: 16px;
+  }
+  
+  .course-card-horizontal {
+    width: 240px;
+  }
+  
+  .course-cover-wrapper {
+    height: 140px;
+  }
+}
+
+@media (max-width: 480px) {
+  .course-list-container {
+    padding: 12px;
+  }
+  
+  .category-title-wrapper {
     flex-direction: column;
-    align-items: stretch;
+    align-items: flex-start;
+    gap: 8px;
   }
-
-  .search-box {
-    width: 100%;
-  }
-
-  .search-box .el-input {
-    width: 100%;
+  
+  .course-card-horizontal {
+    width: 220px;
   }
 }
 </style>
