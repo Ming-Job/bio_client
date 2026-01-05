@@ -37,7 +37,7 @@
           <div class="user-meta">
             <h3>{{ userInfo.username }}</h3>
             <el-tag :type="roleType" size="small">
-              {{ getRoleDisplayName(userInfo.role) }}
+              {{ userRoleText }}
             </el-tag>
             <div class="status">
               <span
@@ -113,6 +113,7 @@ import { mapState } from "vuex";
 import { formatDateTime } from "@/utils/date";
 import { updateUser, updateUserAvatar } from "@/api/user";
 import { getAvatarUrl } from "@/utils/auth";
+import { getRoleText, getRoleTagType } from "@/utils/role";
 
 export default {
   name: "UserProfile",
@@ -155,8 +156,11 @@ export default {
     ...mapState("user", ["userInfo"]),
 
     roleType() {
-      const map = { admin: "danger", teacher: "warning", student: "success" };
-      return map[this.userInfo.role] || "info";
+      return getRoleTagType(this.userInfo.role);
+    },
+
+    userRoleText() {
+      return getRoleText(this.userInfo.role);
     },
   },
 
@@ -186,17 +190,11 @@ export default {
     // 获取头像URL
     getUserAvatar(avatar) {
       return getAvatarUrl(avatar);
-    },
+    },  
 
     // 格式化时间
     formatTime(time) {
       return formatDateTime(time);
-    },
-
-    // 获取角色显示名称
-    getRoleDisplayName(role) {
-      const map = { admin: "管理员", teacher: "教师", student: "学生" };
-      return map[role] || "普通用户";
     },
 
     // 保存用户信息

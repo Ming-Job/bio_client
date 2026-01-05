@@ -14,8 +14,7 @@
           >
             <el-option label="全部" value=""></el-option>
             <el-option label="管理员" value="admin"></el-option>
-            <el-option label="教师" value="teacher"></el-option>
-            <el-option label="学生" value="student"></el-option>
+            <el-option label="普通用户" value="user"></el-option>
           </el-select>
         </el-form-item>
 
@@ -629,8 +628,7 @@ export default {
     getRoleDisplayName(role) {
       const roleMap = {
         admin: "管理员",
-        teacher: "教师",
-        student: "学生",
+        user: "普通用户",
       };
       return roleMap[role] || role;
     },
@@ -639,8 +637,7 @@ export default {
     getRoleTagType(role) {
       const typeMap = {
         admin: "danger",
-        teacher: "warning",
-        student: "success",
+        user: "success",
       };
       return typeMap[role] || "info";
     },

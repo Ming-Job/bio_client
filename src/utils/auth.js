@@ -134,16 +134,6 @@ export function isAdmin() {
   return isRole('admin')
 }
 
-// 检查是否为教师
-export function isTeacher() {
-  return isRole('teacher')
-}
-
-// 检查是否为学生
-export function isStudent() {
-  return isRole('student')
-}
-
 // ========== 数据准备函数 ==========
 // 准备登录数据
 export function prepareLoginData(username, password) {

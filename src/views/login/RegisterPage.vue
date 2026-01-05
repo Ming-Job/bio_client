@@ -195,16 +195,10 @@ export default {
       // 角色选项
       roleOptions: [
         {
-          value: "student",
-          label: "学生",
+          value: "user",
+          label: "普通用户",
           icon: "el-icon-user",
           color: "#67c23a",
-        },
-        {
-          value: "teacher",
-          label: "教师",
-          icon: "el-icon-s-custom",
-          color: "#e6a23c",
         },
         {
           value: "admin",
@@ -247,7 +241,7 @@ export default {
 
       // 样式内容
       const css = `
-        /* 学生选项样式 */
+        /* 普通用户选项样式 */
         .el-select-dropdown__item:nth-child(1) .role-option-content {
           color: #67c23a !important;
         }
@@ -255,19 +249,11 @@ export default {
           color: #67c23a !important;
         }
         
-        /* 教师选项样式 */
-        .el-select-dropdown__item:nth-child(2) .role-option-content {
-          color: #e6a23c !important;
-        }
-        .el-select-dropdown__item:nth-child(2) .role-option-content i {
-          color: #e6a23c !important;
-        }
-        
         /* 管理员选项样式 */
-        .el-select-dropdown__item:nth-child(3) .role-option-content {
+        .el-select-dropdown__item:nth-child(2) .role-option-content {
           color: #f56c6c !important;
         }
-        .el-select-dropdown__item:nth-child(3) .role-option-content i {
+        .el-select-dropdown__item:nth-child(2) .role-option-content i {
           color: #f56c6c !important;
         }
         
@@ -277,11 +263,8 @@ export default {
         }
         
         /* 输入框根据选择的角色显示不同颜色 */
-        .role-select.role-student .el-input__inner {
+        .role-select.role-user .el-input__inner {
           border-left: 4px solid #67c23a !important;
-        }
-        .role-select.role-teacher .el-input__inner {
-          border-left: 4px solid #e6a23c !important;
         }
         .role-select.role-admin .el-input__inner {
           border-left: 4px solid #f56c6c !important;

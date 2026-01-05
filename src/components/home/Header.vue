@@ -20,25 +20,28 @@
       >
         <el-menu-item index="1">首页</el-menu-item>
         <el-submenu index="2">
-          <template slot="title">生物分类</template>
-          <el-menu-item index="2-1">动物王国</el-menu-item>
-          <el-menu-item index="2-2">植物世界</el-menu-item>
-          <el-menu-item index="2-3">微生物</el-menu-item>
-          <el-menu-item index="2-4">人体生物学</el-menu-item>
+          <template slot="title">分析工具</template>
+          <el-menu-item index="2-1">基础分析</el-menu-item>
+          <el-menu-item index="2-2">密码子分析</el-menu-item>
+          <el-menu-item index="2-3">特征分析</el-menu-item>
+          <el-menu-item index="2-4">蛋白质翻译</el-menu-item>
         </el-submenu>
-        <el-menu-item index="3">课程列表</el-menu-item>
-        <el-menu-item index="4">科普视频</el-menu-item>
-        <el-menu-item index="5">科研动态</el-menu-item>
+        <el-menu-item index="3">分析中心</el-menu-item>
+        <el-menu-item index="4">教学案例库</el-menu-item>
+        <el-menu-item index="5">我的项目</el-menu-item>
+        <el-menu-item index="6">帮助中心</el-menu-item>
       </el-menu>
 
       <div class="user-section">
-        <el-input
+
+        <!-- <el-input
           placeholder="搜索生物知识..."
           prefix-icon="el-icon-search"
           v-model="searchKeyword"
           @keyup.enter="handleSearch"
           style="width: 200px; margin-right: 20px"
-        />
+        /> -->
+
         <div class="user-info" @click="handleUserClick">
           <!-- 修改头像显示部分 -->
           <div class="avatar-container">
@@ -67,9 +70,9 @@
           <div class="login-register">
             <template v-if="isLoggedIn">
               <span class="user-name">{{ userInfo.username }}</span>
-              <span class="user-role" :class="getRoleClass(userInfo.role)">
-                {{ getRoleText(userInfo.role) }}
-              </span>
+              <el-tag :type="roleTagType" size="small" class="role-tag">
+                {{ userRoleText }}
+              </el-tag>
             </template>
             <el-button v-else type="text" @click.stop="handleLogin"
               >登录/注册</el-button
@@ -107,6 +110,7 @@
 <script>
 import { mapState, mapActions } from "vuex";
 import { getAvatarUrl } from "@/utils/auth";
+import { getRoleText, getRoleTagType } from "@/utils/role";
 
 export default {
   name: "HeaderPage",
@@ -123,6 +127,16 @@ export default {
       isLoggedIn: (state) => state.isLoggedIn,
       userInfo: (state) => state.userInfo,
     }),
+
+    // 用户角色文本
+    userRoleText() {
+      return getRoleText(this.userInfo.role);
+    },
+
+    // 用户角色标签类型
+    roleTagType() {
+      return getRoleTagType(this.userInfo.role);
+    },
   },
   created() {
     console.log("Header组件创建，检查登录状态");
@@ -153,7 +167,7 @@ export default {
       // 建立菜单index和路由的映射表
       const menuRouteMap = {
         1: { name: "HomePage" }, // 首页对应根路径
-        3: { name: "CourseList" }, // 课程列表对应CourseList路由（优先使用name，更稳定）
+        3: { name: "AnalysisPage" }, // 课程列表对应CourseList路由（优先使用name，更稳定）
       };
       // 获取当前选中index对应的路由配置
       const targetRoute = menuRouteMap[index];
@@ -238,19 +252,6 @@ export default {
       }
       const index = Math.abs(hash % colors.length);
       return colors[index];
-    },
-
-    getRoleText(role) {
-      const roleMap = {
-        student: "学生",
-        teacher: "教师",
-        admin: "管理员",
-      };
-      return roleMap[role] || role;
-    },
-
-    getRoleClass(role) {
-      return `role-${role}`;
     },
 
     // 计算属性：获取完整头像URL
@@ -380,13 +381,8 @@ export default {
           border-radius: 10px;
           margin-top: 2px;
 
-          &.role-student {
-            background-color: #67c23a;
-            color: white;
-          }
-
-          &.role-teacher {
-            background-color: #409eff;
+          &.role-user {
+            background-color: #eeee1e;
             color: white;
           }
 

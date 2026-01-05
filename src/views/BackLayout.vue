@@ -54,42 +54,19 @@
           </el-menu-item>
         </template>
 
-        <!-- 教师菜单 -->
-        <template v-else-if="isTeacher">
-          <el-menu-item index="/back/teacher/dashboard">
-            <i class="el-icon-s-platform menu-icon"></i>
-            <span slot="title">仪表盘</span>
-          </el-menu-item>
-
-          <el-menu-item index="/back/teacher/courses">
-            <i class="el-icon-notebook-1 menu-icon"></i>
-            <span slot="title">授课管理</span>
-          </el-menu-item>
-
-          <el-menu-item index="/back/teacher/students">
-            <i class="el-icon-user menu-icon"></i>
-            <span slot="title">学生管理</span>
-          </el-menu-item>
-
-          <el-menu-item index="/back/teacher/tasks">
-            <i class="el-icon-tickets menu-icon"></i>
-            <span slot="title">作业管理</span>
-          </el-menu-item>
-        </template>
-
         <!-- 学生菜单 -->
-        <template v-else-if="isStudent">
-          <el-menu-item index="/back/student/dashboard">
+        <template v-else-if="isUser">
+          <el-menu-item index="/back/user/dashboard">
             <i class="el-icon-s-opportunity menu-icon"></i>
             <span slot="title">仪表盘</span>
           </el-menu-item>
 
-          <el-menu-item index="/back/student/learning-center">
+          <el-menu-item index="/back/user/learning-center">
             <i class="el-icon-school menu-icon"></i>
             <span slot="title">学习中心</span>
           </el-menu-item>
 
-          <el-menu-item index="/back/student/courses">
+          <el-menu-item index="/back/user/courses">
             <i class="el-icon-collection menu-icon"></i>
             <span slot="title">我的课程</span>
           </el-menu-item>
@@ -295,6 +272,7 @@
 <script>
 import { mapState, mapActions } from "vuex";
 import { getAvatarUrl } from "@/utils/auth";
+import { getRoleText, getRoleTagType } from "@/utils/role";
 
 export default {
   name: "BackLayout",
@@ -312,26 +290,6 @@ export default {
           read: false,
         },
       ],
-      searchOptions: [
-        {
-          value: "用户管理",
-          path: "/back/admin/users",
-          icon: "el-icon-user",
-          type: "功能",
-        },
-        {
-          value: "课程管理",
-          path: "/back/admin/courses",
-          icon: "el-icon-notebook-2",
-          type: "功能",
-        },
-        {
-          value: "学习中心",
-          path: "/back/student/learning-center",
-          icon: "el-icon-school",
-          type: "页面",
-        },
-      ],
       isDarkTheme: false,
       isFullscreen: false,
     };
@@ -346,39 +304,30 @@ export default {
     isAdmin() {
       return this.userInfo.role === "admin";
     },
-    isTeacher() {
-      return this.userInfo.role === "teacher";
-    },
-    isStudent() {
-      return this.userInfo.role === "student";
+    isUser() {
+      return this.userInfo.role === "user";
     },
 
     userRoleText() {
-      const roles = {
-        admin: "管理员",
-        teacher: "教师",
-        student: "学生",
-      };
-      return roles[this.userInfo.role] || "用户";
+      return getRoleText(this.userInfo.role);
     },
 
     roleTagType() {
-      return this.isAdmin ? "danger" : this.isTeacher ? "warning" : "success";
+      return getRoleTagType(this.userInfo.role);
     },
 
     platformName() {
       return this.isAdmin
         ? "管理后台"
-        : this.isTeacher
-        ? "教师平台"
+        : this.isUser
+        ? "普通用户平台"
         : "学习平台";
     },
 
     // 获取当前角色的仪表盘路径
     getDashboardPath() {
       if (this.isAdmin) return "/back/admin/dashboard";
-      if (this.isTeacher) return "/back/teacher/dashboard";
-      if (this.isStudent) return "/back/student/dashboard";
+      if (this.isUser) return "/back/user/dashboard";
       return "/back/profile";
     },
 
@@ -393,13 +342,9 @@ export default {
         "/back/admin/users": "el-icon-user-solid",
         "/back/admin/courses": "el-icon-notebook-2",
         "/back/admin/datasets": "el-icon-files",
-        "/back/teacher/dashboard": "el-icon-s-platform",
-        "/back/teacher/courses": "el-icon-notebook-1",
-        "/back/teacher/students": "el-icon-user",
-        "/back/teacher/tasks": "el-icon-tickets",
-        "/back/student/dashboard": "el-icon-s-opportunity",
-        "/back/student/learning-center": "el-icon-school",
-        "/back/student/courses": "el-icon-collection",
+        "/back/user/dashboard": "el-icon-s-opportunity",
+        "/back/user/learning-center": "el-icon-school",
+        "/back/user/courses": "el-icon-collection",
         "/back/profile": "el-icon-user",
         "/back/account": "el-icon-setting",
       };
@@ -519,22 +464,6 @@ export default {
         })
         .catch(() => {});
     },
-
-    // 搜索相关
-    querySearch(queryString, cb) {
-      const results = queryString
-        ? this.searchOptions.filter((option) =>
-            option.value.toLowerCase().includes(queryString.toLowerCase())
-          )
-        : this.searchOptions;
-      cb(results);
-    },
-
-    handleSelect(item) {
-      this.$router.push(item.path);
-      this.searchText = "";
-    },
-
     // 通知相关
     markAllAsRead() {
       this.notifications.forEach((n) => (n.read = true));

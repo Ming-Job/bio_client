@@ -171,8 +171,7 @@ export default {
     getRoleName(role) {
       const roleNames = {
         admin: "管理员",
-        teacher: "教师",
-        student: "学生",
+        user: "普通用户",
       };
       return roleNames[role] || role;
     },
@@ -181,8 +180,6 @@ export default {
     getRoleTagType(role) {
       const roleTypes = {
         admin: "danger",
-        teacher: "warning",
-        student: "success",
         user: "primary",
       };
       return roleTypes[role] || "info";

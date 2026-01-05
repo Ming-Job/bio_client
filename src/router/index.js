@@ -23,22 +23,17 @@ const NotFound = () => import('@/views/error/404Page.vue')
 
 
 const BackLayout = () => import('@/views/BackLayout.vue')
+
 // 管理员模块
 const AdminDashboard = () => import('@/views/admin/AdminDashboard.vue')
 const UserManagement = () => import('@/views/admin/UserManagement.vue')
 const CourseManagement = () => import('@/views/admin/CourseManagement.vue')
 const DatasetManagement = () => import('@/views/admin/DatasetManagement.vue')
 
-// 教师模块
-const TeacherDashboard = () => import('@/views/teacher/TeacherDashboard.vue')
-const TeachingCourses = () => import('@/views/teacher/TeachingCourses.vue')
-const StudentManagement = () => import('@/views/teacher/StudentManagement.vue')
-const TasksManagement = () => import('@/views/teacher/TasksManagement.vue')
-
-// 学生模块
-const StudentDashboard = () => import('@/views/student/StudentDashboard.vue')
-const LearningCenter = () => import('@/views/student/LearningCenter.vue')
-const MyCourses = () => import('@/views/student/MyCourses.vue')
+// 普通用户模块
+const UserDashboard = () => import('@/views/user/UserDashboard.vue')
+const LearningCenter = () => import('@/views/user/LearningCenter.vue')
+const UserCourses = () => import('@/views/user/UserCourses.vue')
 
 // 公共模块
 const UserProfile = () => import('@/components/user/UserProfile.vue')
@@ -47,7 +42,7 @@ const AccountSetting = () => import('@/components/user/AccountSetting.vue')
 
 const HomePage = () => import('@/views/Home.vue')
 const MainLayout = () => import('@/components/MainLayout.vue')
-const CourseList = () => import('@/views/course/CourseList.vue');
+const AnalysisPage = () => import('@/views/analysis/AnalysisPage.vue');
 
 
 const routes = [
@@ -95,10 +90,10 @@ const routes = [
         },
         {
           // 课程列表：子路由path为courses，
-          path: "courses",
-          name: "CourseList",
-          component: CourseList,
-          meta: { title: "课程列表" },
+          path: "analysis",
+          name: "AnalysisPage",
+          component: AnalysisPage,
+          meta: { title: "分析页面" },
 
           children: [
           ]
@@ -111,13 +106,6 @@ const routes = [
         // }
       ]
     },
-
-
-
-
-
-
-
   // 后台
   {
     path: '/back',
@@ -134,7 +122,7 @@ const routes = [
         component: UserProfile,
         meta: {
           title: '个人中心',
-          roles: ['admin', 'teacher', 'student']
+          roles: ['admin', 'user']
         }
       },
       {
@@ -143,7 +131,7 @@ const routes = [
         component: AccountSetting,
         meta: {
           title: '账号设置',
-          roles: ['admin', 'teacher', 'student']
+          roles: ['admin', 'user']
         }
       },
       
@@ -185,70 +173,32 @@ const routes = [
         }
       },
       
-      // 教师路由
+      // 普通用户路由
       {
-        path: 'teacher/dashboard',
-        name: 'TeacherDashboard',
-        component: TeacherDashboard,
+        path: 'user/dashboard',
+        name: 'UserDashboard',
+        component: UserDashboard,
         meta: {
-          title: '教师仪表盘',
-          roles: ['teacher']
+          title: '用户仪表盘',
+          roles: ['user']
         }
       },
       {
-        path: 'teacher/courses',
-        name: 'TeachingCourses',
-        component: TeachingCourses,
-        meta: {
-          title: '授课管理',
-          roles: ['teacher']
-        }
-      },
-      {
-        path: 'teacher/students',
-        name: 'StudentManagement',
-        component: StudentManagement,
-        meta: {
-          title: '学生管理',
-          roles: ['teacher']
-        }
-      },
-      {
-        path: 'teacher/tasks',
-        name: 'TasksManagement',
-        component: TasksManagement,
-        meta: {
-          title: '作业管理',
-          roles: ['teacher']
-        }
-      },
-      
-      // 学生路由
-      {
-        path: 'student/dashboard',
-        name: 'StudentDashboard',
-        component: StudentDashboard,
-        meta: {
-          title: '学生仪表盘',
-          roles: ['student']
-        }
-      },
-      {
-        path: 'student/learning-center',
+        path: 'user/learning-center',
         name: 'LearningCenter',
         component: LearningCenter,
         meta: {
           title: '学习中心',
-          roles: ['student']
+          roles: ['user']
         }
       },
       {
-        path: 'student/courses',
-        name: 'StudentCourses',
-        component: MyCourses,
+        path: 'user/courses',
+        name: 'UserCourses',
+        component: UserCourses,
         meta: {
           title: '我的课程',
-          roles: ['student']
+          roles: ['user']
         }
       },
       
@@ -260,8 +210,7 @@ const routes = [
           console.log('当前用户角色:', userRole)
           switch (userRole) {
             case 'admin': return '/back/admin/dashboard'
-            case 'teacher': return '/back/teacher/dashboard'
-            case 'student': return '/back/student/dashboard'
+            case 'user': return '/back/user/dashboard'
             default: return '/login'
           }
         }
