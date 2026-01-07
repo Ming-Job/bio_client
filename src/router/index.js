@@ -48,7 +48,7 @@ const AnalysisPage = () => import('@/views/analysis/AnalysisPage.vue');
 const routes = [
   {
     path: '/',
-    redirect: '/login'
+    redirect: '/analysis'
   },
 
   // 登录
@@ -96,14 +96,14 @@ const routes = [
           meta: { title: "分析页面" },
 
           children: [
+            {
+              path: '/assistant',
+              name: 'AnalysisAssistant',
+              component: () => import('@/components/analysis/AnalysisAssistant.vue'),
+              meta: { title: 'AI助手' },
+            }
           ]
         }
-        // 后续可添加：科普视频、科研动态等页面，只需在这里补充子路由即可
-        // {
-        //   path: "videos",
-        //   name: "ScienceVideo",
-        //   component: () => import('@/views/video/ScienceVideo.vue')
-        // }
       ]
     },
   // 后台

@@ -33,7 +33,6 @@
       </el-menu>
 
       <div class="user-section">
-
         <!-- <el-input
           placeholder="搜索生物知识..."
           prefix-icon="el-icon-search"
@@ -116,7 +115,7 @@ export default {
   name: "HeaderPage",
   data() {
     return {
-      activeIndex: "1",
+      activeIndex: "3",
       searchKeyword: "",
       avatarLoadError: false,
     };
@@ -281,7 +280,7 @@ export default {
       // 同步路由与菜单高亮状态（核心：路由→菜单index映射）
       const routeMenuMap = {
         "/": "1", // 根路径对应首页index="1"
-        "/courses": "3", // 课程列表路径对应index="3"
+        "/analysis": "3", // 分析中心路径对应index="3"
         // 其他路由可后续补充
       };
 
