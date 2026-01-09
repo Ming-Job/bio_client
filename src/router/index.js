@@ -94,16 +94,13 @@ const routes = [
           name: "AnalysisPage",
           component: AnalysisPage,
           meta: { title: "分析页面" },
-
-          children: [
-            {
-              path: '/assistant',
-              name: 'AnalysisAssistant',
-              component: () => import('@/components/analysis/AnalysisAssistant.vue'),
-              meta: { title: 'AI助手' },
-            }
-          ]
-        }
+        },
+        {
+          path: "assistant",  // 独立的路由，不是analysis的子路由
+          name: "AnalysisAssistant",
+          component: () => import('@/components/analysis/AnalysisAssistant.vue'),
+          meta: { title: "AI助手" }
+        },
       ]
     },
   // 后台
