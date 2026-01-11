@@ -36,7 +36,7 @@ html,
 }
 </style>
 
-<style scoped>
+<style scoped lang="scss">
 /* 保留原main的样式，无需再保留.home和全局样式 */
 main {
   flex: 1;

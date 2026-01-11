@@ -400,7 +400,7 @@ export default {
 };
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 .dashboard {
   padding: 20px;
 }
