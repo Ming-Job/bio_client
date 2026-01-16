@@ -6,10 +6,19 @@
         <div class="header-title">
           <i class="el-icon-magic-stick"></i>
           <h3>代码生成区</h3>
+          <div class="code-info" v-if="generatedCode">
+            <el-tag size="small" :type="getLanguageTagType()">
+              {{ language.toUpperCase() }}
+            </el-tag>
+            <span class="lines-count">{{ codeLines }} 行</span>
+          </div>
         </div>
         <div class="header-status">
           <el-tag size="small" type="success" v-if="codeStatus === 'generated'">
             已生成
+          </el-tag>
+          <el-tag size="small" type="warning" v-else-if="codeStatus === 'generating'">
+            生成中
           </el-tag>
           <el-tag size="small" type="info" v-else>等待生成</el-tag>
         </div>
@@ -53,7 +62,7 @@
               icon="el-icon-delete"
               plain
             >
-              清空
+              清空输入
             </el-button>
           </div>
           <div class="action-right">
@@ -68,189 +77,128 @@
             </el-button>
           </div>
         </div>
-      </div>
-    </div>
 
-    <!-- 代码显示与编辑区 -->
-    <div class="code-area" v-if="showCodeArea">
-      <div class="area-header">
-        <div class="header-title">
-          <i class="el-icon-document"></i>
-          <h3>代码区域</h3>
-          <div class="code-info">
-            <el-tag size="small" :type="getLanguageTagType()">
-              {{ language.toUpperCase() }}
-            </el-tag>
-            <span class="lines-count">{{ codeLines }} 行</span>
-          </div>
-        </div>
-        <div class="header-actions">
-          <el-tooltip content="切换编辑模式" placement="top">
-            <el-switch
-              v-model="editMode"
-              active-text="编辑"
-              inactive-text="只读"
-              active-color="#67C23A"
-              size="small"
-              style="margin-right: 10px"
-            />
-          </el-tooltip>
-
-          <el-tooltip content="复制代码" placement="top">
-            <el-button
-              size="small"
-              circle
-              @click="copyCode"
-              icon="el-icon-document-copy"
-            />
-          </el-tooltip>
-
-          <el-tooltip content="下载代码" placement="top">
-            <el-button
-              size="small"
-              circle
-              @click="downloadCode"
-              icon="el-icon-download"
-            />
-          </el-tooltip>
-
-          <el-tooltip content="重置代码" placement="top" v-if="hasModified">
-            <el-button
-              size="small"
-              circle
-              @click="resetCode"
-              icon="el-icon-refresh"
-              type="warning"
-            />
-          </el-tooltip>
-        </div>
-      </div>
-
-      <div class="area-content">
-        <!-- 只读模式 -->
-        <div v-if="!editMode" class="readonly-code">
-          <div class="code-container">
-            <div class="code-content">
-              <pre v-highlight="modifiedCode || generatedCode">
-                <code :class="'language-' + language">{{ modifiedCode || generatedCode }}</code>
-              </pre>
+        <!-- 生成的代码展示 -->
+        <div v-if="generatedCode" class="generated-code-section">
+          <div class="section-header">
+            <div class="header-left">
+              <i class="el-icon-document"></i>
+              <span class="section-title">生成的代码</span>
+              <el-tag size="mini" type="success" v-if="codeStatus === 'generated'">
+                只读 - 可复制
+              </el-tag>
             </div>
-            <div class="readonly-overlay">
-              <div class="overlay-content">
-                <i class="el-icon-view"></i>
-                <span>只读模式</span>
+            <div class="header-right">
+              <el-tooltip content="复制代码" placement="top">
                 <el-button
-                  size="mini"
-                  @click="editMode = true"
-                  type="primary"
-                  plain
-                  class="edit-btn"
-                >
-                  点击编辑
-                </el-button>
+                  size="small"
+                  circle
+                  @click="copyGeneratedCode"
+                  icon="el-icon-document-copy"
+                />
+              </el-tooltip>
+              <el-tooltip content="下载代码" placement="top">
+                <el-button
+                  size="small"
+                  circle
+                  @click="downloadGeneratedCode"
+                  icon="el-icon-download"
+                />
+              </el-tooltip>
+            </div>
+          </div>
+          
+          <div class="code-display">
+            <div class="code-container">
+              <pre v-highlight="generatedCode">
+                <code :class="'language-' + language">{{ generatedCode }}</code>
+              </pre>
+              <div class="readonly-overlay">
+                <div class="overlay-content">
+                  <i class="el-icon-lock"></i>
+                  <span>只读模式 - 代码不可编辑</span>
+                  <el-tag size="mini" type="info">仅可复制</el-tag>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-
-        <!-- 编辑模式 -->
-        <div v-else class="editable-code">
-          <div class="editor-header">
-            <span class="editor-title">
-              <i class="el-icon-edit"></i>
-              代码编辑器
-              <el-tag v-if="hasModified" size="mini" type="warning">
-                已修改
-              </el-tag>
-            </span>
-            <div class="editor-tools">
-              <el-button
-                size="mini"
-                @click="formatCode"
-                icon="el-icon-sort"
-                plain
-              >
-                格式化
-              </el-button>
-              <el-button
-                size="mini"
-                @click="saveCode"
-                icon="el-icon-finished"
-                type="success"
-                plain
-              >
-                保存修改
-              </el-button>
-              <el-button
-                size="mini"
-                @click="editMode = false"
-                icon="el-icon-close"
-                plain
-              >
-                返回只读
-              </el-button>
-            </div>
-          </div>
-
-          <div class="editor-container">
-            <textarea
-              v-model="modifiedCode"
-              class="code-editor"
-              :placeholder="'输入' + language + '代码...'"
-              spellcheck="false"
-              @input="onCodeChange"
-            ></textarea>
-          </div>
-
-          <div class="editor-footer">
-            <div class="modification-info">
+          
+          <div class="code-actions">
+            <div class="action-hint">
               <i class="el-icon-info"></i>
-              <span>代码修改后将用于执行，请注意代码安全性</span>
+              <span>生成的代码将自动填充到执行区，您可以直接执行</span>
             </div>
-            <div class="change-stats" v-if="changeCount > 0">
-              <span class="stat-item">
-                <i class="el-icon-edit-outline"></i>
-                修改 {{ changeCount }} 处
-              </span>
-            </div>
+            <el-button
+              size="small"
+              @click="copyToExecution"
+              icon="el-icon-copy-document"
+              type="success"
+              plain
+            >
+              复制到执行区
+            </el-button>
           </div>
         </div>
       </div>
     </div>
 
     <!-- 代码执行区 -->
-    <div class="execution-area" v-if="showCodeArea">
+    <div class="execution-area">
       <div class="area-header">
         <div class="header-title">
           <i class="el-icon-video-play"></i>
           <h3>代码执行区</h3>
+          <div class="execution-status" v-if="executionStatus !== 'idle'">
+            <el-tag size="small" type="info" v-if="executionStatus === 'idle'">
+              等待执行
+            </el-tag>
+            <el-tag size="small" type="warning" v-else-if="executionStatus === 'executing'">
+              执行中
+            </el-tag>
+            <el-tag size="small" type="success" v-else-if="executionStatus === 'completed'">
+              执行完成
+            </el-tag>
+            <el-tag size="small" type="danger" v-else-if="executionStatus === 'error'">
+              执行错误
+            </el-tag>
+          </div>
         </div>
-        <div class="header-status">
-          <el-tag size="small" type="info" v-if="executionStatus === 'idle'">
-            等待执行
-          </el-tag>
-          <el-tag size="small" type="warning" v-else-if="executionStatus === 'executing'">
-            执行中
-          </el-tag>
-          <el-tag size="small" type="success" v-else-if="executionStatus === 'completed'">
-            执行完成
-          </el-tag>
-          <el-tag size="small" type="danger" v-else-if="executionStatus === 'error'">
-            执行错误
-          </el-tag>
+        <div class="header-actions">
+          <el-button
+            size="small"
+            @click="clearExecutionCode"
+            :disabled="!executionCode"
+            icon="el-icon-delete"
+            plain
+          >
+            清空代码
+          </el-button>
+          <el-button
+            size="small"
+            @click="copyExecutionCode"
+            :disabled="!executionCode"
+            icon="el-icon-document-copy"
+            plain
+          >
+            复制代码
+          </el-button>
         </div>
       </div>
 
       <div class="area-content">
-        <div class="execution-controls">
-          <div class="control-group">
-            <div class="control-item">
-              <label class="control-label">执行语言：</label>
+        <!-- 执行代码输入框 -->
+        <div class="execution-input-section">
+          <div class="input-header">
+            <span class="input-label">
+              <i class="el-icon-edit"></i>
+              执行代码编辑器
+            </span>
+            <div class="input-info">
               <el-select
                 v-model="language"
                 size="small"
                 class="language-select"
-                @change="onLanguageChange"
+                style="width: 120px"
               >
                 <el-option label="Python" value="python">
                   <span class="language-option">
@@ -265,73 +213,171 @@
                   </span>
                 </el-option>
               </el-select>
+              <span class="lines-count" v-if="executionCode">
+                {{ executionCodeLines }} 行
+              </span>
             </div>
+          </div>
+          
+          <div class="code-editor-container">
+            <textarea
+              v-model="executionCode"
+              class="execution-code-editor"
+              :placeholder="'输入' + language + '代码...'"
+              spellcheck="false"
+              @input="onExecutionCodeChange"
+              rows="15"
+            ></textarea>
+          </div>
+        </div>
 
+        <div class="execution-controls">
+          <div class="control-group">
             <div class="control-item">
               <label class="control-label">执行模式：</label>
               <el-select
                 v-model="executionMode"
                 size="small"
                 class="mode-select"
+                style="width: 160px"
               >
                 <el-option label="异步执行" value="async">
                   <span class="mode-option">
                     <i class="el-icon-time"></i>
-                    异步执行（后台运行）
+                    异步执行
                   </span>
                 </el-option>
                 <el-option label="同步执行" value="sync">
                   <span class="mode-option">
                     <i class="el-icon-s-check"></i>
-                    同步执行（立即返回）
+                    同步执行
                   </span>
                 </el-option>
+              </el-select>
+            </div>
+
+            <div class="control-item">
+              <label class="control-label">超时设置：</label>
+              <el-select
+                v-model="timeout"
+                size="small"
+                style="width: 120px"
+              >
+                <el-option label="30秒" value="30"></el-option>
+                <el-option label="1分钟" value="60"></el-option>
+                <el-option label="5分钟" value="300"></el-option>
+                <el-option label="10分钟" value="600"></el-option>
               </el-select>
             </div>
           </div>
 
           <div class="execution-actions">
-            <el-button
-              type="success"
-              @click="executeCode"
-              :loading="executing"
-              :disabled="!canExecute"
-              icon="el-icon-video-play"
-              class="execute-btn"
-            >
-              {{ executing ? '执行中...' : '执行代码' }}
-            </el-button>
-
-            <el-button
-              type="info"
-              @click="checkExecutionStatus"
-              :loading="checkingStatus"
-              :disabled="!hasExecutionId"
-              icon="el-icon-refresh"
-              plain
-              v-if="executionMode === 'async'"
-            >
-              检查状态
-            </el-button>
-
-            <el-button
-              type="danger"
-              @click="stopExecution"
-              :disabled="!isExecuting"
-              icon="el-icon-switch-button"
-              plain
-            >
-              停止执行
-            </el-button>
-          </div>
-
-          <div class="security-notice">
-            <div class="notice-content">
-              <i class="el-icon-lock" style="color: #409EFF"></i>
-              <span>所有代码均在安全的沙箱环境中执行，保障系统安全</span>
+            <div class="security-notice">
+              <div class="notice-content">
+                <i class="el-icon-lock" style="color: #409EFF"></i>
+                <span>所有代码均在安全的沙箱环境中执行</span>
+              </div>
+              <div class="notice-detail">
+                <span>内存限制：512MB | 文件大小：10MB</span>
+              </div>
             </div>
-            <div class="notice-detail">
-              <span>执行超时：10分钟 | 内存限制：512MB | 文件大小：10MB</span>
+            
+            <div class="action-buttons">
+              <el-button
+                type="success"
+                @click="executeCode"
+                :loading="executing"
+                :disabled="!canExecute"
+                icon="el-icon-video-play"
+                class="execute-btn"
+              >
+                {{ executing ? '执行中...' : '执行代码' }}
+              </el-button>
+
+              <el-button
+                type="info"
+                @click="checkExecutionStatus"
+                :loading="checkingStatus"
+                :disabled="!hasExecutionId"
+                icon="el-icon-refresh"
+                plain
+                v-if="executionMode === 'async'"
+              >
+                检查状态
+              </el-button>
+
+              <el-button
+                type="danger"
+                @click="stopExecution"
+                :disabled="!isExecuting"
+                icon="el-icon-switch-button"
+                plain
+              >
+                停止执行
+              </el-button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 执行输出 -->
+        <div v-if="executionResult" class="execution-output-section">
+          <div class="output-header">
+            <div class="output-title">
+              <i class="el-icon-monitor"></i>
+              <h4>执行输出</h4>
+              <span class="execution-time" v-if="executionResult?.executionTime">
+                <i class="el-icon-time"></i>
+                耗时：{{ executionResult.executionTime }}ms
+              </span>
+              <span class="memory-usage" v-if="executionResult?.memoryUsage">
+                <i class="el-icon-cpu"></i>
+                内存：{{ executionResult.memoryUsage }}MB
+              </span>
+            </div>
+            <div class="output-actions">
+              <el-button
+                size="mini"
+                @click="copyOutput"
+                icon="el-icon-document-copy"
+                plain
+              >
+                复制输出
+              </el-button>
+              <el-button
+                size="mini"
+                @click="clearOutput"
+                icon="el-icon-delete"
+                plain
+              >
+                清空输出
+              </el-button>
+            </div>
+          </div>
+          
+          <div class="output-content">
+            <!-- 错误信息 -->
+            <div v-if="executionResult?.error" class="error-output">
+              <div class="error-header">
+                <i class="el-icon-warning-outline"></i>
+                <span class="error-title">错误信息</span>
+                <el-tag type="danger" size="mini">执行失败</el-tag>
+              </div>
+              <pre class="error-detail">{{ executionResult.error }}</pre>
+            </div>
+            
+            <!-- 标准输出 -->
+            <div v-if="executionResult?.output" class="std-output">
+              <div class="output-header">
+                <i class="el-icon-s-data"></i>
+                <span class="output-title">标准输出</span>
+              </div>
+              <pre class="output-detail">{{ executionResult.output }}</pre>
+            </div>
+            
+            <!-- 无输出提示 -->
+            <div v-else-if="executionResult?.status === 'completed'" class="no-output">
+              <i class="el-icon-chat-dot-round"></i>
+              <p>程序执行完成，无输出内容</p>
             </div>
           </div>
         </div>
@@ -344,150 +390,111 @@
         <div class="header-title">
           <i class="el-icon-picture"></i>
           <h3>图表展示区</h3>
-          <div class="execution-info">
-            <span class="execution-time" v-if="executionResult?.executionTime">
-              <i class="el-icon-time"></i>
-              执行耗时：{{ executionResult.executionTime }}ms
-            </span>
-            <span class="memory-usage" v-if="executionResult?.memoryUsage">
-              <i class="el-icon-cpu"></i>
-              内存使用：{{ executionResult.memoryUsage }}MB
-            </span>
+          <div class="charts-info" v-if="hasCharts">
+            <el-tag size="small" type="success">
+              已生成 {{ executionResult.images.length }} 张图表
+            </el-tag>
           </div>
         </div>
         <div class="header-actions">
           <el-button
             size="small"
-            @click="clearResults"
+            @click="clearVisualization"
+            :disabled="!hasCharts && !executionResult"
             icon="el-icon-delete"
             plain
           >
-            清空结果
+            清空图表
           </el-button>
           <el-button
             size="small"
-            @click="exportResults"
+            @click="exportAllCharts"
+            :disabled="!hasCharts"
             icon="el-icon-download"
             type="primary"
           >
-            导出结果
+            导出所有图表
           </el-button>
         </div>
       </div>
 
       <div class="area-content">
-        <div class="results-container">
-          <!-- 控制台输出 -->
-          <div v-if="executionResult?.output" class="console-output">
-            <div class="output-header">
-              <div class="output-title">
-                <i class="el-icon-monitor"></i>
-                <h4>控制台输出</h4>
-              </div>
-              <el-button
-                size="mini"
-                @click="copyOutput"
-                icon="el-icon-document-copy"
-                plain
-              >
-                复制输出
-              </el-button>
-            </div>
-            <div class="output-content">
-              <pre>{{ executionResult.output }}</pre>
-            </div>
-          </div>
-
-          <!-- 错误信息 -->
-          <div v-if="executionResult?.error" class="error-output">
-            <div class="error-header">
-              <div class="error-title">
-                <i class="el-icon-warning-outline"></i>
-                <h4>错误信息</h4>
-              </div>
-              <el-tag type="danger" size="small">执行失败</el-tag>
-            </div>
-            <div class="error-content">
-              <pre>{{ executionResult.error }}</pre>
-            </div>
-          </div>
-
-          <!-- 图表展示 -->
-          <div v-if="hasCharts" class="charts-display">
-            <div class="charts-header">
-              <div class="charts-title">
-                <i class="el-icon-picture-outline"></i>
-                <h4>生成图表（{{ executionResult.images.length }}张）</h4>
-              </div>
-              <el-button
-                size="mini"
-                @click="exportCharts"
-                icon="el-icon-download"
-                plain
-              >
-                导出所有图表
-              </el-button>
-            </div>
-            <div class="charts-grid">
-              <div
-                v-for="(image, index) in executionResult.images"
-                :key="index"
-                class="chart-item"
-              >
-                <div class="chart-container">
-                  <div class="chart-header">
-                    <span class="chart-title">图表 {{ index + 1 }}</span>
-                    <div class="chart-actions">
-                      <el-tooltip content="预览" placement="top">
-                        <el-button
-                          size="mini"
-                          circle
-                          @click="previewChart(image)"
-                          icon="el-icon-view"
-                        />
-                      </el-tooltip>
-                      <el-tooltip content="下载" placement="top">
-                        <el-button
-                          size="mini"
-                          circle
-                          @click="downloadChart(image, index)"
-                          icon="el-icon-download"
-                        />
-                      </el-tooltip>
-                    </div>
+        <!-- 图表展示 -->
+        <div v-if="hasCharts" class="charts-display">
+          <div class="charts-grid">
+            <div
+              v-for="(image, index) in executionResult.images"
+              :key="index"
+              class="chart-item"
+            >
+              <div class="chart-container">
+                <div class="chart-header">
+                  <span class="chart-title">图表 {{ index + 1 }}</span>
+                  <div class="chart-actions">
+                    <el-tooltip content="预览" placement="top">
+                      <el-button
+                        size="mini"
+                        circle
+                        @click="previewChart(image)"
+                        icon="el-icon-view"
+                      />
+                    </el-tooltip>
+                    <el-tooltip content="下载" placement="top">
+                      <el-button
+                        size="mini"
+                        circle
+                        @click="downloadChart(image, index)"
+                        icon="el-icon-download"
+                      />
+                    </el-tooltip>
+                    <el-tooltip content="复制链接" placement="top">
+                      <el-button
+                        size="mini"
+                        circle
+                        @click="copyChartLink(image)"
+                        icon="el-icon-link"
+                      />
+                    </el-tooltip>
                   </div>
-                  <div class="chart-content">
-                    <img
-                      :src="image"
-                      :alt="'图表 ' + (index + 1)"
-                      @error="handleImageError"
-                      class="chart-image"
-                    />
-                  </div>
+                </div>
+                <div class="chart-content">
+                  <img
+                    :src="image"
+                    :alt="'图表 ' + (index + 1)"
+                    @error="handleImageError"
+                    class="chart-image"
+                  />
+                </div>
+                <div class="chart-footer">
+                  <span class="chart-index">#{{ index + 1 }}</span>
+                  <span class="chart-size">PNG 图像</span>
                 </div>
               </div>
             </div>
           </div>
+        </div>
 
-          <!-- 无图表提示 -->
-          <div
-            v-else-if="executionResult?.status === 'completed'"
-            class="no-charts"
-          >
-            <div class="no-charts-content">
-              <i class="el-icon-picture-outline"></i>
-              <p>本次执行未生成图表</p>
-              <span class="hint">尝试使用matplotlib或seaborn等库生成图表</span>
+        <!-- 无图表提示 -->
+        <div
+          v-else-if="executionResult?.status === 'completed'"
+          class="no-charts"
+        >
+          <div class="no-charts-content">
+            <i class="el-icon-picture-outline"></i>
+            <p>本次执行未生成图表</p>
+            <span class="hint">尝试使用matplotlib或seaborn等库生成图表</span>
+            <div class="hint-code">
+              <code>plt.savefig('output.png')  # 保存图表</code>
             </div>
           </div>
+        </div>
 
-          <!-- 执行结果为空 -->
-          <div v-else-if="!executionResult" class="empty-results">
-            <div class="empty-content">
-              <i class="el-icon-s-data"></i>
-              <p>执行结果将在此处显示</p>
-              <span class="hint">请先生成并执行代码</span>
-            </div>
+        <!-- 等待执行提示 -->
+        <div v-else class="waiting-execution">
+          <div class="waiting-content">
+            <i class="el-icon-s-promotion"></i>
+            <p>等待代码执行</p>
+            <span class="hint">请在代码执行区输入代码并执行</span>
           </div>
         </div>
       </div>
@@ -508,7 +515,7 @@
 
 <script>
 export default {
-  name: 'CodeAssistantWithEdit',
+  name: 'CodeAssistantNewLayout',
   data() {
     return {
       // 用户输入
@@ -516,12 +523,12 @@ export default {
       
       // 代码相关
       generatedCode: '',
-      modifiedCode: '',
-      editMode: false,
       language: 'python',
       
       // 执行相关
+      executionCode: '',
       executionMode: 'async',
+      timeout: '60',
       executionId: null,
       executionResult: null,
       executionStatus: 'idle', // idle, executing, completed, error
@@ -530,10 +537,6 @@ export default {
       loading: false,
       executing: false,
       checkingStatus: false,
-      
-      // 修改跟踪
-      originalCode: '',
-      changeCount: 0,
       
       // 示例
       examples: [
@@ -547,30 +550,28 @@ export default {
       
       // 代码状态
       codeStatus: 'empty', // empty, generating, generated
+      
+      // 轮询间隔
+      pollInterval: null,
     }
   },
   
   computed: {
-    // 是否显示代码区域
-    showCodeArea() {
-      return this.codeStatus === 'generated' && this.generatedCode
+    // 代码行数（生成区）
+    codeLines() {
+      if (!this.generatedCode) return 0
+      return this.generatedCode.split('\n').length
+    },
+    
+    // 执行代码行数
+    executionCodeLines() {
+      if (!this.executionCode) return 0
+      return this.executionCode.split('\n').length
     },
     
     // 是否显示图表区域
     showVisualizationArea() {
       return this.executionResult || this.executionStatus !== 'idle'
-    },
-    
-    // 代码行数
-    codeLines() {
-      const code = this.modifiedCode || this.generatedCode
-      if (!code) return 0
-      return code.split('\n').length
-    },
-    
-    // 是否有修改
-    hasModified() {
-      return this.modifiedCode && this.modifiedCode !== this.originalCode
     },
     
     // 是否有图表
@@ -580,8 +581,7 @@ export default {
     
     // 是否可以执行
     canExecute() {
-      const code = this.modifiedCode || this.generatedCode
-      return code && code.trim() && !this.executing
+      return this.executionCode && this.executionCode.trim() && !this.executing
     },
     
     // 是否有执行ID
@@ -620,12 +620,10 @@ export default {
         
         const data = await response.json()
         this.generatedCode = data.code
-        this.originalCode = data.code
-        this.modifiedCode = data.code
+        this.executionCode = data.code // 自动填充到执行区
         this.codeStatus = 'generated'
-        this.editMode = false // 默认只读模式
         
-        this.$message.success('代码生成成功')
+        this.$message.success('代码生成成功，已填充到执行区')
       } catch (error) {
         this.$message.error('生成代码失败：' + error.message)
         this.codeStatus = 'empty'
@@ -645,23 +643,25 @@ export default {
       return this.language === 'python' ? 'success' : 'primary'
     },
     
-    // 复制代码
-    copyCode() {
-      const code = this.modifiedCode || this.generatedCode
-      navigator.clipboard.writeText(code).then(() => {
+    // 复制生成的代码
+    copyGeneratedCode() {
+      if (!this.generatedCode) return
+      
+      navigator.clipboard.writeText(this.generatedCode).then(() => {
         this.$message.success('代码已复制到剪贴板')
       }).catch(err => {
         this.$message.error('复制失败：' + err.message)
       })
     },
     
-    // 下载代码
-    downloadCode() {
-      const code = this.modifiedCode || this.generatedCode
-      const extension = this.language === 'python' ? 'py' : 'R'
-      const filename = `analysis_code_${Date.now()}.${extension}`
+    // 下载生成的代码
+    downloadGeneratedCode() {
+      if (!this.generatedCode) return
       
-      const blob = new Blob([code], { type: 'text/plain' })
+      const extension = this.language === 'python' ? 'py' : 'R'
+      const filename = `generated_code_${Date.now()}.${extension}`
+      
+      const blob = new Blob([this.generatedCode], { type: 'text/plain' })
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
@@ -674,49 +674,34 @@ export default {
       this.$message.success(`代码已下载：${filename}`)
     },
     
-    // 重置代码
-    resetCode() {
-      this.modifiedCode = this.originalCode
-      this.changeCount = 0
-      this.$message.info('已重置为原始代码')
-    },
-    
-    // 格式化代码
-    formatCode() {
-      // 这里可以集成代码格式化工具
-      // 暂时只做简单的缩进处理
-      const lines = this.modifiedCode.split('\n')
-      const formatted = lines.map(line => {
-        // 简单的缩进处理
-        return line.trim() ? '    ' + line.trim() : line
-      }).join('\n')
+    // 复制到执行区
+    copyToExecution() {
+      if (!this.generatedCode) return
       
-      this.modifiedCode = formatted
-      this.$message.success('代码已格式化')
+      this.executionCode = this.generatedCode
+      this.$message.success('代码已复制到执行区')
     },
     
-    // 保存代码修改
-    saveCode() {
-      this.editMode = false
-      this.$message.success('代码修改已保存')
+    // 清空执行代码
+    clearExecutionCode() {
+      this.executionCode = ''
+      this.$message.info('已清空执行代码')
     },
     
-    // 代码变化处理
-    onCodeChange() {
-      if (this.modifiedCode !== this.originalCode) {
-        // 简单的修改计数
-        const originalLines = this.originalCode.split('\n')
-        const modifiedLines = this.modifiedCode.split('\n')
-        this.changeCount = Math.abs(originalLines.length - modifiedLines.length)
-      } else {
-        this.changeCount = 0
-      }
+    // 复制执行代码
+    copyExecutionCode() {
+      if (!this.executionCode) return
+      
+      navigator.clipboard.writeText(this.executionCode).then(() => {
+        this.$message.success('执行代码已复制')
+      }).catch(err => {
+        this.$message.error('复制失败：' + err.message)
+      })
     },
     
-    // 语言切换
-    onLanguageChange() {
-      // 如果切换语言，可能需要重新生成代码
-      this.$message.info(`已切换为${this.language}语言`)
+    // 执行代码变化处理
+    onExecutionCodeChange() {
+      // 可以在这里添加代码检查或其他逻辑
     },
     
     // 执行代码
@@ -728,7 +713,6 @@ export default {
       this.executionResult = null
       
       try {
-        const codeToExecute = this.modifiedCode || this.generatedCode
         const url = this.executionMode === 'async' 
           ? 'http://localhost:8080/api/code/execute'
           : 'http://localhost:8080/api/code/execute-sync'
@@ -737,8 +721,9 @@ export default {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            code: codeToExecute,
-            language: this.language
+            code: this.executionCode,
+            language: this.language,
+            timeout: parseInt(this.timeout)
           })
         })
         
@@ -780,14 +765,18 @@ export default {
         }
       }, 2000)
       
-      // 10分钟后停止轮询
+      // 超时后停止轮询
+      const timeoutMs = parseInt(this.timeout) * 1000 + 5000
       setTimeout(() => {
         if (this.pollInterval) {
           clearInterval(this.pollInterval)
           this.pollInterval = null
-          this.$message.warning('执行超时')
+          if (this.executionStatus === 'executing') {
+            this.$message.warning('执行超时')
+            this.executionStatus = 'error'
+          }
         }
-      }, 10 * 60 * 1000)
+      }, timeoutMs)
     },
     
     // 检查执行状态
@@ -838,27 +827,12 @@ export default {
     
     // 停止执行
     stopExecution() {
-      // 这里可以添加停止执行的API调用
       this.executionStatus = 'idle'
       if (this.pollInterval) {
         clearInterval(this.pollInterval)
         this.pollInterval = null
       }
       this.$message.info('执行已停止')
-    },
-    
-    // 清空结果
-    clearResults() {
-      this.executionResult = null
-      this.executionStatus = 'idle'
-      this.executionId = null
-      this.$message.info('已清空执行结果')
-    },
-    
-    // 导出结果
-    exportResults() {
-      // 实现结果导出逻辑
-      this.$message.info('导出功能开发中')
     },
     
     // 复制输出
@@ -869,9 +843,31 @@ export default {
       }
     },
     
+    // 清空输出
+    clearOutput() {
+      this.executionResult = null
+      this.executionStatus = 'idle'
+      this.$message.info('已清空输出')
+    },
+    
+    // 清空可视化
+    clearVisualization() {
+      if (this.executionResult) {
+        this.executionResult.images = []
+      }
+      this.$message.info('已清空图表')
+    },
+    
+    // 导出所有图表
+    exportAllCharts() {
+      if (!this.hasCharts) return
+      
+      this.$message.info('图表批量导出功能开发中')
+      // 实际实现中，可以打包下载所有图表
+    },
+    
     // 预览图表
     previewChart(imageUrl) {
-      // 可以使用图片预览组件
       window.open(imageUrl, '_blank')
     },
     
@@ -886,9 +882,10 @@ export default {
       this.$message.success(`图表 ${index + 1} 已下载`)
     },
     
-    // 导出图表
-    exportCharts() {
-      this.$message.info('图表批量导出功能开发中')
+    // 复制图表链接
+    copyChartLink(imageUrl) {
+      navigator.clipboard.writeText(imageUrl)
+      this.$message.success('图表链接已复制')
     },
     
     // 处理图片加载错误
@@ -959,19 +956,12 @@ export default {
         }
       }
 
-      .execution-info {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        margin-left: 20px;
+      .execution-status {
+        margin-left: 16px;
+      }
 
-        span {
-          font-size: 12px;
-          color: #718096;
-          display: flex;
-          align-items: center;
-          gap: 4px;
-        }
+      .charts-info {
+        margin-left: 16px;
       }
     }
 
@@ -1055,22 +1045,49 @@ export default {
       }
     }
   }
-}
 
-/* 代码区域 */
-.code-area {
-  .readonly-code {
-    position: relative;
+  .generated-code-section {
+    margin-top: 24px;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
     overflow: hidden;
 
-    .code-container {
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        i {
+          color: #409eff;
+        }
+
+        .section-title {
+          font-weight: 500;
+          color: #4a5568;
+        }
+      }
+
+      .header-right {
+        display: flex;
+        gap: 4px;
+      }
+    }
+
+    .code-display {
+      position: relative;
       max-height: 400px;
       overflow: auto;
       background: #1e1e1e;
 
-      .code-content {
+      .code-container {
         pre {
           margin: 0;
           padding: 20px;
@@ -1084,78 +1101,109 @@ export default {
           }
         }
       }
+
+      .readonly-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.95);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+
+        &:hover {
+          opacity: 1;
+        }
+
+        .overlay-content {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 12px;
+
+          i {
+            font-size: 24px;
+            color: #718096;
+          }
+
+          span {
+            color: #4a5568;
+            font-size: 14px;
+          }
+        }
+      }
     }
 
-    .readonly-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(255, 255, 255, 0.92);
+    .code-actions {
       display: flex;
+      justify-content: space-between;
       align-items: center;
-      justify-content: center;
-      opacity: 0;
-      transition: opacity 0.3s ease;
+      padding: 12px 16px;
+      background: #f8fafc;
+      border-top: 1px solid #e2e8f0;
 
-      &:hover {
-        opacity: 1;
-      }
-
-      .overlay-content {
+      .action-hint {
         display: flex;
-        flex-direction: column;
         align-items: center;
-        gap: 12px;
+        gap: 6px;
+        font-size: 12px;
+        color: #718096;
 
         i {
-          font-size: 24px;
-          color: #718096;
-        }
-
-        span {
-          color: #4a5568;
-          font-size: 14px;
-        }
-
-        .edit-btn {
-          padding: 6px 16px;
+          color: #409eff;
         }
       }
     }
   }
+}
 
-  .editable-code {
-    .editor-header {
+/* 代码执行区 */
+.execution-area {
+  .execution-input-section {
+    margin-bottom: 24px;
+
+    .input-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 12px;
 
-      .editor-title {
+      .input-label {
         display: flex;
         align-items: center;
-        gap: 8px;
-        font-size: 14px;
+        gap: 6px;
         font-weight: 500;
-        color: #2d3748;
+        color: #4a5568;
+
+        i {
+          color: #409eff;
+        }
       }
 
-      .editor-tools {
+      .input-info {
         display: flex;
-        gap: 8px;
+        align-items: center;
+        gap: 12px;
+
+        .lines-count {
+          font-size: 12px;
+          color: #718096;
+        }
       }
     }
 
-    .editor-container {
+    .code-editor-container {
       border: 1px solid #cbd5e0;
       border-radius: 8px;
       overflow: hidden;
 
-      .code-editor {
+      .execution-code-editor {
         width: 100%;
-        min-height: 300px;
         padding: 16px;
         font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
         font-size: 13px;
@@ -1171,40 +1219,8 @@ export default {
         }
       }
     }
-
-    .editor-footer {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 12px;
-
-      .modification-info {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 12px;
-        color: #718096;
-
-        i {
-          color: #e6a23c;
-        }
-      }
-
-      .change-stats {
-        .stat-item {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          font-size: 12px;
-          color: #e6a23c;
-        }
-      }
-    }
   }
-}
 
-/* 代码执行区 */
-.execution-area {
   .execution-controls {
     .control-group {
       display: flex;
@@ -1221,56 +1237,179 @@ export default {
           color: #4a5568;
           white-space: nowrap;
         }
-
-        .language-select,
-        .mode-select {
-          width: 200px;
-
-          .language-option,
-          .mode-option {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-          }
-        }
       }
     }
 
     .execution-actions {
       display: flex;
-      gap: 12px;
-      margin-bottom: 20px;
+      justify-content: space-between;
+      align-items: center;
 
-      .execute-btn {
-        padding: 10px 24px;
-        font-weight: 500;
-        transition: all 0.3s ease;
+      .security-notice {
+        background: #f0f9ff;
+        border: 1px solid #bae6fd;
+        border-radius: 8px;
+        padding: 12px 16px;
 
-        &:hover:not(.is-disabled) {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(103, 194, 58, 0.3);
+        .notice-content {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 13px;
+          color: #0369a1;
+          margin-bottom: 4px;
+        }
+
+        .notice-detail {
+          font-size: 11px;
+          color: #64748b;
+        }
+      }
+
+      .action-buttons {
+        display: flex;
+        gap: 12px;
+
+        .execute-btn {
+          padding: 10px 24px;
+          font-weight: 500;
+          transition: all 0.3s ease;
+
+          &:hover:not(.is-disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(103, 194, 58, 0.3);
+          }
         }
       }
     }
+  }
 
-    .security-notice {
-      background: #f0f9ff;
-      border: 1px solid #bae6fd;
-      border-radius: 8px;
+  .execution-output-section {
+    margin-top: 24px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+
+    .output-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       padding: 12px 16px;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
 
-      .notice-content {
+      .output-title {
         display: flex;
         align-items: center;
-        gap: 8px;
-        font-size: 13px;
-        color: #0369a1;
-        margin-bottom: 4px;
+        gap: 12px;
+
+        i {
+          color: #409eff;
+        }
+
+        h4 {
+          margin: 0;
+          font-size: 14px;
+          font-weight: 600;
+        }
+
+        .execution-time,
+        .memory-usage {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 12px;
+          color: #718096;
+        }
       }
 
-      .notice-detail {
-        font-size: 11px;
-        color: #64748b;
+      .output-actions {
+        display: flex;
+        gap: 8px;
+      }
+    }
+
+    .output-content {
+      max-height: 300px;
+      overflow: auto;
+
+      > div {
+        margin: 16px;
+      }
+
+      .error-output,
+      .std-output {
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        overflow: hidden;
+
+        .error-header,
+        .output-header {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 12px;
+          background: #f8fafc;
+          border-bottom: 1px solid #e2e8f0;
+
+          i {
+            font-size: 14px;
+          }
+
+          .error-title,
+          .output-title {
+            font-size: 13px;
+            font-weight: 500;
+          }
+        }
+
+        .error-header {
+          background: #fef2f2;
+          border-color: #fecaca;
+          
+          i {
+            color: #f56c6c;
+          }
+        }
+
+        .error-detail,
+        .output-detail {
+          margin: 0;
+          padding: 12px;
+          font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+          font-size: 12px;
+          line-height: 1.4;
+          white-space: pre-wrap;
+          word-break: break-all;
+        }
+
+        .error-detail {
+          background: #fef2f2;
+          color: #dc2626;
+        }
+
+        .output-detail {
+          background: white;
+          color: #2d3748;
+        }
+      }
+
+      .no-output {
+        text-align: center;
+        padding: 40px 20px;
+        color: #a0aec0;
+
+        i {
+          font-size: 32px;
+          margin-bottom: 12px;
+          opacity: 0.5;
+        }
+
+        p {
+          font-size: 14px;
+          margin: 0;
+          color: #718096;
+        }
       }
     }
   }
@@ -1278,127 +1417,114 @@ export default {
 
 /* 图表展示区 */
 .visualization-area {
-  .results-container {
-    > div {
-      margin-bottom: 24px;
+  .charts-display {
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
 
-      &:last-child {
-        margin-bottom: 0;
-      }
-    }
+      .chart-item {
+        .chart-container {
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          overflow: hidden;
+          background: white;
+          transition: all 0.3s ease;
 
-    .output-header,
-    .error-header,
-    .charts-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-    }
+          &:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+          }
 
-    .output-content,
-    .error-content {
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      padding: 16px;
-      max-height: 200px;
-      overflow: auto;
+          .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
 
-      pre {
-        margin: 0;
-        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-        font-size: 12px;
-        line-height: 1.4;
-        white-space: pre-wrap;
-        word-break: break-all;
-      }
-    }
-
-    .error-content {
-      background: #fef2f2;
-      border-color: #fecaca;
-      color: #dc2626;
-    }
-
-    .charts-display {
-      .charts-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 16px;
-
-        .chart-item {
-          .chart-container {
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            overflow: hidden;
-            background: white;
-            transition: all 0.3s ease;
-
-            &:hover {
-              transform: translateY(-2px);
-              box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+            .chart-title {
+              font-size: 13px;
+              font-weight: 500;
+              color: #4a5568;
             }
 
-            .chart-header {
+            .chart-actions {
               display: flex;
-              justify-content: space-between;
-              align-items: center;
-              padding: 12px 16px;
-              background: #f8fafc;
-              border-bottom: 1px solid #e2e8f0;
-
-              .chart-title {
-                font-size: 13px;
-                font-weight: 500;
-                color: #4a5568;
-              }
-
-              .chart-actions {
-                display: flex;
-                gap: 4px;
-              }
+              gap: 4px;
             }
+          }
 
-            .chart-content {
-              height: 250px;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              background: #f8fafc;
+          .chart-content {
+            height: 250px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8fafc;
 
-              .chart-image {
-                max-width: 100%;
-                max-height: 100%;
-                object-fit: contain;
-              }
+            .chart-image {
+              max-width: 100%;
+              max-height: 100%;
+              object-fit: contain;
+            }
+          }
+
+          .chart-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 16px;
+            background: #f8fafc;
+            border-top: 1px solid #e2e8f0;
+
+            .chart-index,
+            .chart-size {
+              font-size: 11px;
+              color: #718096;
             }
           }
         }
       }
     }
+  }
 
-    .no-charts,
-    .empty-results {
-      text-align: center;
-      padding: 40px 20px;
+  .no-charts,
+  .waiting-execution {
+    text-align: center;
+    padding: 60px 20px;
+    color: #a0aec0;
+
+    i {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    p {
+      font-size: 14px;
+      margin: 0 0 8px 0;
+      color: #718096;
+    }
+
+    .hint {
+      font-size: 12px;
       color: #a0aec0;
+      display: block;
+      margin-bottom: 12px;
+    }
 
-      i {
-        font-size: 48px;
-        margin-bottom: 16px;
-        opacity: 0.5;
-      }
-
-      p {
-        font-size: 14px;
-        margin: 0 0 8px 0;
-        color: #718096;
-      }
-
-      .hint {
+    .hint-code {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      padding: 8px 12px;
+      display: inline-block;
+      
+      code {
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
         font-size: 12px;
-        color: #a0aec0;
+        color: #4a5568;
       }
     }
   }
@@ -1456,13 +1582,21 @@ export default {
     padding: 16px;
   }
 
-  .execution-controls .control-group {
+  .execution-controls .control-group,
+  .execution-actions {
     flex-direction: column;
     gap: 12px;
   }
 
   .charts-grid {
     grid-template-columns: 1fr !important;
+  }
+
+  .execution-actions {
+    .action-buttons {
+      flex-wrap: wrap;
+      justify-content: center;
+    }
   }
 }
 
