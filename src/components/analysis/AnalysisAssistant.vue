@@ -17,7 +17,11 @@
           <el-tag size="small" type="success" v-if="codeStatus === 'generated'">
             已生成
           </el-tag>
-          <el-tag size="small" type="warning" v-else-if="codeStatus === 'generating'">
+          <el-tag
+            size="small"
+            type="warning"
+            v-else-if="codeStatus === 'generating'"
+          >
             生成中
           </el-tag>
           <el-tag size="small" type="info" v-else>等待生成</el-tag>
@@ -73,7 +77,7 @@
               icon="el-icon-magic-stick"
               class="generate-btn"
             >
-              {{ loading ? '生成中...' : '生成代码' }}
+              {{ loading ? "生成中..." : "生成代码" }}
             </el-button>
           </div>
         </div>
@@ -84,7 +88,11 @@
             <div class="header-left">
               <i class="el-icon-document"></i>
               <span class="section-title">生成的代码</span>
-              <el-tag size="mini" type="success" v-if="codeStatus === 'generated'">
+              <el-tag
+                size="mini"
+                type="success"
+                v-if="codeStatus === 'generated'"
+              >
                 只读 - 可复制
               </el-tag>
             </div>
@@ -107,7 +115,7 @@
               </el-tooltip>
             </div>
           </div>
-          
+
           <div class="code-display">
             <div class="code-container">
               <pre v-highlight="generatedCode">
@@ -122,11 +130,11 @@
               </div>
             </div>
           </div>
-          
+
           <div class="code-actions">
             <div class="action-hint">
               <i class="el-icon-info"></i>
-              <span>生成的代码将自动填充到执行区，您可以直接执行</span>
+              <span>可点击按钮复制代码到执行区运行</span>
             </div>
             <el-button
               size="small"
@@ -152,13 +160,25 @@
             <el-tag size="small" type="info" v-if="executionStatus === 'idle'">
               等待执行
             </el-tag>
-            <el-tag size="small" type="warning" v-else-if="executionStatus === 'executing'">
+            <el-tag
+              size="small"
+              type="warning"
+              v-else-if="executionStatus === 'executing'"
+            >
               执行中
             </el-tag>
-            <el-tag size="small" type="success" v-else-if="executionStatus === 'completed'">
+            <el-tag
+              size="small"
+              type="success"
+              v-else-if="executionStatus === 'completed'"
+            >
               执行完成
             </el-tag>
-            <el-tag size="small" type="danger" v-else-if="executionStatus === 'error'">
+            <el-tag
+              size="small"
+              type="danger"
+              v-else-if="executionStatus === 'error'"
+            >
               执行错误
             </el-tag>
           </div>
@@ -202,13 +222,13 @@
               >
                 <el-option label="Python" value="python">
                   <span class="language-option">
-                    <i class="el-icon-s-data" style="color: #3572A5"></i>
+                    <i class="el-icon-s-data" style="color: #3572a5"></i>
                     Python
                   </span>
                 </el-option>
                 <el-option label="R" value="r">
                   <span class="language-option">
-                    <i class="el-icon-s-data" style="color: #198CE7"></i>
+                    <i class="el-icon-s-data" style="color: #198ce7"></i>
                     R
                   </span>
                 </el-option>
@@ -218,7 +238,7 @@
               </span>
             </div>
           </div>
-          
+
           <div class="code-editor-container">
             <textarea
               v-model="executionCode"
@@ -258,11 +278,7 @@
 
             <div class="control-item">
               <label class="control-label">超时设置：</label>
-              <el-select
-                v-model="timeout"
-                size="small"
-                style="width: 120px"
-              >
+              <el-select v-model="timeout" size="small" style="width: 120px">
                 <el-option label="30秒" value="30"></el-option>
                 <el-option label="1分钟" value="60"></el-option>
                 <el-option label="5分钟" value="300"></el-option>
@@ -274,14 +290,14 @@
           <div class="execution-actions">
             <div class="security-notice">
               <div class="notice-content">
-                <i class="el-icon-lock" style="color: #409EFF"></i>
+                <i class="el-icon-lock" style="color: #409eff"></i>
                 <span>所有代码均在安全的沙箱环境中执行</span>
               </div>
               <div class="notice-detail">
                 <span>内存限制：512MB | 文件大小：10MB</span>
               </div>
             </div>
-            
+
             <div class="action-buttons">
               <el-button
                 type="success"
@@ -291,7 +307,7 @@
                 icon="el-icon-video-play"
                 class="execute-btn"
               >
-                {{ executing ? '执行中...' : '执行代码' }}
+                {{ executing ? "执行中..." : "执行代码" }}
               </el-button>
 
               <el-button
@@ -325,7 +341,10 @@
             <div class="output-title">
               <i class="el-icon-monitor"></i>
               <h4>执行输出</h4>
-              <span class="execution-time" v-if="executionResult?.executionTime">
+              <span
+                class="execution-time"
+                v-if="executionResult?.executionTime"
+              >
                 <i class="el-icon-time"></i>
                 耗时：{{ executionResult.executionTime }}ms
               </span>
@@ -353,7 +372,7 @@
               </el-button>
             </div>
           </div>
-          
+
           <div class="output-content">
             <!-- 错误信息 -->
             <div v-if="executionResult?.error" class="error-output">
@@ -364,7 +383,7 @@
               </div>
               <pre class="error-detail">{{ executionResult.error }}</pre>
             </div>
-            
+
             <!-- 标准输出 -->
             <div v-if="executionResult?.output" class="std-output">
               <div class="output-header">
@@ -373,9 +392,12 @@
               </div>
               <pre class="output-detail">{{ executionResult.output }}</pre>
             </div>
-            
+
             <!-- 无输出提示 -->
-            <div v-else-if="executionResult?.status === 'completed'" class="no-output">
+            <div
+              v-else-if="executionResult?.status === 'completed'"
+              class="no-output"
+            >
               <i class="el-icon-chat-dot-round"></i>
               <p>程序执行完成，无输出内容</p>
             </div>
@@ -484,7 +506,7 @@
             <p>本次执行未生成图表</p>
             <span class="hint">尝试使用matplotlib或seaborn等库生成图表</span>
             <div class="hint-code">
-              <code>plt.savefig('output.png')  # 保存图表</code>
+              <code>plt.savefig('output.png') # 保存图表</code>
             </div>
           </div>
         </div>
@@ -515,385 +537,429 @@
 
 <script>
 export default {
-  name: 'CodeAssistantNewLayout',
+  name: "CodeAssistantNewLayout",
   data() {
     return {
       // 用户输入
-      userInput: '',
-      
+      userInput: "",
+
       // 代码相关
-      generatedCode: '',
-      language: 'python',
-      
+      generatedCode: "",
+      language: "python",
+
       // 执行相关
-      executionCode: '',
-      executionMode: 'async',
-      timeout: '60',
+      executionCode: "",
+      executionMode: "async",
+      timeout: "60",
       executionId: null,
       executionResult: null,
-      executionStatus: 'idle', // idle, executing, completed, error
-      
+      executionStatus: "idle", // idle, executing, completed, error
+
       // 状态标志
       loading: false,
       executing: false,
       checkingStatus: false,
-      
+
       // 示例
       examples: [
-        '两组独立样本的t检验，并绘制箱线图',
-        '线性回归分析，展示回归系数和残差图',
-        '主成分分析(PCA)并绘制双标图',
-        '时间序列的ARIMA模型拟合与预测',
-        'K-means聚类分析并可视化结果',
-        '生存分析的Kaplan-Meier曲线绘制',
+        "两组独立样本的t检验，并绘制箱线图",
+        "线性回归分析，展示回归系数和残差图",
+        "主成分分析(PCA)并绘制双标图",
+        "时间序列的ARIMA模型拟合与预测",
+        "K-means聚类分析并可视化结果",
+        "生存分析的Kaplan-Meier曲线绘制",
       ],
-      
+
       // 代码状态
-      codeStatus: 'empty', // empty, generating, generated
-      
+      codeStatus: "empty", // empty, generating, generated
+
       // 轮询间隔
       pollInterval: null,
-    }
+    };
   },
-  
+
   computed: {
     // 代码行数（生成区）
     codeLines() {
-      if (!this.generatedCode) return 0
-      return this.generatedCode.split('\n').length
+      if (!this.generatedCode) return 0;
+      return this.generatedCode.split("\n").length;
     },
-    
+
     // 执行代码行数
     executionCodeLines() {
-      if (!this.executionCode) return 0
-      return this.executionCode.split('\n').length
+      if (!this.executionCode) return 0;
+      return this.executionCode.split("\n").length;
     },
-    
+
     // 是否显示图表区域
     showVisualizationArea() {
-      return this.executionResult || this.executionStatus !== 'idle'
+      return this.executionResult || this.executionStatus !== "idle";
     },
-    
+
     // 是否有图表
     hasCharts() {
-      return this.executionResult?.images && this.executionResult.images.length > 0
+      return (
+        this.executionResult?.images && this.executionResult.images.length > 0
+      );
     },
-    
+
     // 是否可以执行
     canExecute() {
-      return this.executionCode && this.executionCode.trim() && !this.executing
+      return this.executionCode && this.executionCode.trim() && !this.executing;
     },
-    
+
     // 是否有执行ID
     hasExecutionId() {
-      return this.executionId && this.executionMode === 'async'
+      return this.executionId && this.executionMode === "async";
     },
-    
+
     // 是否正在执行
     isExecuting() {
-      return this.executionStatus === 'executing'
-    }
+      return this.executionStatus === "executing";
+    },
   },
-  
+
   methods: {
     // 生成代码
     async askAssistant() {
       if (!this.userInput.trim()) {
-        this.$message.warning('请输入分析需求')
-        return
+        this.$message.warning("请输入分析需求");
+        return;
       }
-      
-      this.loading = true
-      this.codeStatus = 'generating'
-      
+
+      this.loading = true;
+      this.codeStatus = "generating";
+
       try {
         // 调用后端API生成代码
-        const response = await fetch('http://localhost:8080/api/analysis/assist', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ question: this.userInput })
-        })
-        
+        const response = await fetch(
+          "http://localhost:8080/api/analysis/assist",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ question: this.userInput }),
+          }
+        );
+
         if (!response.ok) {
-          throw new Error('生成代码失败')
+          throw new Error("生成代码失败");
         }
-        
-        const data = await response.json()
-        this.generatedCode = data.code
-        this.executionCode = data.code // 自动填充到执行区
-        this.codeStatus = 'generated'
-        
-        this.$message.success('代码生成成功，已填充到执行区')
+
+        const data = await response.json();
+        this.generatedCode = data.code;
+        this.codeStatus = "generated";
+
+        this.$message.success("代码生成成功, 可点击复制代码到执行区运行");
       } catch (error) {
-        this.$message.error('生成代码失败：' + error.message)
-        this.codeStatus = 'empty'
+        this.$message.error("生成代码失败：" + error.message);
+        this.codeStatus = "empty";
       } finally {
-        this.loading = false
+        this.loading = false;
       }
     },
-    
+
     // 清空输入
     clearInput() {
-      this.userInput = ''
-      this.$message.info('已清空输入')
+      this.userInput = "";
+      this.$message.info("已清空输入");
     },
-    
+
     // 获取语言标签类型
     getLanguageTagType() {
-      return this.language === 'python' ? 'success' : 'primary'
+      return this.language === "python" ? "success" : "primary";
     },
-    
+
     // 复制生成的代码
     copyGeneratedCode() {
-      if (!this.generatedCode) return
-      
-      navigator.clipboard.writeText(this.generatedCode).then(() => {
-        this.$message.success('代码已复制到剪贴板')
-      }).catch(err => {
-        this.$message.error('复制失败：' + err.message)
-      })
+      if (!this.generatedCode) return;
+
+      navigator.clipboard
+        .writeText(this.generatedCode)
+        .then(() => {
+          this.$message.success("代码已复制到剪贴板");
+        })
+        .catch((err) => {
+          this.$message.error("复制失败：" + err.message);
+        });
     },
-    
+
     // 下载生成的代码
     downloadGeneratedCode() {
-      if (!this.generatedCode) return
-      
-      const extension = this.language === 'python' ? 'py' : 'R'
-      const filename = `generated_code_${Date.now()}.${extension}`
-      
-      const blob = new Blob([this.generatedCode], { type: 'text/plain' })
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = filename
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
-      
-      this.$message.success(`代码已下载：${filename}`)
+      if (!this.generatedCode) return;
+
+      const extension = this.language === "python" ? "py" : "R";
+      const filename = `generated_code_${Date.now()}.${extension}`;
+
+      const blob = new Blob([this.generatedCode], { type: "text/plain" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      this.$message.success(`代码已下载：${filename}`);
     },
-    
-    // 复制到执行区
+
+    // 提取代码块内容
+    extractCodeFromMarkdown(code) {
+      // 匹配 ```python 和 ``` 之间的内容
+      const pythonRegex = /```python\n([\s\S]*?)```/;
+      // 匹配 ```r 和 ``` 之间的内容
+      const rRegex = /```r\n([\s\S]*?)```/;
+      // 匹配 ```（不带语言标识）和 ``` 之间的内容
+      const genericRegex = /```\n([\s\S]*?)```/;
+
+      let match;
+
+      // 根据当前语言选择匹配模式
+      if (this.language === "python") {
+        match = pythonRegex.exec(code);
+      } else if (this.language === "r") {
+        match = rRegex.exec(code);
+      }
+
+      // 如果没有匹配到指定语言的代码块，尝试通用匹配
+      if (!match && !match?.[1]) {
+        match = genericRegex.exec(code);
+      }
+
+      // 如果匹配成功，返回代码内容，否则返回原代码
+      return match ? match[1].trim() : code;
+    },
+
+    // 复制到执行区（修改后的版本）
     copyToExecution() {
-      if (!this.generatedCode) return
-      
-      this.executionCode = this.generatedCode
-      this.$message.success('代码已复制到执行区')
+      if (!this.generatedCode) return;
+
+      // 提取代码块内容
+      const extractedCode = this.extractCodeFromMarkdown(this.generatedCode);
+      this.executionCode = extractedCode;
+
+      this.$message.success("代码已提取并复制到执行区");
     },
-    
+
     // 清空执行代码
     clearExecutionCode() {
-      this.executionCode = ''
-      this.$message.info('已清空执行代码')
+      this.executionCode = "";
+      this.$message.info("已清空执行代码");
     },
-    
+
     // 复制执行代码
     copyExecutionCode() {
-      if (!this.executionCode) return
-      
-      navigator.clipboard.writeText(this.executionCode).then(() => {
-        this.$message.success('执行代码已复制')
-      }).catch(err => {
-        this.$message.error('复制失败：' + err.message)
-      })
+      if (!this.executionCode) return;
+
+      navigator.clipboard
+        .writeText(this.executionCode)
+        .then(() => {
+          this.$message.success("执行代码已复制");
+        })
+        .catch((err) => {
+          this.$message.error("复制失败：" + err.message);
+        });
     },
-    
+
     // 执行代码变化处理
     onExecutionCodeChange() {
       // 可以在这里添加代码检查或其他逻辑
     },
-    
+
     // 执行代码
     async executeCode() {
-      if (!this.canExecute) return
-      
-      this.executing = true
-      this.executionStatus = 'executing'
-      this.executionResult = null
-      
+      if (!this.canExecute) return;
+
+      this.executing = true;
+      this.executionStatus = "executing";
+      this.executionResult = null;
+
       try {
-        const url = this.executionMode === 'async' 
-          ? 'http://localhost:8080/api/code/execute'
-          : 'http://localhost:8080/api/code/execute-sync'
-        
+        const url =
+          this.executionMode === "async"
+            ? "http://localhost:8080/api/code/execute"
+            : "http://localhost:8080/api/code/execute-sync";
+
         const response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             code: this.executionCode,
             language: this.language,
-            timeout: parseInt(this.timeout)
-          })
-        })
-        
-        if (this.executionMode === 'async') {
-          const data = await response.json()
+            timeout: parseInt(this.timeout),
+          }),
+        });
+
+        if (this.executionMode === "async") {
+          const data = await response.json();
           if (response.ok) {
-            this.executionId = data.taskId
-            this.$message.success(`任务已提交，ID: ${data.taskId}`)
-            this.startPolling()
+            this.executionId = data.taskId;
+            this.$message.success(`任务已提交，ID: ${data.taskId}`);
+            this.startPolling();
           } else {
-            throw new Error(data.error || '执行失败')
+            throw new Error(data.error || "执行失败");
           }
         } else {
-          const result = await response.json()
-          this.handleExecutionResult(result)
+          const result = await response.json();
+          this.handleExecutionResult(result);
         }
       } catch (error) {
-        this.executionStatus = 'error'
-        this.$message.error('执行失败：' + error.message)
+        this.executionStatus = "error";
+        this.$message.error("执行失败：" + error.message);
       } finally {
-        this.executing = false
+        this.executing = false;
       }
     },
-    
+
     // 开始轮询状态
     startPolling() {
       // 清除之前的轮询
       if (this.pollInterval) {
-        clearInterval(this.pollInterval)
+        clearInterval(this.pollInterval);
       }
-      
+
       // 立即检查一次
-      this.checkExecutionStatus()
-      
+      this.checkExecutionStatus();
+
       // 设置轮询
       this.pollInterval = setInterval(() => {
         if (this.executionId) {
-          this.checkExecutionStatus()
+          this.checkExecutionStatus();
         }
-      }, 2000)
-      
+      }, 2000);
+
       // 超时后停止轮询
-      const timeoutMs = parseInt(this.timeout) * 1000 + 5000
+      const timeoutMs = parseInt(this.timeout) * 1000 + 5000;
       setTimeout(() => {
         if (this.pollInterval) {
-          clearInterval(this.pollInterval)
-          this.pollInterval = null
-          if (this.executionStatus === 'executing') {
-            this.$message.warning('执行超时')
-            this.executionStatus = 'error'
+          clearInterval(this.pollInterval);
+          this.pollInterval = null;
+          if (this.executionStatus === "executing") {
+            this.$message.warning("执行超时");
+            this.executionStatus = "error";
           }
         }
-      }, timeoutMs)
+      }, timeoutMs);
     },
-    
+
     // 检查执行状态
     async checkExecutionStatus() {
-      if (!this.executionId) return
-      
-      this.checkingStatus = true
+      if (!this.executionId) return;
+
+      this.checkingStatus = true;
       try {
-        const response = await fetch(`http://localhost:8080/api/code/result/${this.executionId}`)
-        
+        const response = await fetch(
+          `http://localhost:8080/api/code/result/${this.executionId}`
+        );
+
         if (response.status === 404) {
-          this.$message.warning('任务不存在')
+          this.$message.warning("任务不存在");
           if (this.pollInterval) {
-            clearInterval(this.pollInterval)
-            this.pollInterval = null
+            clearInterval(this.pollInterval);
+            this.pollInterval = null;
           }
-          return
+          return;
         }
-        
-        const result = await response.json()
-        this.handleExecutionResult(result)
+
+        const result = await response.json();
+        this.handleExecutionResult(result);
       } catch (error) {
-        console.error('检查状态失败:', error)
+        console.error("检查状态失败:", error);
       } finally {
-        this.checkingStatus = false
+        this.checkingStatus = false;
       }
     },
-    
+
     // 处理执行结果
     handleExecutionResult(result) {
-      this.executionResult = result
-      this.executionStatus = result.status
-      
-      if (result.status === 'completed') {
+      this.executionResult = result;
+      this.executionStatus = result.status;
+
+      if (result.status === "completed") {
         if (this.pollInterval) {
-          clearInterval(this.pollInterval)
-          this.pollInterval = null
+          clearInterval(this.pollInterval);
+          this.pollInterval = null;
         }
-        this.$message.success(`执行成功，耗时${result.executionTime}ms`)
-      } else if (result.status === 'error') {
+        this.$message.success(`执行成功，耗时${result.executionTime}ms`);
+      } else if (result.status === "error") {
         if (this.pollInterval) {
-          clearInterval(this.pollInterval)
-          this.pollInterval = null
+          clearInterval(this.pollInterval);
+          this.pollInterval = null;
         }
-        this.$message.error('执行出错：' + (result.error || '未知错误'))
+        this.$message.error("执行出错：" + (result.error || "未知错误"));
       }
     },
-    
+
     // 停止执行
     stopExecution() {
-      this.executionStatus = 'idle'
+      this.executionStatus = "idle";
       if (this.pollInterval) {
-        clearInterval(this.pollInterval)
-        this.pollInterval = null
+        clearInterval(this.pollInterval);
+        this.pollInterval = null;
       }
-      this.$message.info('执行已停止')
+      this.$message.info("执行已停止");
     },
-    
+
     // 复制输出
     copyOutput() {
       if (this.executionResult?.output) {
-        navigator.clipboard.writeText(this.executionResult.output)
-        this.$message.success('输出已复制')
+        navigator.clipboard.writeText(this.executionResult.output);
+        this.$message.success("输出已复制");
       }
     },
-    
+
     // 清空输出
     clearOutput() {
-      this.executionResult = null
-      this.executionStatus = 'idle'
-      this.$message.info('已清空输出')
+      this.executionResult = null;
+      this.executionStatus = "idle";
+      this.$message.info("已清空输出");
     },
-    
+
     // 清空可视化
     clearVisualization() {
       if (this.executionResult) {
-        this.executionResult.images = []
+        this.executionResult.images = [];
       }
-      this.$message.info('已清空图表')
+      this.$message.info("已清空图表");
     },
-    
+
     // 导出所有图表
     exportAllCharts() {
-      if (!this.hasCharts) return
-      
-      this.$message.info('图表批量导出功能开发中')
+      if (!this.hasCharts) return;
+
+      this.$message.info("图表批量导出功能开发中");
       // 实际实现中，可以打包下载所有图表
     },
-    
+
     // 预览图表
     previewChart(imageUrl) {
-      window.open(imageUrl, '_blank')
+      window.open(imageUrl, "_blank");
     },
-    
+
     // 下载图表
     downloadChart(imageUrl, index) {
-      const link = document.createElement('a')
-      link.href = imageUrl
-      link.download = `chart_${index + 1}_${Date.now()}.png`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      this.$message.success(`图表 ${index + 1} 已下载`)
+      const link = document.createElement("a");
+      link.href = imageUrl;
+      link.download = `chart_${index + 1}_${Date.now()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      this.$message.success(`图表 ${index + 1} 已下载`);
     },
-    
+
     // 复制图表链接
     copyChartLink(imageUrl) {
-      navigator.clipboard.writeText(imageUrl)
-      this.$message.success('图表链接已复制')
+      navigator.clipboard.writeText(imageUrl);
+      this.$message.success("图表链接已复制");
     },
-    
+
     // 处理图片加载错误
     handleImageError(event) {
-      event.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGQ9Ik03NSAyNUgyNUwyNSA3NUw3NSA3NUw3NSAyNVoiIGZpbGw9IiNGM0YzRjMiLz4KPHBhdGggZD0iTTQ1IDUwQzQ1IDQ3Ljc5MDkgNDYuNzkwOSA0NiA0OSA0NiA1MS4yMDkxIDQ2IDUzIDQ3Ljc5MDkgNTMgNTAgNTMgNTIuMjA5MSA1MS4yMDkxIDU0IDQ5IDU0IDQ2Ljc5MDkgNTQgNDUgNTIuMjA5MSA0NSA1MFoiIGZpbGw9IiM5MDkzOTkiLz4KPHBhdGggZD0iTTUwIDU3TDM5IDY4SDYxTDUwIDU3WiIgZmlsbD0iIzkwOTM5OSIvPgo8L3N2Zz4='
-    }
-  }
-}
+      event.target.src =
+        "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGQ9Ik03NSAyNUgyNUwyNSA3NUw3NSA3NUw3NSAyNVoiIGZpbGw9IiNGM0YzRjMiLz4KPHBhdGggZD0iTTQ1IDUwQzQ1IDQ3Ljc5MDkgNDYuNzkwOSA0NiA0OSA0NiA1MS4yMDkxIDQ2IDUzIDQ3Ljc5MDkgNTMgNTAgNTMgNTIuMjA5MSA1MS4yMDkxIDU0IDQ5IDU0IDQ2Ljc5MDkgNTQgNDUgNTIuMjA5MSA0NSA1MFoiIGZpbGw9IiM5MDkzOTkiLz4KPHBhdGggZD0iTTUwIDU3TDM5IDY4SDYxTDUwIDU3WiIgZmlsbD0iIzkwOTM5OSIvPgo8L3N2Zz4=";
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>
@@ -1091,7 +1157,7 @@ export default {
         pre {
           margin: 0;
           padding: 20px;
-          font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+          font-family: "Consolas", "Monaco", "Courier New", monospace;
           font-size: 13px;
           line-height: 1.5;
 
@@ -1205,7 +1271,7 @@ export default {
       .execution-code-editor {
         width: 100%;
         padding: 16px;
-        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        font-family: "Consolas", "Monaco", "Courier New", monospace;
         font-size: 13px;
         line-height: 1.5;
         border: none;
@@ -1366,7 +1432,7 @@ export default {
         .error-header {
           background: #fef2f2;
           border-color: #fecaca;
-          
+
           i {
             color: #f56c6c;
           }
@@ -1376,7 +1442,7 @@ export default {
         .output-detail {
           margin: 0;
           padding: 12px;
-          font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+          font-family: "Consolas", "Monaco", "Courier New", monospace;
           font-size: 12px;
           line-height: 1.4;
           white-space: pre-wrap;
@@ -1520,9 +1586,9 @@ export default {
       border-radius: 4px;
       padding: 8px 12px;
       display: inline-block;
-      
+
       code {
-        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        font-family: "Consolas", "Monaco", "Courier New", monospace;
         font-size: 12px;
         color: #4a5568;
       }
@@ -1568,8 +1634,12 @@ export default {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* 响应式设计 */
@@ -1603,7 +1673,7 @@ export default {
 /* 代码高亮样式 */
 :deep(pre) {
   position: relative;
-  
+
   &:before {
     content: attr(data-lang);
     position: absolute;

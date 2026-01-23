@@ -43,7 +43,7 @@ const AccountSetting = () => import('@/components/user/AccountSetting.vue')
 const HomePage = () => import('@/views/Home.vue')
 const MainLayout = () => import('@/components/MainLayout.vue')
 const AnalysisPage = () => import('@/views/analysis/AnalysisPage.vue');
-
+const TeachingCase = () => import('@/views/case/TeachingCase.vue');
 
 const routes = [
   {
@@ -96,11 +96,31 @@ const routes = [
           meta: { title: "分析页面" },
         },
         {
+          // 文件上传页面
+          path: "file-uploader",
+          name: "FileUploader",
+          component: () => import('@/components/analysis/FileUploader.vue'),
+          meta: { title: "文件上传" } 
+        },
+        {
+          // 新建分析页面
+          path: "new-analysis",
+          name: "NewAnalysisForm",
+          component: () => import('@/components/analysis/NewAnalysisForm.vue'),
+          meta: { title: "新建分析" }
+        },
+        {
           path: "assistant",  // 独立的路由，不是analysis的子路由
           name: "AnalysisAssistant",
           component: () => import('@/components/analysis/AnalysisAssistant.vue'),
           meta: { title: "AI助手" }
         },
+        {
+          path: "teaching-case",
+          name: "TeachingCase",
+          component: TeachingCase,
+          meta: { title: "教学案例" }
+        }
       ]
     },
   // 后台

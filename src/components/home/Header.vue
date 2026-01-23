@@ -167,6 +167,7 @@ export default {
       const menuRouteMap = {
         1: { name: "HomePage" }, // 首页对应根路径
         3: { name: "AnalysisPage" }, // 课程列表对应CourseList路由（优先使用name，更稳定）
+        4: { name: "TeachingCase" }, // 教学案例库
       };
       // 获取当前选中index对应的路由配置
       const targetRoute = menuRouteMap[index];
