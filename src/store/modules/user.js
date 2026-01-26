@@ -62,6 +62,8 @@ const actions = {
 }
 
 const getters = {
+  // 获取用户ID
+  UserId: state => state.userInfo?.id || null,
   // 获取用户角色
   userRole: state => state.userInfo?.role || '',
   // 获取用户名

@@ -300,86 +300,15 @@
 
         <!-- 右侧：数据文件和推荐资源 -->
         <div class="content-right">
-          <!-- 数据文件列表 -->
-          <div class="data-files">
-            <div class="files-header">
-              <h3 class="section-title">
-                <i class="el-icon-folder-opened"></i> 最近数据文件
-              </h3>
-              <el-button
-                type="text"
-                size="mini"
-                icon="el-icon-upload"
-                @click="handleUploadData"
-              >
-                上传
-              </el-button>
-            </div>
-
-            <div class="file-list">
-              <div
-                v-for="file in recentFiles"
-                :key="file.id"
-                class="file-item"
-                @click="viewFile(file)"
-              >
-                <div class="file-icon">
-                  <i :class="getFileIcon(file.type)"></i>
-                </div>
-                <div class="file-info">
-                  <div class="file-name">
-                    <span>{{ file.name }}</span>
-                    <el-tag v-if="file.isPublic" size="mini" type="success"
-                      >公开</el-tag
-                    >
-                  </div>
-                  <div class="file-meta">
-                    <span>{{ formatFileSize(file.size) }}</span>
-                    <span>{{ formatTime(file.uploadTime) }}</span>
-                  </div>
-                </div>
-                <div class="file-actions">
-                  <el-dropdown
-                    trigger="click"
-                    @command="handleFileCommand($event, file)"
-                  >
-                    <span class="el-dropdown-link">
-                      <i class="el-icon-more"></i>
-                    </span>
-                    <el-dropdown-menu slot="dropdown">
-                      <el-dropdown-item command="download"
-                        >下载</el-dropdown-item
-                      >
-                      <el-dropdown-item command="share">分享</el-dropdown-item>
-                      <el-dropdown-item command="delete" divided
-                        >删除</el-dropdown-item
-                      >
-                    </el-dropdown-menu>
-                  </el-dropdown>
-                </div>
-              </div>
-
-              <div v-if="recentFiles.length === 0" class="empty-files">
-                <i class="el-icon-document"></i>
-                <p>暂无数据文件</p>
-                <el-button type="text" @click="handleUploadData"
-                  >上传第一个文件</el-button
-                >
-              </div>
-
-              <div class="file-storage">
-                <div class="storage-info">
-                  <span>存储空间</span>
-                  <span>{{ usedStorage }} / {{ totalStorage }}</span>
-                </div>
-                <el-progress
-                  :percentage="storagePercentage"
-                  :stroke-width="6"
-                  :color="storagePercentage > 90 ? '#f56c6c' : '#409eff'"
-                />
-              </div>
-            </div>
-          </div>
+          <!-- 最近上传文件组件 -->
+          <recent-files
+            :user-id="UserId"
+            @upload-click="handleUploadData"
+            @file-click="viewFile"
+            @file-download="downloadFile"
+            @file-delete="deleteFile"
+            ref="recentFiles"
+          />
 
           <!-- 学习资源推荐 -->
           <div class="learning-resources" v-if="userRole === 'student'">
@@ -454,7 +383,7 @@
     >
       <new-analysis-form
         :templates="analysisTemplates"
-        :files="recentFiles"
+        :files="getRecentUploadFiles"
         @submit="createAnalysis"
         @cancel="closeCreateDialog"
       />
@@ -475,9 +404,17 @@
 </template>
 
 <script>
+import { mapState, mapGetters } from "vuex";
+import FileUploader from "@/components/analysis/FileUploader.vue";
+import RecentFiles from "@/components/analysis/RecentFiles.vue";
 
 export default {
   name: "AnalysisPage",
+
+  components: {
+    FileUploader,
+    RecentFiles,
+  },
 
   data() {
     return {
@@ -487,6 +424,7 @@ export default {
         successRate: 94.5,
         activeUsers: 42,
       },
+
       recentTasks: [
         {
           id: 1,
@@ -521,6 +459,7 @@ export default {
           createTime: "2023-10-15T16:45:00",
         },
       ],
+
       analysisTemplates: [
         {
           id: 1,
@@ -568,32 +507,7 @@ export default {
           usedCount: 64,
         },
       ],
-      recentFiles: [
-        {
-          id: 1,
-          name: "sample_R1.fastq.gz",
-          type: "fastq",
-          size: 1024 * 1024 * 500, // 500MB
-          uploadTime: "2023-10-16T08:30:00",
-          isPublic: true,
-        },
-        {
-          id: 2,
-          name: "reference_genome.fa",
-          type: "fasta",
-          size: 1024 * 1024 * 800, // 800MB
-          uploadTime: "2023-10-16T09:15:00",
-          isPublic: false,
-        },
-        {
-          id: 3,
-          name: "expression_matrix.csv",
-          type: "csv",
-          size: 1024 * 1024 * 10, // 10MB
-          uploadTime: "2023-10-15T14:20:00",
-          isPublic: true,
-        },
-      ],
+
       learningResources: [
         {
           id: 1,
@@ -614,6 +528,7 @@ export default {
           level: "中级",
         },
       ],
+
       announcements: [
         {
           id: 1,
@@ -630,32 +545,110 @@ export default {
           isNew: false,
         },
       ],
-      userRole: "student",
       taskFilter: "all",
       refreshing: false,
       showCreateDialog: false,
       showUploadDialog: false,
-      usedStorage: "1.2GB",
-      totalStorage: "10GB",
-      storagePercentage: 12,
     };
   },
+
   computed: {
+    ...mapState("user", {
+      isLoggedIn: (state) => state.isLoggedIn,
+      userInfo: (state) => state.userInfo,
+    }),
+
+    ...mapGetters("user", ["UserId", "Name", "userRole"]),
+
     filteredTasks() {
       if (this.taskFilter === "all") {
-        return this.recentTasks.slice(0, 5); // 最多显示5个
+        return this.recentTasks.slice(0, 5);
       }
       return this.recentTasks
         .filter((task) => task.status === this.taskFilter)
         .slice(0, 5);
     },
+
+    // 获取最近上传的文件（用于新建分析对话框）
+    getRecentUploadFiles() {
+      return this.$refs.recentFiles ? 
+        this.$refs.recentFiles.files.filter(file => 
+          ['fasta', 'fastq', 'bam', 'vcf', 'csv'].includes(file.type)
+        ) : [];
+    }
   },
+
+  created() {
+    if (!this.isLoggedIn) {
+      this.$message.warning("请先登录");
+      this.$router.push("/login");
+      return;
+    }
+
+    console.log("当前用户信息:", this.userInfo);
+    console.log("用户ID:", this.UserId);
+    console.log("用户名:", this.Name);
+  },
+
   methods: {
-    // 快速操作
+    // 处理上传数据按钮点击
     handleUploadData() {
+      if (!this.isLoggedIn) {
+        this.$message.warning("请先登录");
+        this.$router.push("/login");
+        return;
+      }
+
       this.showUploadDialog = true;
     },
 
+    // 处理上传成功
+    handleUploadSuccess(result) {
+      this.closeUploadDialog();
+
+      this.$message({
+        message: `成功上传 ${result.success}/${result.total} 个文件`,
+        type: "success",
+        duration: 3000,
+      });
+
+      // 刷新文件列表
+      this.$refs.recentFiles.refresh();
+    },
+
+    // 关闭上传对话框
+    closeUploadDialog() {
+      this.showUploadDialog = false;
+    },
+
+    // 查看文件
+    viewFile(file) {
+      this.$message.info(`查看文件: ${file.name}`);
+    },
+
+    // 下载文件
+    downloadFile(file) {
+      if (file.downloadUrl) {
+        window.open(file.downloadUrl, '_blank');
+        this.$message.success(`开始下载: ${file.name}`);
+      } else {
+        this.$message.warning('文件下载链接不可用');
+      }
+    },
+
+    // 删除文件
+    async deleteFile(file) {
+      try {
+        // 调用API删除文件
+        await this.$axios.delete(`/api/files/${file.id}`);
+        this.$message.success('文件已删除');
+      } catch (error) {
+        console.error('删除文件失败:', error);
+        this.$message.error('删除文件失败');
+      }
+    },
+
+    // 其他方法保持不变...
     handleNewAnalysis() {
       this.showCreateDialog = true;
     },
@@ -687,7 +680,6 @@ export default {
       this.$router.push({ name: "DataManagement" });
     },
 
-    // 任务管理
     getStatusType(status) {
       const map = {
         completed: "success",
@@ -729,7 +721,6 @@ export default {
       this.$confirm("确定要停止这个任务吗？", "提示", {
         type: "warning",
       }).then(() => {
-        // 调用API停止任务
         this.$message.success("任务已停止");
       });
     },
@@ -740,14 +731,12 @@ export default {
 
     refreshTasks() {
       this.refreshing = true;
-      // 模拟API调用
       setTimeout(() => {
         this.refreshing = false;
         this.$message.success("任务列表已刷新");
       }, 1000);
     },
 
-    // 模板管理
     useTemplate(template) {
       this.$router.push({
         name: "NewAnalysis",
@@ -782,7 +771,6 @@ export default {
       return tagMap[tag] || "info";
     },
 
-    // 文件管理
     getFileIcon(fileType) {
       const iconMap = {
         fastq: "el-icon-document",
@@ -805,49 +793,6 @@ export default {
       return iconMap[taskType] || "el-icon-s-operation";
     },
 
-    viewFile(file) {
-      this.$message.info(`查看文件: ${file.name}`);
-    },
-
-    handleFileCommand(command, file) {
-      if (command === "download") {
-        this.downloadFile(file);
-      } else if (command === "share") {
-        this.shareFile(file);
-      } else if (command === "delete") {
-        this.deleteFile(file);
-      }
-    },
-
-    downloadFile(file) {
-      this.$message.success(`开始下载: ${file.name}`);
-    },
-
-    shareFile(file) {
-      this.$prompt("请输入分享天数", "分享文件", {
-        confirmButtonText: "确定",
-        cancelButtonText: "取消",
-        inputPattern: /^[1-9]\d*$/,
-        inputErrorMessage: "请输入有效天数",
-      }).then(({ value }) => {
-        this.$message.success(`文件 ${file.name} 已分享 ${value} 天`);
-      });
-    },
-
-    deleteFile(file) {
-      this.$confirm(`确定要删除 ${file.name} 吗？`, "提示", {
-        type: "warning",
-      }).then(() => {
-        // 从列表中移除
-        const index = this.recentFiles.findIndex((f) => f.id === file.id);
-        if (index !== -1) {
-          this.recentFiles.splice(index, 1);
-        }
-        this.$message.success("文件已删除");
-      });
-    },
-
-    // 学习资源
     startLearning(resource) {
       this.$router.push({
         name: "LearningDetail",
@@ -863,27 +808,15 @@ export default {
       this.$router.push({ name: "TaskManagement" });
     },
 
-    // 对话框管理
     closeCreateDialog() {
       this.showCreateDialog = false;
     },
 
-    closeUploadDialog() {
-      this.showUploadDialog = false;
-    },
-
-    handleUploadSuccess() {
-      this.closeUploadDialog();
-      this.$message.success("文件上传成功");
-    },
-
     createAnalysis(formData) {
-      // 调用API创建分析任务
       console.log("创建分析任务:", formData);
       this.closeCreateDialog();
       this.$message.success("分析任务已创建");
 
-      // 添加到任务列表
       this.recentTasks.unshift({
         id: Date.now(),
         name: formData.name || "新分析任务",
@@ -894,7 +827,6 @@ export default {
       });
     },
 
-    // 工具函数
     formatTime(timestamp) {
       const date = new Date(timestamp);
       const now = new Date();
@@ -920,6 +852,21 @@ export default {
       const sizes = ["B", "KB", "MB", "GB", "TB"];
       const i = Math.floor(Math.log(bytes) / Math.log(k));
       return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+    },
+  },
+
+  watch: {
+    isLoggedIn(newVal) {
+      if (newVal) {
+        // 登录后刷新数据
+        if (this.$refs.recentFiles) {
+          this.$refs.recentFiles.refresh();
+        }
+        this.refreshTasks();
+      } else {
+        // 登出后清空数据
+        this.recentTasks = [];
+      }
     },
   },
 };
@@ -1392,131 +1339,6 @@ export default {
         align-items: center;
         padding-top: 16px;
         border-top: 1px solid #f5f5f5;
-      }
-    }
-  }
-}
-
-// 数据文件样式
-.data-files {
-  background: white;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-
-  .files-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-  }
-
-  .file-list {
-    .file-item {
-      display: flex;
-      align-items: center;
-      padding: 12px;
-      border-radius: 8px;
-      border: 1px solid #e8e8e8;
-      margin-bottom: 12px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-
-      &:hover {
-        border-color: #3498db;
-        background: #f8fafc;
-      }
-
-      .file-icon {
-        width: 40px;
-        height: 40px;
-        border-radius: 8px;
-        background: #f5f5f5;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 12px;
-
-        i {
-          font-size: 20px;
-          color: #7f8c8d;
-        }
-      }
-
-      .file-info {
-        flex: 1;
-
-        .file-name {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-bottom: 4px;
-
-          span {
-            flex: 1;
-            font-weight: 500;
-            color: #2c3e50;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-          }
-        }
-
-        .file-meta {
-          display: flex;
-          justify-content: space-between;
-          font-size: 12px;
-          color: #95a5a6;
-        }
-      }
-
-      .file-actions {
-        .el-dropdown-link {
-          cursor: pointer;
-          padding: 8px;
-          border-radius: 4px;
-
-          &:hover {
-            background: #f5f5f5;
-          }
-
-          i {
-            color: #7f8c8d;
-            font-size: 16px;
-          }
-        }
-      }
-    }
-
-    .empty-files {
-      text-align: center;
-      padding: 30px 20px;
-      color: #bdc3c7;
-      border: 1px dashed #e8e8e8;
-      border-radius: 8px;
-      margin-bottom: 16px;
-
-      i {
-        font-size: 36px;
-        margin-bottom: 12px;
-      }
-
-      p {
-        margin-bottom: 12px;
-        font-size: 14px;
-      }
-    }
-
-    .file-storage {
-      padding-top: 16px;
-      border-top: 1px solid #e8e8e8;
-
-      .storage-info {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 8px;
-        font-size: 14px;
-        color: #2c3e50;
       }
     }
   }
