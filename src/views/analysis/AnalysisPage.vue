@@ -302,7 +302,7 @@
         <div class="content-right">
           <!-- 最近上传文件组件 -->
           <recent-files
-            :user-id="UserId"
+            :user-id="userId"
             @upload-click="handleUploadData"
             @file-click="viewFile"
             @file-download="downloadFile"
@@ -558,7 +558,7 @@ export default {
       userInfo: (state) => state.userInfo,
     }),
 
-    ...mapGetters("user", ["UserId", "Name", "userRole"]),
+    ...mapGetters("user", ["userId", "username", "userRole"]),
 
     filteredTasks() {
       if (this.taskFilter === "all") {
@@ -571,11 +571,12 @@ export default {
 
     // 获取最近上传的文件（用于新建分析对话框）
     getRecentUploadFiles() {
-      return this.$refs.recentFiles ? 
-        this.$refs.recentFiles.files.filter(file => 
-          ['fasta', 'fastq', 'bam', 'vcf', 'csv'].includes(file.type)
-        ) : [];
-    }
+      return this.$refs.recentFiles
+        ? this.$refs.recentFiles.files.filter((file) =>
+            ["fasta", "fastq", "bam", "vcf", "csv"].includes(file.type)
+          )
+        : [];
+    },
   },
 
   created() {
@@ -586,8 +587,8 @@ export default {
     }
 
     console.log("当前用户信息:", this.userInfo);
-    console.log("用户ID:", this.UserId);
-    console.log("用户名:", this.Name);
+    console.log("用户ID:", this.userId);
+    console.log("用户名:", this.username);
   },
 
   methods: {
@@ -629,10 +630,10 @@ export default {
     // 下载文件
     downloadFile(file) {
       if (file.downloadUrl) {
-        window.open(file.downloadUrl, '_blank');
+        window.open(file.downloadUrl, "_blank");
         this.$message.success(`开始下载: ${file.name}`);
       } else {
-        this.$message.warning('文件下载链接不可用');
+        this.$message.warning("文件下载链接不可用");
       }
     },
 
@@ -641,10 +642,10 @@ export default {
       try {
         // 调用API删除文件
         await this.$axios.delete(`/api/files/${file.id}`);
-        this.$message.success('文件已删除');
+        this.$message.success("文件已删除");
       } catch (error) {
-        console.error('删除文件失败:', error);
-        this.$message.error('删除文件失败');
+        console.error("删除文件失败:", error);
+        this.$message.error("删除文件失败");
       }
     },
 
@@ -703,11 +704,14 @@ export default {
     },
 
     getProgressStatus(status) {
-      return status === "failed"
-        ? "exception"
-        : status === "completed"
-        ? "success"
-        : "";
+      // 只对 completed 和 failed 状态设置特殊样式
+      // 其他状态返回 null，让进度条使用默认样式
+      if (status === "completed") {
+        return "success";
+      } else if (status === "failed") {
+        return "exception";
+      }
+      return null;
     },
 
     viewTask(task) {
