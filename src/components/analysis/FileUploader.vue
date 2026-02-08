@@ -1,7 +1,12 @@
 <template>
-  <div class="file-uploader">
+  <div class="simple-file-uploader">
     <!-- 上传区域 -->
-    <div class="upload-area" @click="triggerFileInput" @dragover.prevent="onDragOver" @drop.prevent="onDrop">
+    <div
+      class="upload-area"
+      @click="triggerFileInput"
+      @dragover.prevent="onDragOver"
+      @drop.prevent="onDrop"
+    >
       <input
         ref="fileInput"
         type="file"
@@ -10,80 +15,14 @@
         @change="handleFileChange"
         style="display: none"
       />
-      
-      <div class="upload-content" :class="{ 'dragover': isDragover }">
+
+      <div class="upload-content" :class="{ dragover: isDragover }">
         <i class="el-icon-upload upload-icon"></i>
         <h3 class="upload-title">点击或拖拽文件到此区域上传</h3>
-        <p class="upload-tips">支持 {{ allowedExtensionsText }} 格式，单个文件最大 {{ maxFileSizeText }}</p>
-        <p class="upload-tips small">建议按照项目分类上传，便于管理</p>
-      </div>
-    </div>
-
-    <!-- 项目选择 -->
-    <div class="upload-options">
-      <div class="option-item">
-        <span class="option-label">选择项目：</span>
-        <el-select
-          v-model="selectedProject"
-          placeholder="请选择项目（可选）"
-          style="width: 300px"
-          filterable
-          clearable
-          @change="onProjectChange"
-        >
-          <el-option
-            v-for="project in projectList"
-            :key="project.id"
-            :label="project.name"
-            :value="project.id"
-          >
-            <div class="project-option">
-              <span>{{ project.name }}</span>
-              <span class="project-count">（{{ project.fileCount }}个文件）</span>
-            </div>
-          </el-option>
-        </el-select>
-        <el-button
-          type="text"
-          icon="el-icon-plus"
-          @click="createNewProject"
-          style="margin-left: 10px"
-        >
-          新建项目
-        </el-button>
-      </div>
-
-      <div class="option-item">
-        <span class="option-label">文件描述：</span>
-        <el-input
-          v-model="fileDescription"
-          type="textarea"
-          :rows="3"
-          placeholder="请输入文件描述信息（可选）"
-          style="width: 300px"
-          maxlength="500"
-          show-word-limit
-        />
-      </div>
-
-      <div class="option-item">
-        <span class="option-label">标签分类：</span>
-        <el-select
-          v-model="selectedTags"
-          multiple
-          placeholder="选择或输入标签（可选）"
-          style="width: 300px"
-          filterable
-          allow-create
-          default-first-option
-        >
-          <el-option
-            v-for="tag in commonTags"
-            :key="tag.value"
-            :label="tag.label"
-            :value="tag.value"
-          />
-        </el-select>
+        <p class="upload-tips">
+          支持 {{ allowedExtensionsText }} 格式，单个文件最大
+          {{ maxFileSizeText }}
+        </p>
       </div>
     </div>
 
@@ -97,7 +36,7 @@
           :disabled="uploading"
           @click="startUpload"
         >
-          {{ uploading ? `上传中 (${progress}%)` : '开始上传' }}
+          {{ uploading ? `上传中...` : "开始上传" }}
         </el-button>
       </div>
 
@@ -107,26 +46,19 @@
           :key="file.id"
           class="file-item"
           :class="{
-            'uploading': file.status === 'uploading',
-            'success': file.status === 'success',
-            'error': file.status === 'error'
+            uploading: file.status === 'uploading',
+            success: file.status === 'success',
+            error: file.status === 'error',
           }"
         >
           <!-- 文件信息 -->
           <div class="file-info">
             <div class="file-icon">
-              <i :class="getFileIcon(file.type)"></i>
+              <i :class="getFileIcon(file.name)"></i>
             </div>
             <div class="file-details">
               <div class="file-name">
                 <span class="name-text">{{ file.name }}</span>
-                <el-tag
-                  v-if="file.type"
-                  size="mini"
-                  :type="getFileTypeTag(file.type)"
-                >
-                  {{ file.type.toUpperCase() }}
-                </el-tag>
               </div>
               <div class="file-meta">
                 <span class="file-size">{{ formatFileSize(file.size) }}</span>
@@ -137,32 +69,15 @@
             </div>
           </div>
 
-          <!-- 进度条 -->
-          <div class="file-progress" v-if="file.status === 'uploading'">
-            <el-progress
-              :percentage="file.progress"
-              :stroke-width="4"
-              :show-text="false"
-            />
-          </div>
-
           <!-- 操作按钮 -->
           <div class="file-actions">
             <el-button
-              v-if="file.status === 'pending'"
+              v-if="file.status === 'pending' || file.status === 'error'"
               type="text"
               icon="el-icon-delete"
               @click="removeFile(index)"
               class="remove-btn"
               title="移除"
-            ></el-button>
-            <el-button
-              v-if="file.status === 'error'"
-              type="text"
-              icon="el-icon-refresh"
-              @click="retryUpload(file, index)"
-              class="retry-btn"
-              title="重试"
             ></el-button>
             <i
               v-if="file.status === 'success'"
@@ -203,465 +118,471 @@
         <span class="stats-label">失败：</span>
         <span class="stats-value error">{{ errorCount }} 个</span>
       </div>
-      <div class="stats-item">
-        <span class="stats-label">总进度：</span>
-        <el-progress
-          :percentage="progress"
-          :stroke-width="12"
-          :status="uploadStatus"
-          style="width: 200px; margin-left: 10px;"
-        />
-      </div>
     </div>
-
-    <!-- 新建项目对话框 -->
-    <el-dialog
-      title="新建项目"
-      :visible.sync="showProjectDialog"
-      width="400px"
-      @close="closeProjectDialog"
-    >
-      <div class="project-dialog">
-        <el-form :model="newProject" label-width="80px">
-          <el-form-item label="项目名称" required>
-            <el-input
-              v-model="newProject.name"
-              placeholder="请输入项目名称"
-              maxlength="50"
-              show-word-limit
-            />
-          </el-form-item>
-          <el-form-item label="项目描述">
-            <el-input
-              v-model="newProject.description"
-              type="textarea"
-              placeholder="请输入项目描述（可选）"
-              :rows="3"
-              maxlength="200"
-              show-word-limit
-            />
-          </el-form-item>
-        </el-form>
-        <div class="dialog-footer">
-          <el-button @click="closeProjectDialog">取消</el-button>
-          <el-button type="primary" @click="confirmNewProject">确定</el-button>
-        </div>
-      </div>
-    </el-dialog>
   </div>
 </template>
 
 <script>
-import axios from 'axios'
+import { mapState } from "vuex";
+import { uploadFiles } from "@/api/file";
 
 export default {
-  name: 'FileUploader',
-  
+  name: "SimpleFileUploader",
+
   props: {
-    // 用户ID（从父组件传入）
-    userId: {
-      type: Number,
-      required: true
+    // 项目ID（可选）
+    projectId: {
+      type: [Number, String],
+      default: null,
+    },
+    // 文件描述（可选）
+    description: {
+      type: String,
+      default: "",
     },
     // 最大文件大小（字节）
     maxFileSize: {
       type: Number,
-      default: 10 * 1024 * 1024 * 1024 // 10GB
+      default: 10 * 1024 * 1024 * 1024, // 10GB
     },
     // 允许的文件扩展名
     allowedExtensions: {
       type: Array,
-      default: () => ['.fastq', '.fastq.gz', '.fq', '.fq.gz', '.fasta', '.fa', '.fasta.gz', '.bam', '.sam', '.vcf', '.bed', '.gtf']
-    }
+      default: () => [
+        ".fastq",
+        ".fastq.gz",
+        ".fq",
+        ".fq.gz",
+        ".fasta",
+        ".fa",
+        ".fasta.gz",
+        ".bam",
+        ".sam",
+        ".vcf",
+        ".bed",
+        ".gtf",
+      ],
+    },
   },
 
   data() {
     return {
       // 文件列表
       fileList: [],
-      // 项目列表
-      projectList: [
-        { id: 1, name: '肝癌转录组分析', fileCount: 12 },
-        { id: 2, name: '小麦基因组测序', fileCount: 8 },
-        { id: 3, name: '作业：RNA-Seq分析', fileCount: 5 },
-        { id: 4, name: '实验数据备份', fileCount: 3 }
-      ],
-      // 常用标签
-      commonTags: [
-        { label: 'RNA-Seq', value: 'RNA-Seq' },
-        { label: 'WGS', value: 'WGS' },
-        { label: 'scRNA-Seq', value: 'scRNA-Seq' },
-        { label: 'ChIP-Seq', value: 'ChIP-Seq' },
-        { label: '教学项目', value: 'teaching' },
-        { label: '科研项目', value: 'research' },
-        { label: '作业', value: 'homework' },
-        { label: '实验数据', value: 'experiment' }
-      ],
-      // 选择状态
-      selectedProject: null,
-      selectedTags: [],
-      fileDescription: '',
       // 上传状态
       uploading: false,
       isDragover: false,
-      // 新建项目
-      showProjectDialog: false,
-      newProject: {
-        name: '',
-        description: ''
-      }
-    }
+    };
   },
 
   computed: {
+    // 直接从 Vuex 的 user 模块获取用户信息
+    ...mapState("user", {
+      userId: (state) => state.userInfo?.id,
+      userInfo: (state) => state.userInfo,
+      isLoggedIn: (state) => state.isLoggedIn,
+    }),
+
     // 格式化允许的文件扩展名文本
     allowedExtensionsText() {
-      const exts = this.allowedExtensions.map(ext => ext.replace('.', '').toUpperCase())
-      return exts.join('、')
+      const exts = this.allowedExtensions.map((ext) =>
+        ext.replace(".", "").toUpperCase(),
+      );
+      return exts.join("、");
     },
 
     // 格式化最大文件大小
     maxFileSizeText() {
-      return this.formatFileSize(this.maxFileSize)
-    },
-
-    // 上传进度
-    progress() {
-      if (this.fileList.length === 0) return 0
-      
-      const totalFiles = this.fileList.length
-      const completedFiles = this.fileList.filter(file => 
-        file.status === 'success' || file.status === 'error'
-      ).length
-      
-      return Math.round((completedFiles / totalFiles) * 100)
-    },
-
-    // 上传状态（用于进度条颜色）
-    uploadStatus() {
-      if (this.errorCount > 0) return 'exception'
-      if (this.successCount === this.fileList.length && this.fileList.length > 0) return 'success'
-      return ''
+      return this.formatFileSize(this.maxFileSize);
     },
 
     // 统计信息
     totalSize() {
-      return this.fileList.reduce((sum, file) => sum + file.size, 0)
+      return this.fileList.reduce((sum, file) => sum + file.size, 0);
     },
 
     successCount() {
-      return this.fileList.filter(file => file.status === 'success').length
+      return this.fileList.filter((file) => file.status === "success").length;
     },
 
     errorCount() {
-      return this.fileList.filter(file => file.status === 'error').length
-    }
+      return this.fileList.filter((file) => file.status === "error").length;
+    },
   },
 
   methods: {
+    // 检查用户是否已登录
+    checkLogin() {
+      if (!this.isLoggedIn || !this.userId) {
+        this.$message.warning("请先登录后再上传文件");
+        this.$router.push("/login");
+        return false;
+      }
+
+      // 调试信息
+      console.log("当前用户信息：", this.userInfo);
+      console.log("用户ID：", this.userId);
+      console.log("用户名：", this.userInfo?.username);
+
+      return true;
+    },
+
     // 触发文件选择
     triggerFileInput() {
-      this.$refs.fileInput.click()
+      if (!this.checkLogin()) return;
+      this.$refs.fileInput.click();
     },
 
     // 处理文件选择
     handleFileChange(event) {
-      const files = Array.from(event.target.files)
-      this.addFiles(files)
+      if (!this.checkLogin()) return;
+
+      const files = Array.from(event.target.files);
+      this.addFiles(files);
       // 清空input，以便可以选择相同的文件
-      event.target.value = ''
+      event.target.value = "";
     },
 
     // 拖拽相关方法
     onDragOver() {
-      this.isDragover = true
+      if (!this.checkLogin()) return;
+      this.isDragover = true;
     },
 
     onDrop(event) {
-      this.isDragover = false
-      const files = Array.from(event.dataTransfer.files)
-      this.addFiles(files)
+      if (!this.checkLogin()) return;
+
+      this.isDragover = false;
+      const files = Array.from(event.dataTransfer.files);
+      this.addFiles(files);
     },
 
     // 添加文件到列表
     addFiles(files) {
-      files.forEach(file => {
+      files.forEach((file) => {
         // 检查文件大小
         if (file.size > this.maxFileSize) {
-          this.$message.error(`文件 ${file.name} 超过最大限制 ${this.maxFileSizeText}`)
-          return
+          this.$message.error(
+            `文件 ${file.name} 超过最大限制 ${this.maxFileSizeText}`,
+          );
+          return;
         }
 
         // 检查文件类型
-        const fileExt = this.getFileExtension(file.name).toLowerCase()
-        if (!this.allowedExtensions.includes(fileExt)) {
-          this.$message.error(`不支持的文件类型 ${fileExt}，允许的类型：${this.allowedExtensionsText}`)
-          return
+        const fileExt = this.getFileExtension(file.name).toLowerCase();
+        const allowedExts = this.allowedExtensions.map((ext) =>
+          ext.toLowerCase(),
+        );
+        if (!allowedExts.includes(fileExt)) {
+          this.$message.error(
+            `不支持的文件类型 ${fileExt}，允许的类型：${this.allowedExtensionsText}`,
+          );
+          return;
         }
 
         // 检查是否已存在同名文件
-        const exists = this.fileList.some(f => f.name === file.name && f.size === file.size)
+        const exists = this.fileList.some(
+          (f) => f.name === file.name && f.size === file.size,
+        );
         if (exists) {
-          this.$message.warning(`文件 ${file.name} 已存在列表中`)
-          return
+          this.$message.warning(`文件 ${file.name} 已存在列表中`);
+          return;
         }
 
         // 添加到文件列表
-        const fileType = this.determineFileType(fileExt)
         this.fileList.push({
           id: Date.now() + Math.random(),
           file: file,
           name: file.name,
           size: file.size,
-          type: fileType,
-          status: 'pending', // pending, uploading, success, error
-          progress: 0,
-          retryCount: 0
-        })
-      })
+          status: "pending", // pending, uploading, success, error
+          retryCount: 0,
+        });
+      });
 
-      this.$message.success(`成功添加 ${files.length} 个文件`)
+      if (files.length > 0) {
+        this.$message.success(`成功添加 ${files.length} 个文件`);
+      }
     },
 
-    // 开始上传
+    // 开始批量上传
     async startUpload() {
+      if (!this.checkLogin()) return;
+
       if (this.fileList.length === 0) {
-        this.$message.warning('请先选择要上传的文件')
-        return
+        this.$message.warning("请先选择要上传的文件");
+        return;
       }
 
-      this.uploading = true
-      const pendingFiles = this.fileList.filter(file => file.status === 'pending')
+      this.uploading = true;
 
-      // 逐个上传文件
-      for (let i = 0; i < pendingFiles.length; i++) {
-        const fileItem = pendingFiles[i]
-        await this.uploadSingleFile(fileItem)
-      }
-
-      this.uploading = false
-      
-      // 所有文件上传完成后通知父组件
-      if (this.successCount > 0) {
-        this.$emit('success', {
-          success: this.successCount,
-          total: this.fileList.length,
-          files: this.fileList.filter(f => f.status === 'success')
-        })
-      }
-    },
-
-    // 上传单个文件
-    async uploadSingleFile(fileItem) {
-      const index = this.fileList.findIndex(f => f.id === fileItem.id)
-      if (index === -1) return
-
-      // 更新状态为上传中
-      this.$set(this.fileList[index], 'status', 'uploading')
-      
       try {
-        // 构建 FormData
-        const formData = new FormData()
-        formData.append('file', fileItem.file)
-        formData.append('userId', this.userId)
-        
-        if (this.selectedProject) {
-          formData.append('projectId', this.selectedProject)
-        }
-        
-        if (this.fileDescription) {
-          formData.append('description', this.fileDescription)
-        }
-        
-        if (this.selectedTags.length > 0) {
-          formData.append('tags', JSON.stringify(this.selectedTags))
+        // 准备 FormData
+        const formData = new FormData();
+
+        // 添加文件列表（多个文件）
+        this.fileList.forEach((fileItem, index) => {
+          formData.append("files", fileItem.file);
+          // 更新文件状态为上传中
+          this.$set(this.fileList[index], "status", "uploading");
+        });
+
+        // 添加用户ID（必需参数）
+        if (!this.userId) {
+          throw new Error("无法获取用户ID，请重新登录");
         }
 
-        // 配置上传进度
-        const config = {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          },
-          onUploadProgress: (progressEvent) => {
-            const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total)
-            this.$set(this.fileList[index], 'progress', progress)
+        formData.append("userId", this.userId);
+
+        // 添加其他参数
+        if (this.projectId) {
+          formData.append("projectId", this.projectId);
+        }
+
+        if (this.description) {
+          formData.append("description", this.description);
+        }
+
+        // 调用批量上传API
+        const response = await uploadFiles(formData);
+        console.log("上传响应：", response);
+
+        // 处理上传结果
+        if (response && Array.isArray(response)) {
+          // 创建一个文件名映射，处理可能的编码差异
+          const createMatchKey = (fileName) => {
+            // 移除可能的路径信息，只保留文件名
+            const name = fileName.split(/[\\/]/).pop();
+            // 转换为小写进行不区分大小写的比较
+            return name.toLowerCase();
+          };
+
+          // 为后端返回的数据创建映射表
+          const responseMap = {};
+          response.forEach((item) => {
+            if (item.file && item.file.originalName) {
+              const key = createMatchKey(item.file.originalName);
+              responseMap[key] = item;
+            }
+          });
+          console.log("响应映射表：", responseMap);
+
+          // 更新每个文件的状态
+          let successCount = 0;
+          let errorCount = 0;
+
+          this.fileList.forEach((fileItem, index) => {
+            const fileKey = createMatchKey(fileItem.name);
+            const matchedResult = responseMap[fileKey];
+
+            if (matchedResult) {
+              console.log(
+                `文件 ${fileItem.name} 匹配到响应记录：`,
+                matchedResult,
+              );
+
+              if (matchedResult.status === "completed") {
+                this.$set(this.fileList[index], "status", "success");
+                this.$set(this.fileList[index], "result", matchedResult);
+                successCount++;
+
+                // 显示更多成功信息
+                this.$message.success({
+                  message: `文件 ${fileItem.name} 上传成功`,
+                  duration: 3000,
+                });
+              } else {
+                this.$set(this.fileList[index], "status", "error");
+                this.$set(
+                  this.fileList[index],
+                  "error",
+                  `上传状态: ${matchedResult.status}`,
+                );
+                errorCount++;
+              }
+            }
+          });
+
+          // 显示统计信息
+          if (errorCount === 0) {
+            this.$message.success(
+              `所有文件上传成功，共 ${successCount} 个文件`,
+            );
+          } else {
+            this.$message.warning(
+              `上传完成，成功 ${successCount} 个，失败 ${errorCount} 个`,
+            );
+          }
+
+          // 触发上传成功事件
+          this.$emit("upload-success", {
+            success: successCount,
+            total: this.fileList.length,
+            results: response,
+          });
+        } else {
+          // 响应不是数组格式，按原逻辑处理
+          console.warn("上传响应不是数组格式：", response);
+
+          if (response && response.status === "completed") {
+            const results = response.file || [];
+            results.forEach((result, index) => {
+              if (result && result.success !== false) {
+                this.$set(this.fileList[index], "status", "success");
+                this.$set(this.fileList[index], "result", result);
+              } else {
+                this.$set(this.fileList[index], "status", "error");
+                this.$set(
+                  this.fileList[index],
+                  "error",
+                  result?.message || "上传失败",
+                );
+              }
+            });
+            // 处理没有返回结果的剩余文件
+            this.fileList.forEach((file, index) => {
+              if (file.status === "uploading") {
+                this.$set(this.fileList[index], "status", "error");
+                this.$set(
+                  this.fileList[index],
+                  "error",
+                  "服务器未返回此文件的上传结果",
+                );
+              }
+            });
+
+            this.$message.success(
+              `批量上传完成，成功 ${this.successCount} 个，失败 ${this.errorCount} 个`,
+            );
+
+            // 触发上传成功事件
+            this.$emit("upload-success", {
+              success: this.successCount,
+              total: this.fileList.length,
+              results: response.data || response,
+            });
+          } else {
+            // 所有文件标记为失败
+            this.fileList.forEach((file, index) => {
+              this.$set(this.fileList[index], "status", "error");
+              this.$set(
+                this.fileList[index],
+                "error",
+                response?.message || "上传失败",
+              );
+            });
+            this.$message.error(`上传失败: ${response?.message || "未知错误"}`);
           }
         }
-
-        // 发送上传请求
-        const response = await axios.post('/api/files/upload', formData, config)
-        
-        // 上传成功
-        this.$set(this.fileList[index], 'status', 'success')
-        this.$set(this.fileList[index], 'progress', 100)
-        this.$set(this.fileList[index], 'response', response.data)
-        
-        this.$message.success(`文件 ${fileItem.name} 上传成功`)
-        
       } catch (error) {
-        console.error('文件上传失败:', error)
-        
-        // 更新状态为失败
-        this.$set(this.fileList[index], 'status', 'error')
-        this.$set(this.fileList[index], 'error', error.message || '上传失败')
-        
-        this.$message.error(`文件 ${fileItem.name} 上传失败：${error.response?.data?.message || error.message}`)
-      }
-    },
+        console.error("批量上传失败:", error);
 
-    // 重试上传
-    async retryUpload(fileItem) {
-      const index = this.fileList.findIndex(f => f.id === fileItem.id)
-      if (index === -1) return
-      
-      // 重置状态
-      this.$set(this.fileList[index], 'status', 'pending')
-      this.$set(this.fileList[index], 'progress', 0)
-      this.$set(this.fileList[index], 'retryCount', fileItem.retryCount + 1)
-      
-      // 开始上传
-      await this.uploadSingleFile(fileItem)
+        // 所有文件标记为失败
+        this.fileList.forEach((file, index) => {
+          this.$set(this.fileList[index], "status", "error");
+          this.$set(this.fileList[index], "error", error.message || "网络错误");
+        });
+
+        // 如果是认证错误，提示重新登录
+        if (error.response && error.response.status === 401) {
+          this.$message.error("登录已过期，请重新登录");
+          this.$router.push("/login");
+        } else if (error.message.includes("用户ID")) {
+          this.$message.error(error.message);
+          this.$router.push("/login");
+        } else {
+          this.$message.error(`上传失败: ${error.message || "网络错误"}`);
+        }
+      } finally {
+        this.uploading = false;
+      }
     },
 
     // 移除文件
     removeFile(index) {
-      this.fileList.splice(index, 1)
+      this.fileList.splice(index, 1);
+      if (this.fileList.length === 0) {
+        this.$emit("clear-all");
+      }
     },
 
     // 清空所有文件
     clearAllFiles() {
-      this.$confirm('确定要清空所有文件吗？', '提示', {
-        type: 'warning'
+      this.$confirm("确定要清空所有文件吗？", "提示", {
+        type: "warning",
       }).then(() => {
-        this.fileList = []
-        this.$message.success('已清空文件列表')
-      })
+        this.fileList = [];
+        this.$message.success("已清空文件列表");
+        this.$emit("clear-all");
+      });
     },
 
     // 选择更多文件
     selectMoreFiles() {
-      this.triggerFileInput()
-    },
-
-    // 项目相关
-    onProjectChange(value) {
-      console.log('选择项目:', value)
-    },
-
-    createNewProject() {
-      this.showProjectDialog = true
-    },
-
-    closeProjectDialog() {
-      this.showProjectDialog = false
-      this.newProject = { name: '', description: '' }
-    },
-
-    async confirmNewProject() {
-      if (!this.newProject.name.trim()) {
-        this.$message.warning('请输入项目名称')
-        return
-      }
-
-      try {
-        // 这里应该调用API创建项目
-        // const response = await axios.post('/api/projects', this.newProject)
-        
-        // 模拟API调用
-        const newProject = {
-          id: this.projectList.length + 1,
-          name: this.newProject.name,
-          description: this.newProject.description,
-          fileCount: 0
-        }
-        
-        this.projectList.push(newProject)
-        this.selectedProject = newProject.id
-        
-        this.$message.success('项目创建成功')
-        this.closeProjectDialog()
-      } catch (error) {
-        this.$message.error('项目创建失败：' + error.message)
-      }
+      this.triggerFileInput();
     },
 
     // 工具方法
     getFileExtension(filename) {
-      if (!filename) return ''
-      const lastDot = filename.lastIndexOf('.')
-      return lastDot === -1 ? '' : filename.substring(lastDot)
+      if (!filename) return "";
+      const lastDot = filename.lastIndexOf(".");
+      return lastDot === -1 ? "" : filename.substring(lastDot);
     },
 
-    determineFileType(fileExt) {
-      fileExt = fileExt.toLowerCase()
-      if (fileExt.includes('fastq') || fileExt.includes('fq')) {
-        return 'fastq'
-      } else if (fileExt.includes('fasta') || fileExt.includes('fa')) {
-        return 'fasta'
-      } else if (fileExt.includes('bam')) {
-        return 'bam'
-      } else if (fileExt.includes('sam')) {
-        return 'sam'
-      } else if (fileExt.includes('vcf')) {
-        return 'vcf'
-      } else if (fileExt.includes('bed')) {
-        return 'bed'
-      } else if (fileExt.includes('gtf')) {
-        return 'gtf'
+    getFileIcon(filename) {
+      const ext = this.getFileExtension(filename).toLowerCase();
+      if (ext.includes("fastq") || ext.includes("fq")) {
+        return "el-icon-document";
+      } else if (ext.includes("fasta") || ext.includes("fa")) {
+        return "el-icon-files";
+      } else if (ext.includes("bam") || ext.includes("sam")) {
+        return "el-icon-coin";
+      } else if (ext.includes("vcf")) {
+        return "el-icon-s-flag";
+      } else if (ext.includes("bed") || ext.includes("gtf")) {
+        return "el-icon-s-data";
       }
-      return 'other'
-    },
-
-    getFileIcon(fileType) {
-      const iconMap = {
-        fastq: 'el-icon-document',
-        fasta: 'el-icon-files',
-        bam: 'el-icon-coin',
-        sam: 'el-icon-coin',
-        vcf: 'el-icon-s-flag',
-        bed: 'el-icon-s-data',
-        gtf: 'el-icon-s-data',
-        other: 'el-icon-document'
-      }
-      return iconMap[fileType] || 'el-icon-document'
-    },
-
-    getFileTypeTag(fileType) {
-      const tagMap = {
-        fastq: 'primary',
-        fasta: 'success',
-        bam: 'warning',
-        sam: 'warning',
-        vcf: 'danger',
-        bed: 'info',
-        gtf: 'info'
-      }
-      return tagMap[fileType] || 'default'
+      return "el-icon-document";
     },
 
     getStatusText(status) {
       const textMap = {
-        pending: '等待上传',
-        uploading: '上传中',
-        success: '上传成功',
-        error: '上传失败'
-      }
-      return textMap[status] || status
+        pending: "等待上传",
+        uploading: "上传中",
+        success: "上传成功",
+        error: "上传失败",
+      };
+      return textMap[status] || status;
     },
 
     formatFileSize(bytes) {
-      if (bytes === 0) return '0 B'
-      const k = 1024
-      const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-      const i = Math.floor(Math.log(bytes) / Math.log(k))
-      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-    }
-  }
-}
+      if (bytes === 0) return "0 B";
+      const k = 1024;
+      const sizes = ["B", "KB", "MB", "GB", "TB"];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+    },
+
+    // 公开方法：重置上传器
+    reset() {
+      this.fileList = [];
+      this.uploading = false;
+      this.isDragover = false;
+    },
+  },
+
+  mounted() {
+    // 组件挂载时检查 Vuex 状态
+    console.log("组件挂载，Vuex状态检查：");
+    console.log("用户ID：", this.userId);
+    console.log("登录状态：", this.isLoggedIn);
+    console.log("用户信息：", this.userInfo);
+  },
+};
 </script>
 
 <style lang="scss" scoped>
-.file-uploader {
+.simple-file-uploader {
   padding: 20px;
 }
 
@@ -701,46 +622,6 @@ export default {
     .upload-tips {
       color: #909399;
       margin: 4px 0;
-
-      &.small {
-        font-size: 12px;
-      }
-    }
-  }
-}
-
-.upload-options {
-  background: #f8f9fa;
-  border-radius: 8px;
-  padding: 20px;
-  margin-bottom: 24px;
-
-  .option-item {
-    display: flex;
-    align-items: center;
-    margin-bottom: 16px;
-
-    &:last-child {
-      margin-bottom: 0;
-    }
-
-    .option-label {
-      width: 100px;
-      text-align: right;
-      color: #606266;
-      font-size: 14px;
-      flex-shrink: 0;
-    }
-
-    .project-option {
-      display: flex;
-      justify-content: space-between;
-      width: 100%;
-
-      .project-count {
-        color: #909399;
-        font-size: 12px;
-      }
     }
   }
 }
@@ -817,15 +698,12 @@ export default {
           flex: 1;
 
           .file-name {
-            display: flex;
-            align-items: center;
-            gap: 8px;
             margin-bottom: 6px;
 
             .name-text {
               font-weight: 500;
               color: #303133;
-              flex: 1;
+              display: block;
               overflow: hidden;
               text-overflow: ellipsis;
               white-space: nowrap;
@@ -854,23 +732,11 @@ export default {
         }
       }
 
-      .file-progress {
-        width: 150px;
-        margin: 0 20px;
-      }
-
       .file-actions {
         .remove-btn {
           color: #f56c6c;
           &:hover {
             background-color: rgba(245, 108, 108, 0.1);
-          }
-        }
-
-        .retry-btn {
-          color: #409eff;
-          &:hover {
-            background-color: rgba(64, 158, 255, 0.1);
           }
         }
 
@@ -936,40 +802,11 @@ export default {
   }
 }
 
-.project-dialog {
-  .dialog-footer {
-    text-align: right;
-    margin-top: 20px;
-
-    .el-button {
-      margin-left: 10px;
-    }
-  }
-}
-
 // 响应式设计
 @media (max-width: 768px) {
-  .upload-options {
-    .option-item {
-      flex-direction: column;
-      align-items: flex-start;
-
-      .option-label {
-        width: 100%;
-        text-align: left;
-        margin-bottom: 8px;
-      }
-    }
-  }
-
   .file-item {
     flex-direction: column;
     align-items: flex-start;
-
-    .file-progress {
-      width: 100% !important;
-      margin: 12px 0 !important;
-    }
 
     .file-actions {
       align-self: flex-end;
