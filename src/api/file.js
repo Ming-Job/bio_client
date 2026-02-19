@@ -71,3 +71,12 @@ export function deleteFile(fileId, userId) {
   })
 }
 
+
+// 获取文件预览内容 (截取头部)
+export function previewFile(fileId, userId) {
+  return request({
+    url: `/api/files/preview/${fileId}`,
+    method: 'get',
+    params: { userId } // userId 作为参数传给后端校验权限
+  })
+}

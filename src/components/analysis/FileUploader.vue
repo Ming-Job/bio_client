@@ -167,6 +167,7 @@ export default {
         ".fq.gz",
         ".fasta",
         ".fa",
+        ".fa.gz",
         ".fasta.gz",
         ".bam",
         ".sam",
@@ -318,8 +319,8 @@ export default {
           name: file.name,
           size: file.size,
           status: "pending", // pending, uploading, success, error
-          progress: 0, // 【新增】初始化进度为0
-          error: "", // 【新增】初始化错误信息为空
+          progress: 0, // 初始化进度为0
+          error: "", // 初始化错误信息为空
           retryCount: 0,
         });
       });

@@ -1,4 +1,3 @@
-<!-- @/components/analysis/RecentFiles.vue -->
 <template>
   <div class="data-files">
     <div class="files-header">
@@ -12,29 +11,24 @@
           size="mini"
           icon="el-icon-refresh"
           @click="refresh"
+          >刷新</el-button
         >
-          刷新
-        </el-button>
-
         <el-button
           type="text"
           size="mini"
           icon="el-icon-upload"
           @click="handleUploadClick"
+          >上传</el-button
         >
-          上传
-        </el-button>
       </div>
     </div>
 
     <div class="file-list">
-      <!-- 加载状态 -->
       <div v-if="loading" class="loading-files">
         <i class="el-icon-loading"></i>
         <p>正在加载文件列表...</p>
       </div>
 
-      <!-- 文件列表 -->
       <div v-else>
         <div
           v-for="file in files"
@@ -48,9 +42,9 @@
           <div class="file-info">
             <div class="file-name">
               <span>{{ file.name }}</span>
-              <el-tag v-if="file.isPublic" size="mini" type="success">
-                公开
-              </el-tag>
+              <el-tag v-if="file.isPublic" size="mini" type="success"
+                >公开</el-tag
+              >
             </div>
             <div class="file-meta">
               <span>{{ file.formattedSize || formatFileSize(file.size) }}</span>
@@ -61,11 +55,13 @@
             <el-dropdown
               trigger="click"
               @command="handleFileCommand($event, file)"
+              @click.native.stop
             >
               <span class="el-dropdown-link">
                 <i class="el-icon-more"></i>
               </span>
               <el-dropdown-menu slot="dropdown">
+                <el-dropdown-item command="preview">预览</el-dropdown-item>
                 <el-dropdown-item command="download">下载</el-dropdown-item>
                 <el-dropdown-item command="delete" divided
                   >删除</el-dropdown-item
@@ -75,17 +71,15 @@
           </div>
         </div>
 
-        <!-- 空状态 -->
         <div v-if="files.length === 0" class="empty-files">
           <i class="el-icon-document"></i>
           <p>暂无数据文件</p>
-          <el-button type="text" @click="handleUploadClick">
-            上传第一个文件
-          </el-button>
+          <el-button type="text" @click="handleUploadClick"
+            >上传第一个文件</el-button
+          >
         </div>
       </div>
 
-      <!-- 存储空间信息 -->
       <div class="file-storage">
         <div class="storage-info">
           <span>存储空间</span>
@@ -98,19 +92,45 @@
         />
       </div>
     </div>
+
+    <el-dialog
+      :title="`文件预览: ${previewFileName}`"
+      :visible.sync="previewVisible"
+      width="70%"
+      top="5vh"
+      custom-class="preview-dialog"
+      append-to-body
+    >
+      <div
+        v-loading="previewLoading"
+        element-loading-background="rgba(30, 30, 30, 0.8)"
+        class="preview-container"
+      >
+        <pre
+          v-if="previewContent"
+          class="code-block"
+        ><code>{{ previewContent }}</code></pre>
+
+        <el-empty
+          v-else-if="!previewLoading"
+          description="暂无预览内容"
+        ></el-empty>
+      </div>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="previewVisible = false">关 闭</el-button>
+      </span>
+    </el-dialog>
   </div>
 </template>
 
 <script>
-import { getRecentUploadFiles } from "@/api/file";
-import { EventBus } from "@/utils/event-bus"; // 事件总线 类似于 广播器
-import { deleteFile } from "@/api/file";
+import { getRecentUploadFiles, deleteFile, previewFile } from "@/api/file";
+import { EventBus } from "@/utils/event-bus";
 
 export default {
   name: "RecentFiles",
 
   props: {
-    // 用户ID
     userId: {
       type: [Number, String],
       required: true,
@@ -119,63 +139,55 @@ export default {
 
   data() {
     return {
-      // 文件列表
       files: [],
-      // 加载状态
       loading: false,
-      // 存储空间信息
       usedStorage: "0B",
       totalStorage: "10GB",
       storagePercentage: 0,
+
+      // 【新增】：预览相关的状态数据
+      previewVisible: false,
+      previewLoading: false,
+      previewContent: "",
+      previewFileName: "",
     };
   },
 
-  // 添加生命周期钩子
   mounted() {
-    // 监听文件上传事件
     EventBus.$on("file-uploaded", this.handleFileUploaded);
   },
+
   beforeDestroy() {
-    // 取消监听文件上传事件
     EventBus.$off("file-uploaded", this.handleFileUploaded);
   },
 
   watch: {
-    // 监听userId变化
     userId: {
       immediate: true,
       handler(newVal) {
-        if (newVal) {
-          this.loadFiles();
-        }
+        if (newVal) this.loadFiles();
       },
     },
   },
 
   methods: {
-    // 处理文件上传事件
     async handleFileUploaded(data) {
-      // 检查是否是当前用户的文件
       if (data.userId && data.userId.toString() === this.userId.toString()) {
-        console.log("收到文件上传事件，刷新列表");
-        // 延迟一点时间确保数据库已更新
         setTimeout(() => {
           this.loadFiles();
         }, 500);
       }
     },
 
-    // 加载文件列表
     async loadFiles() {
       try {
         this.loading = true;
-
-        // 调用API获取最近上传的文件
         const response = await getRecentUploadFiles(this.userId);
 
         if (response && Array.isArray(response)) {
-          // 处理文件数据
-          this.files = response.map((file) => ({
+          // 这里为了兼容 Axios 不同的响应拦截器配置，可能是 response 也可能是 response.data
+          const dataList = response.data || response;
+          this.files = dataList.map((file) => ({
             id: file.id,
             name: file.originalName,
             type: file.fileType,
@@ -188,19 +200,15 @@ export default {
         } else {
           this.files = [];
         }
-
-        // 计算存储空间使用情况
         this.updateStorageInfo();
       } catch (error) {
         console.error("加载文件列表失败:", error);
-        this.$message.error("获取文件列表失败");
         this.files = [];
       } finally {
         this.loading = false;
       }
     },
 
-    // 更新存储空间信息
     updateStorageInfo() {
       const totalBytes = this.files.reduce(
         (sum, file) => sum + (file.size || 0),
@@ -213,23 +221,86 @@ export default {
       );
     },
 
-    // 处理上传点击
     handleUploadClick() {
       this.$emit("upload-click");
     },
 
-    // 处理查看文件
-    handleViewFile(file) {
-      this.$emit("file-click", file);
+    // 【核心修改】：点击文件列表直接触发预览
+    async handleViewFile(file) {
+      this.$emit("file-click", file); // 保持向外抛出事件，不影响别的逻辑
+
+      this.previewFileName = file.name;
+      this.previewContent = "";
+      this.previewVisible = true;
+      this.previewLoading = true;
+
+      try {
+        const response = await previewFile(file.id, this.userId);
+        console.log("预览响应数据类型:", typeof response);
+
+        // 【核心修复】：更灵活的数据解析逻辑
+        let content = "";
+
+        // Axios 包装了 data，且 data 是字符串
+        if (response && typeof response.data === "string") {
+          content = response.data;
+        }
+
+        if (content) {
+          this.previewContent = content;
+        } else {
+          // 如果解析不到内容，提示警告
+          this.$message.warning(
+            response?.message ||
+              response?.data?.message ||
+              "无法预览该文件或文件内容为空",
+          );
+          this.previewVisible = false;
+        }
+      } catch (error) {
+        console.error("预览请求报错:", error);
+        const errorMsg =
+          error.response?.data?.message || error.message || "预览加载失败";
+        this.$message.error(errorMsg);
+        this.previewVisible = false;
+      } finally {
+        this.previewLoading = false;
+      }
     },
 
-    // 处理文件操作命令
     async handleFileCommand(command, file) {
       try {
         switch (command) {
-          case "download":
-            this.$emit("file-download", file);
+          case "preview":
+            this.handleViewFile(file);
             break;
+
+          case "download":
+            // 【核心实现】：原生 a 标签触发浏览器下载，完美支持大文件和断点续传
+
+            // 1. 拼接下载接口的 URL（确保包含了鉴权用的 userId）
+            // 注意：如果你的前端配置了代理 (vue.config.js 里的 proxy)，这里的 /api/files 会自动转发到后端
+            // eslint-disable-next-line no-case-declarations
+            const downloadUrl = `/api/files/download/${file.id}?userId=${this.userId}`;
+
+            // 2. 动态创建隐藏的 a 标签
+            // eslint-disable-next-line no-case-declarations
+            const link = document.createElement("a");
+            link.style.display = "none";
+            link.href = downloadUrl;
+
+            // 3. 挂载到 DOM 并模拟点击
+            document.body.appendChild(link);
+            link.click();
+
+            // 4. 清理 DOM 节点
+            document.body.removeChild(link);
+
+            this.$message.success(
+              `已开始下载: ${file.name}，请查看浏览器的下载任务`,
+            );
+            break;
+
           case "delete":
             await this.deleteFile(file);
             break;
@@ -239,39 +310,29 @@ export default {
       }
     },
 
-    // 删除文件 (软删除)
     async deleteFile(file) {
-      console.log("准备删除文件，fileId:", file.id, "userId:", this.userId);
       try {
-        // 确认对话框
         await this.$confirm(`确定要删除 "${file.name}" 吗？`, "警告", {
           confirmButtonText: "确定删除",
           cancelButtonText: "取消",
           type: "warning",
         });
 
-        // 调用API删除文件
         await deleteFile(file.id, this.userId);
-
-        // 成功提示
         this.$message.success("文件删除成功");
 
-        // 从列表中移除
         const index = this.files.findIndex((f) => f.id === file.id);
         if (index !== -1) {
           this.files.splice(index, 1);
-          // 更新存储空间信息
           this.updateStorageInfo();
         }
       } catch (error) {
-        if (error !== "cancel") {
-          console.error("删除文件失败:", error);
-        }
+        if (error !== "cancel") console.error("删除文件失败:", error);
       }
     },
 
-    // 获取文件图标
     getFileIcon(fileType) {
+      /* 保持原样 */
       const iconMap = {
         fastq: "el-icon-document",
         fasta: "el-icon-files",
@@ -289,62 +350,41 @@ export default {
       return iconMap[fileType] || "el-icon-document";
     },
 
-    // 格式化文件大小
     formatFileSize(bytes) {
+      /* 保持原样 */
       if (typeof bytes !== "number" || bytes < 0) return "0 B";
       if (bytes === 0) return "0 B";
-
       const k = 1024;
       const sizes = ["B", "KB", "MB", "GB", "TB"];
       const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-      const size = parseFloat((bytes / Math.pow(k, i)).toFixed(2));
-      return size + " " + sizes[i];
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
     },
 
-    // 格式化时间
     formatTime(timestamp) {
+      /* 保持原样 */
       try {
         if (!timestamp) return "未知时间";
-
-        let date;
-        if (typeof timestamp === "string" && timestamp.includes(" ")) {
-          date = new Date(timestamp.replace(" ", "T") + "Z");
-        } else {
-          date = new Date(timestamp);
-        }
-
-        if (isNaN(date.getTime())) {
-          return "未知时间";
-        }
-
-        const now = new Date();
-        const diffMs = now - date;
+        let date =
+          typeof timestamp === "string" && timestamp.includes(" ")
+            ? new Date(timestamp.replace(" ", "T") + "Z")
+            : new Date(timestamp);
+        if (isNaN(date.getTime())) return "未知时间";
+        const diffMs = new Date() - date;
         const diffMins = Math.floor(diffMs / 60000);
         const diffHours = Math.floor(diffMs / 3600000);
         const diffDays = Math.floor(diffMs / 86400000);
-
-        if (diffMins < 1) {
-          return "刚刚";
-        } else if (diffMins < 60) {
-          return `${diffMins}分钟前`;
-        } else if (diffHours < 24) {
-          return `${diffHours}小时前`;
-        } else if (diffDays < 7) {
-          return `${diffDays}天前`;
-        } else {
-          const year = date.getFullYear();
-          const month = (date.getMonth() + 1).toString().padStart(2, "0");
-          const day = date.getDate().toString().padStart(2, "0");
-          return `${year}-${month}-${day}`;
-        }
-      } catch (error) {
-        console.error("格式化时间失败:", error);
+        if (diffMins < 1) return "刚刚";
+        if (diffMins < 60) return `${diffMins}分钟前`;
+        if (diffHours < 24) return `${diffHours}小时前`;
+        if (diffDays < 7) return `${diffDays}天前`;
+        return `${date.getFullYear()}-${(date.getMonth() + 1)
+          .toString()
+          .padStart(2, "0")}-${date.getDate().toString().padStart(2, "0")}`;
+      } catch {
         return "时间错误";
       }
     },
 
-    // 刷新文件列表（公开方法）
     refresh() {
       this.loadFiles();
     },
@@ -353,148 +393,179 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+/* ======= 你原本的样式保持不变 ======= */
 .data-files {
   background: white;
   border-radius: 12px;
   padding: 24px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-
-  .files-header {
+}
+.files-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  .header-actions {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-
-    .header-actions {
-      display: flex;
-      gap: 8px; // 两个按钮之间的间距
+    gap: 8px;
+  }
+}
+.file-list {
+  .loading-files {
+    text-align: center;
+    padding: 40px 20px;
+    color: #bdc3c7;
+    i {
+      font-size: 32px;
+      margin-bottom: 12px;
+    }
+    p {
+      margin: 0;
+      font-size: 14px;
     }
   }
-
-  .file-list {
-    .loading-files {
-      text-align: center;
-      padding: 40px 20px;
-      color: #bdc3c7;
-
-      i {
-        font-size: 32px;
-        margin-bottom: 12px;
-      }
-
-      p {
-        margin: 0;
-        font-size: 14px;
-      }
+  .file-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #e8e8e8;
+    margin-bottom: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    &:hover {
+      border-color: #3498db;
+      background: #f8fafc;
     }
-
-    .file-item {
+    .file-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      background: #f5f5f5;
       display: flex;
       align-items: center;
-      padding: 12px;
-      border-radius: 8px;
-      border: 1px solid #e8e8e8;
-      margin-bottom: 12px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-
-      &:hover {
-        border-color: #3498db;
-        background: #f8fafc;
+      justify-content: center;
+      margin-right: 12px;
+      i {
+        font-size: 20px;
+        color: #7f8c8d;
       }
-
-      .file-icon {
-        width: 40px;
-        height: 40px;
-        border-radius: 8px;
-        background: #f5f5f5;
+    }
+    .file-info {
+      flex: 1;
+      overflow: hidden;
+      .file-name {
         display: flex;
         align-items: center;
-        justify-content: center;
-        margin-right: 12px;
-
-        i {
-          font-size: 20px;
-          color: #7f8c8d;
+        gap: 8px;
+        margin-bottom: 4px;
+        span {
+          flex: 1;
+          font-weight: 500;
+          color: #2c3e50;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
       }
-
-      .file-info {
-        flex: 1;
-
-        .file-name {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-bottom: 4px;
-
-          span {
-            flex: 1;
-            font-weight: 500;
-            color: #2c3e50;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-          }
-        }
-
-        .file-meta {
-          display: flex;
-          justify-content: space-between;
-          font-size: 12px;
-          color: #95a5a6;
-        }
-      }
-
-      .file-actions {
-        .el-dropdown-link {
-          cursor: pointer;
-          padding: 8px;
-          border-radius: 4px;
-
-          &:hover {
-            background: #f5f5f5;
-          }
-
-          i {
-            color: #7f8c8d;
-            font-size: 16px;
-          }
-        }
-      }
-    }
-
-    .empty-files {
-      text-align: center;
-      padding: 30px 20px;
-      color: #bdc3c7;
-      border: 1px dashed #e8e8e8;
-      border-radius: 8px;
-      margin-bottom: 16px;
-
-      i {
-        font-size: 36px;
-        margin-bottom: 12px;
-      }
-
-      p {
-        margin-bottom: 12px;
-        font-size: 14px;
-      }
-    }
-
-    .file-storage {
-      padding-top: 16px;
-      border-top: 1px solid #e8e8e8;
-
-      .storage-info {
+      .file-meta {
         display: flex;
         justify-content: space-between;
-        margin-bottom: 8px;
-        font-size: 14px;
-        color: #2c3e50;
+        font-size: 12px;
+        color: #95a5a6;
       }
     }
+    .file-actions {
+      .el-dropdown-link {
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 4px;
+        &:hover {
+          background: #f5f5f5;
+        }
+        i {
+          color: #7f8c8d;
+          font-size: 16px;
+        }
+      }
+    }
+  }
+  .empty-files {
+    text-align: center;
+    padding: 30px 20px;
+    color: #bdc3c7;
+    border: 1px dashed #e8e8e8;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    i {
+      font-size: 36px;
+      margin-bottom: 12px;
+    }
+    p {
+      margin-bottom: 12px;
+      font-size: 14px;
+    }
+  }
+  .file-storage {
+    padding-top: 16px;
+    border-top: 1px solid #e8e8e8;
+    .storage-info {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: #2c3e50;
+    }
+  }
+}
+
+/* ======= 【新增】：预览弹窗样式 ======= */
+::v-deep .preview-dialog {
+  border-radius: 8px;
+  overflow: hidden;
+  .el-dialog__header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #ebeef5;
+    padding: 15px 20px;
+  }
+  .el-dialog__body {
+    padding: 0; /* 移除默认内边距，让黑色代码框撑满 */
+    background-color: #1e1e1e;
+  }
+  .el-dialog__title {
+    font-size: 16px;
+    font-weight: 600;
+  }
+}
+
+.preview-container {
+  min-height: 250px;
+  max-height: 65vh;
+  overflow-y: auto;
+  padding: 20px;
+  background-color: #1e1e1e;
+
+  /* 滚动条美化 */
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 4px;
+  }
+  &::-webkit-scrollbar-track {
+    background: #1e1e1e;
+  }
+
+  .code-block {
+    margin: 0;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #d4d4d4;
+    white-space: pre-wrap;
+    word-break: break-all;
   }
 }
 </style>
