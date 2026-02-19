@@ -1,6 +1,5 @@
 <template>
   <div class="simple-file-uploader">
-    <!-- 上传区域 -->
     <div
       class="upload-area"
       @click="triggerFileInput"
@@ -11,7 +10,7 @@
         ref="fileInput"
         type="file"
         multiple
-        :accept="allowedExtensions"
+        :accept="allowedExtensionsText"
         @change="handleFileChange"
         style="display: none"
       />
@@ -26,7 +25,6 @@
       </div>
     </div>
 
-    <!-- 文件列表 -->
     <div v-if="fileList.length > 0" class="file-list">
       <div class="file-list-header">
         <span class="header-title">待上传文件（{{ fileList.length }}个）</span>
@@ -51,7 +49,6 @@
             error: file.status === 'error',
           }"
         >
-          <!-- 文件信息 -->
           <div class="file-info">
             <div class="file-icon">
               <i :class="getFileIcon(file.name)"></i>
@@ -60,16 +57,32 @@
               <div class="file-name">
                 <span class="name-text">{{ file.name }}</span>
               </div>
+
+              <el-progress
+                v-if="file.status === 'uploading'"
+                :percentage="file.progress"
+                :stroke-width="4"
+                :show-text="false"
+                class="file-progress"
+              ></el-progress>
+
               <div class="file-meta">
                 <span class="file-size">{{ formatFileSize(file.size) }}</span>
                 <span class="file-status" :class="file.status">
-                  {{ getStatusText(file.status) }}
+                  {{
+                    file.status === "uploading"
+                      ? `上传中 ${file.progress}%`
+                      : getStatusText(file.status)
+                  }}
+                </span>
+
+                <span v-if="file.status === 'error'" class="error-message">
+                  ({{ file.error }})
                 </span>
               </div>
             </div>
           </div>
 
-          <!-- 操作按钮 -->
           <div class="file-actions">
             <el-button
               v-if="file.status === 'pending' || file.status === 'error'"
@@ -93,7 +106,6 @@
         </div>
       </div>
 
-      <!-- 批量操作 -->
       <div class="batch-actions">
         <el-button type="text" @click="clearAllFiles">
           <i class="el-icon-delete"></i> 清空列表
@@ -104,7 +116,6 @@
       </div>
     </div>
 
-    <!-- 上传统计 -->
     <div v-if="fileList.length > 0" class="upload-stats">
       <div class="stats-item">
         <span class="stats-label">总大小：</span>
@@ -115,7 +126,7 @@
         <span class="stats-value success">{{ successCount }} 个</span>
       </div>
       <div class="stats-item">
-        <span class="stats-label">失败：</span>
+        <span class="stats-label">失败/拦截：</span>
         <span class="stats-value error">{{ errorCount }} 个</span>
       </div>
     </div>
@@ -124,10 +135,11 @@
 
 <script>
 import { mapState } from "vuex";
-import { uploadFiles } from "@/api/file";
+import { uploadSingleFile } from "@/api/file";
+import { EventBus } from "@/utils/event-bus";
 
 export default {
-  name: "SimpleFileUploader",
+  name: "FileUploader",
 
   props: {
     // 项目ID（可选）
@@ -183,12 +195,8 @@ export default {
       isLoggedIn: (state) => state.isLoggedIn,
     }),
 
-    // 格式化允许的文件扩展名文本
     allowedExtensionsText() {
-      const exts = this.allowedExtensions.map((ext) =>
-        ext.replace(".", "").toUpperCase(),
-      );
-      return exts.join("、");
+      return this.allowedExtensions.join(",");
     },
 
     // 格式化最大文件大小
@@ -210,6 +218,15 @@ export default {
     },
   },
 
+  watch: {
+    // 监听用户登录状态变化，如果用户登出，清空文件列表
+    isLoggedIn(newVal) {
+      if (!newVal) {
+        this.fileList = [];
+      }
+    },
+  },
+
   methods: {
     // 检查用户是否已登录
     checkLogin() {
@@ -218,12 +235,6 @@ export default {
         this.$router.push("/login");
         return false;
       }
-
-      // 调试信息
-      console.log("当前用户信息：", this.userInfo);
-      console.log("用户ID：", this.userId);
-      console.log("用户名：", this.userInfo?.username);
-
       return true;
     },
 
@@ -269,13 +280,24 @@ export default {
         }
 
         // 检查文件类型
-        const fileExt = this.getFileExtension(file.name).toLowerCase();
         const allowedExts = this.allowedExtensions.map((ext) =>
           ext.toLowerCase(),
         );
-        if (!allowedExts.includes(fileExt)) {
+
+        // 简单后缀校验，针对 .tar.gz 这种双后缀可以稍微放宽
+        let isValidExt = false;
+        for (let ext of allowedExts) {
+          if (file.name.toLowerCase().endsWith(ext)) {
+            isValidExt = true;
+            break;
+          }
+        }
+
+        if (!isValidExt) {
           this.$message.error(
-            `不支持的文件类型 ${fileExt}，允许的类型：${this.allowedExtensionsText}`,
+            `不支持的文件类型，允许的类型：${this.allowedExtensions.join(
+              "、",
+            )}`,
           );
           return;
         }
@@ -296,6 +318,8 @@ export default {
           name: file.name,
           size: file.size,
           status: "pending", // pending, uploading, success, error
+          progress: 0, // 【新增】初始化进度为0
+          error: "", // 【新增】初始化错误信息为空
           retryCount: 0,
         });
       });
@@ -305,196 +329,127 @@ export default {
       }
     },
 
-    // 开始批量上传
+    // 并发处理独立上传
     async startUpload() {
       if (!this.checkLogin()) return;
 
-      if (this.fileList.length === 0) {
-        this.$message.warning("请先选择要上传的文件");
+      const pendingFiles = this.fileList.filter(
+        (f) => f.status === "pending" || f.status === "error",
+      );
+      if (pendingFiles.length === 0) {
+        this.$message.warning("没有需要上传的文件");
         return;
       }
 
       this.uploading = true;
 
-      try {
-        // 准备 FormData
-        const formData = new FormData();
+      // 为每个文件创建一个独立的上传任务
+      const uploadPromises = pendingFiles.map((fileItem) => {
+        return this.uploadSingle(fileItem);
+      });
 
-        // 添加文件列表（多个文件）
-        this.fileList.forEach((fileItem, index) => {
-          formData.append("files", fileItem.file);
-          // 更新文件状态为上传中
-          this.$set(this.fileList[index], "status", "uploading");
+      try {
+        // 使用 Promise.all 来等待所有上传任务完成 (无论成功还是失败)
+        await Promise.all(uploadPromises);
+      } finally {
+        this.uploading = false;
+
+        if (this.errorCount === 0) {
+          this.$message.success(`全部上传完成，共 ${this.successCount} 个文件`);
+        } else {
+          this.$message.warning(
+            `上传结束，成功 ${this.successCount} 个，失败/拦截 ${this.errorCount} 个`,
+          );
+        }
+
+        this.$emit("upload-complete", {
+          success: this.successCount,
+          error: this.errorCount,
+          total: this.fileList.length,
+        });
+      }
+    },
+
+    // 单个文件的上传于进度监听
+    async uploadSingle(fileItem) {
+      const index = this.fileList.findIndex((f) => f.id === fileItem.id);
+      if (index === -1) return Promise.resolve(); // 文件不在列表中，直接返回
+
+      // 重置状态
+      this.$set(this.fileList[index], "status", "uploading");
+      this.$set(this.fileList[index], "progress", 0);
+      this.$set(this.fileList[index], "error", "");
+
+      const formData = new FormData();
+
+      // 这里的参数名与后端接口要求的保持一致
+      formData.append("file", fileItem.file);
+      formData.append("userId", this.userId);
+      if (this.projectId) {
+        formData.append("projectId", this.projectId);
+      }
+      if (this.description) {
+        formData.append("description", this.description);
+      }
+
+      try {
+        // 调用带进度监听的 API
+        const response = await uploadSingleFile(formData, (progressEvent) => {
+          // 计算百分比 并更新文件项的进度
+          let percent = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total,
+          );
+          // 避免进度条提早跑满但后端还在处理 MD5，最高跑到 99%，真正完成时再设置为100%
+          if (percent > 99) percent = 99;
+          this.$set(this.fileList[index], "progress", percent);
         });
 
-        // 添加用户ID（必需参数）
-        if (!this.userId) {
-          throw new Error("无法获取用户ID，请重新登录");
-        }
+        const resultData = response.data || response; // 兼容不同的响应格式
 
-        formData.append("userId", this.userId);
+        // 【处理秒传/拦截防重逻辑】
+        if (resultData.isDuplicate) {
+          // 命中后端拦截：文件已存在
+          this.$set(this.fileList[index], "status", "error");
+          this.$set(this.fileList[index], "error", "文件已存在，请勿重复上传");
+          this.$set(this.fileList[index], "progress", 0); // 进度条归零
+        } else if (
+          resultData.status === "completed" ||
+          resultData.status === "ready" ||
+          resultData.id
+        ) {
+          // 正常上传成功
+          this.$set(this.fileList[index], "status", "success");
+          this.$set(this.fileList[index], "progress", 100);
+          this.$set(this.fileList[index], "result", resultData);
 
-        // 添加其他参数
-        if (this.projectId) {
-          formData.append("projectId", this.projectId);
-        }
-
-        if (this.description) {
-          formData.append("description", this.description);
-        }
-
-        // 调用批量上传API
-        const response = await uploadFiles(formData);
-        console.log("上传响应：", response);
-
-        // 处理上传结果
-        if (response && Array.isArray(response)) {
-          // 创建一个文件名映射，处理可能的编码差异
-          const createMatchKey = (fileName) => {
-            // 移除可能的路径信息，只保留文件名
-            const name = fileName.split(/[\\/]/).pop();
-            // 转换为小写进行不区分大小写的比较
-            return name.toLowerCase();
-          };
-
-          // 为后端返回的数据创建映射表
-          const responseMap = {};
-          response.forEach((item) => {
-            if (item.file && item.file.originalName) {
-              const key = createMatchKey(item.file.originalName);
-              responseMap[key] = item;
-            }
-          });
-          console.log("响应映射表：", responseMap);
-
-          // 更新每个文件的状态
-          let successCount = 0;
-          let errorCount = 0;
-
-          this.fileList.forEach((fileItem, index) => {
-            const fileKey = createMatchKey(fileItem.name);
-            const matchedResult = responseMap[fileKey];
-
-            if (matchedResult) {
-              console.log(
-                `文件 ${fileItem.name} 匹配到响应记录：`,
-                matchedResult,
-              );
-
-              if (matchedResult.status === "completed") {
-                this.$set(this.fileList[index], "status", "success");
-                this.$set(this.fileList[index], "result", matchedResult);
-                successCount++;
-
-                // 显示更多成功信息
-                this.$message.success({
-                  message: `文件 ${fileItem.name} 上传成功`,
-                  duration: 3000,
-                });
-              } else {
-                this.$set(this.fileList[index], "status", "error");
-                this.$set(
-                  this.fileList[index],
-                  "error",
-                  `上传状态: ${matchedResult.status}`,
-                );
-                errorCount++;
-              }
-            }
-          });
-
-          // 显示统计信息
-          if (errorCount === 0) {
-            this.$message.success(
-              `所有文件上传成功，共 ${successCount} 个文件`,
-            );
-          } else {
-            this.$message.warning(
-              `上传完成，成功 ${successCount} 个，失败 ${errorCount} 个`,
-            );
-          }
-
-          // 触发上传成功事件
-          this.$emit("upload-success", {
-            success: successCount,
-            total: this.fileList.length,
-            results: response,
+          EventBus.$emit("file-uploaded", {
+            file: resultData,
+            userId: this.userId,
+            projectId: this.projectId,
+            timestamp: new Date(),
           });
         } else {
-          // 响应不是数组格式，按原逻辑处理
-          console.warn("上传响应不是数组格式：", response);
-
-          if (response && response.status === "completed") {
-            const results = response.file || [];
-            results.forEach((result, index) => {
-              if (result && result.success !== false) {
-                this.$set(this.fileList[index], "status", "success");
-                this.$set(this.fileList[index], "result", result);
-              } else {
-                this.$set(this.fileList[index], "status", "error");
-                this.$set(
-                  this.fileList[index],
-                  "error",
-                  result?.message || "上传失败",
-                );
-              }
-            });
-            // 处理没有返回结果的剩余文件
-            this.fileList.forEach((file, index) => {
-              if (file.status === "uploading") {
-                this.$set(this.fileList[index], "status", "error");
-                this.$set(
-                  this.fileList[index],
-                  "error",
-                  "服务器未返回此文件的上传结果",
-                );
-              }
-            });
-
-            this.$message.success(
-              `批量上传完成，成功 ${this.successCount} 个，失败 ${this.errorCount} 个`,
-            );
-
-            // 触发上传成功事件
-            this.$emit("upload-success", {
-              success: this.successCount,
-              total: this.fileList.length,
-              results: response.data || response,
-            });
-          } else {
-            // 所有文件标记为失败
-            this.fileList.forEach((file, index) => {
-              this.$set(this.fileList[index], "status", "error");
-              this.$set(
-                this.fileList[index],
-                "error",
-                response?.message || "上传失败",
-              );
-            });
-            this.$message.error(`上传失败: ${response?.message || "未知错误"}`);
-          }
+          // 其他未知异常
+          this.$set(this.fileList[index], "status", "error");
+          this.$set(
+            this.fileList[index],
+            "error",
+            resultData.message || "服务器响应异常",
+          );
         }
       } catch (error) {
-        console.error("批量上传失败:", error);
+        console.error(`文件 ${fileItem.name} 上传失败:`, error);
+        this.$set(this.fileList[index], "status", "error");
+        this.$set(this.fileList[index], "progress", 0);
 
-        // 所有文件标记为失败
-        this.fileList.forEach((file, index) => {
-          this.$set(this.fileList[index], "status", "error");
-          this.$set(this.fileList[index], "error", error.message || "网络错误");
-        });
+        const errorMsg =
+          error.response?.data?.message || error.message || "网络或服务器错误";
+        this.$set(this.fileList[index], "error", errorMsg);
 
-        // 如果是认证错误，提示重新登录
         if (error.response && error.response.status === 401) {
           this.$message.error("登录已过期，请重新登录");
           this.$router.push("/login");
-        } else if (error.message.includes("用户ID")) {
-          this.$message.error(error.message);
-          this.$router.push("/login");
-        } else {
-          this.$message.error(`上传失败: ${error.message || "网络错误"}`);
         }
-      } finally {
-        this.uploading = false;
       }
     },
 
@@ -510,11 +465,15 @@ export default {
     clearAllFiles() {
       this.$confirm("确定要清空所有文件吗？", "提示", {
         type: "warning",
-      }).then(() => {
-        this.fileList = [];
-        this.$message.success("已清空文件列表");
-        this.$emit("clear-all");
-      });
+      })
+        .then(() => {
+          this.fileList = [];
+          this.$message.success("已清空文件列表");
+          this.$emit("clear-all");
+        })
+        .catch(() => {
+          // 用户取消清空
+        });
     },
 
     // 选择更多文件
@@ -562,21 +521,6 @@ export default {
       const i = Math.floor(Math.log(bytes) / Math.log(k));
       return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
     },
-
-    // 公开方法：重置上传器
-    reset() {
-      this.fileList = [];
-      this.uploading = false;
-      this.isDragover = false;
-    },
-  },
-
-  mounted() {
-    // 组件挂载时检查 Vuex 状态
-    console.log("组件挂载，Vuex状态检查：");
-    console.log("用户ID：", this.userId);
-    console.log("登录状态：", this.isLoggedIn);
-    console.log("用户信息：", this.userInfo);
   },
 };
 </script>
@@ -677,6 +621,7 @@ export default {
         display: flex;
         align-items: center;
         flex: 1;
+        overflow: hidden; // 防止长文件名撑破布局
 
         .file-icon {
           width: 40px;
@@ -687,6 +632,7 @@ export default {
           align-items: center;
           justify-content: center;
           margin-right: 12px;
+          flex-shrink: 0; // 防止图标被压缩
 
           i {
             font-size: 20px;
@@ -696,9 +642,10 @@ export default {
 
         .file-details {
           flex: 1;
+          overflow: hidden;
 
           .file-name {
-            margin-bottom: 6px;
+            margin-bottom: 4px; // 为进度条留出紧凑空间
 
             .name-text {
               font-weight: 500;
@@ -710,12 +657,19 @@ export default {
             }
           }
 
+          // 【新增】进度条样式
+          .file-progress {
+            margin-bottom: 4px;
+            padding-right: 20px; // 避免贴边
+          }
+
           .file-meta {
             display: flex;
             align-items: center;
-            gap: 16px;
+            gap: 12px;
             font-size: 12px;
             color: #909399;
+            flex-wrap: wrap; // 允许标签和错误信息换行
 
             .file-status {
               &.success {
@@ -728,11 +682,20 @@ export default {
                 color: #409eff;
               }
             }
+
+            // 【新增】具体的错误信息文本样式
+            .error-message {
+              color: #f56c6c;
+              font-size: 12px;
+            }
           }
         }
       }
 
       .file-actions {
+        padding-left: 16px;
+        flex-shrink: 0; // 防止操作按钮被压缩
+
         .remove-btn {
           color: #f56c6c;
           &:hover {
@@ -776,7 +739,7 @@ export default {
   padding: 16px;
   background: #f8f9fa;
   border-radius: 8px;
-  margin-top: 20px;
+  margin-top: 0px;
 
   .stats-item {
     display: flex;

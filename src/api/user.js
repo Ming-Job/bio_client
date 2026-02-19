@@ -154,6 +154,8 @@ export function batchDeleteUsers(data) {
   });
 }
 
+
+
 // 获取用户增长图表数据
 export function getUserGrowthChart(period = '30d') {
   return request({
@@ -180,7 +182,7 @@ export function getUsername(id){
   })
 }
 
-// /api/user.js
+// 更新用户头像
 export function updateUserAvatar(data) {
   return request({
     url: "/api/user/avatar/update",
@@ -189,6 +191,7 @@ export function updateUserAvatar(data) {
   })
 }
 
+// 更新用户信息（昵称、邮箱等）
 export function updateUserInfo(data) {
   return request({
     url: "/api/user/info/update",

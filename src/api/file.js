@@ -14,14 +14,20 @@ export function getRecentUploadFiles(userId, limit = 10, projectId = null) {
   })
 }
 
-// 其他文件API函数...
-export function uploadFile(data) {
+// 上传单个文件
+export function uploadSingleFile(data, onProgress) {
   return request({
-    url: '/api/files/upload',
+    url: '/api/files/upload', // 替换为你后端实际的单文件上传接口路径！
     method: 'post',
-    data,
+    data: data,
     headers: {
       'Content-Type': 'multipart/form-data'
+    },
+    // 将 axios 的进度事件回调抛给组件
+    onUploadProgress: progressEvent => {
+      if (onProgress) {
+        onProgress(progressEvent);
+      }
     }
   })
 }
@@ -37,6 +43,7 @@ export function uploadFiles(data) {
     }
   })
 }
+
 
 // 获取文件列表
 export function getFileList(params) {
@@ -54,3 +61,13 @@ export function getFileStats() {
     method: 'get'
   })
 }
+
+// 根据文件ID删除文件（需传入 userId）
+export function deleteFile(fileId, userId) {
+  return request({
+    url: `/api/files/${fileId}`,
+    method: 'delete',
+    params: { userId }  // 添加 userId 作为查询参数
+  })
+}
+

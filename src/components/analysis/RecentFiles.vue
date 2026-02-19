@@ -5,14 +5,26 @@
       <h3 class="section-title">
         <i class="el-icon-folder-opened"></i> 最近上传文件
       </h3>
-      <el-button
-        type="text"
-        size="mini"
-        icon="el-icon-upload"
-        @click="handleUploadClick"
-      >
-        上传
-      </el-button>
+
+      <div class="header-actions">
+        <el-button
+          type="text"
+          size="mini"
+          icon="el-icon-refresh"
+          @click="refresh"
+        >
+          刷新
+        </el-button>
+
+        <el-button
+          type="text"
+          size="mini"
+          icon="el-icon-upload"
+          @click="handleUploadClick"
+        >
+          上传
+        </el-button>
+      </div>
     </div>
 
     <div class="file-list">
@@ -36,11 +48,7 @@
           <div class="file-info">
             <div class="file-name">
               <span>{{ file.name }}</span>
-              <el-tag 
-                v-if="file.isPublic" 
-                size="mini" 
-                type="success"
-              >
+              <el-tag v-if="file.isPublic" size="mini" type="success">
                 公开
               </el-tag>
             </div>
@@ -59,7 +67,9 @@
               </span>
               <el-dropdown-menu slot="dropdown">
                 <el-dropdown-item command="download">下载</el-dropdown-item>
-                <el-dropdown-item command="delete" divided>删除</el-dropdown-item>
+                <el-dropdown-item command="delete" divided
+                  >删除</el-dropdown-item
+                >
               </el-dropdown-menu>
             </el-dropdown>
           </div>
@@ -92,19 +102,21 @@
 </template>
 
 <script>
-import { getRecentUploadFiles } from '@/api/file'
+import { getRecentUploadFiles } from "@/api/file";
+import { EventBus } from "@/utils/event-bus"; // 事件总线 类似于 广播器
+import { deleteFile } from "@/api/file";
 
 export default {
-  name: 'RecentFiles',
-  
+  name: "RecentFiles",
+
   props: {
     // 用户ID
     userId: {
       type: [Number, String],
-      required: true
-    }
+      required: true,
+    },
   },
-  
+
   data() {
     return {
       // 文件列表
@@ -112,123 +124,152 @@ export default {
       // 加载状态
       loading: false,
       // 存储空间信息
-      usedStorage: '0B',
-      totalStorage: '10GB',
-      storagePercentage: 0
-    }
+      usedStorage: "0B",
+      totalStorage: "10GB",
+      storagePercentage: 0,
+    };
   },
-  
+
+  // 添加生命周期钩子
+  mounted() {
+    // 监听文件上传事件
+    EventBus.$on("file-uploaded", this.handleFileUploaded);
+  },
+  beforeDestroy() {
+    // 取消监听文件上传事件
+    EventBus.$off("file-uploaded", this.handleFileUploaded);
+  },
+
   watch: {
     // 监听userId变化
     userId: {
       immediate: true,
       handler(newVal) {
         if (newVal) {
-          this.loadFiles()
+          this.loadFiles();
         }
-      }
-    }
+      },
+    },
   },
-  
+
   methods: {
+    // 处理文件上传事件
+    async handleFileUploaded(data) {
+      // 检查是否是当前用户的文件
+      if (data.userId && data.userId.toString() === this.userId.toString()) {
+        console.log("收到文件上传事件，刷新列表");
+        // 延迟一点时间确保数据库已更新
+        setTimeout(() => {
+          this.loadFiles();
+        }, 500);
+      }
+    },
+
     // 加载文件列表
     async loadFiles() {
       try {
-        this.loading = true
-        
+        this.loading = true;
+
         // 调用API获取最近上传的文件
-        const response = await getRecentUploadFiles(this.userId)
-        
+        const response = await getRecentUploadFiles(this.userId);
+
         if (response && Array.isArray(response)) {
           // 处理文件数据
-          this.files = response.map(file => ({
+          this.files = response.map((file) => ({
             id: file.id,
             name: file.originalName,
             type: file.fileType,
             size: file.sizeBytes,
             uploadTime: file.uploadTime,
-            isPublic: file.isPublic || file.accessLevel === 'public',
+            isPublic: file.isPublic || file.accessLevel === "public",
             downloadUrl: file.downloadUrl,
-            formattedSize: file.formattedSize
-          }))
+            formattedSize: file.formattedSize,
+          }));
         } else {
-          this.files = []
+          this.files = [];
         }
-        
+
         // 计算存储空间使用情况
-        this.updateStorageInfo()
-        
+        this.updateStorageInfo();
       } catch (error) {
-        console.error('加载文件列表失败:', error)
-        this.$message.error('获取文件列表失败')
-        this.files = []
+        console.error("加载文件列表失败:", error);
+        this.$message.error("获取文件列表失败");
+        this.files = [];
       } finally {
-        this.loading = false
+        this.loading = false;
       }
     },
-    
+
     // 更新存储空间信息
     updateStorageInfo() {
-      const totalBytes = this.files.reduce((sum, file) => sum + (file.size || 0), 0)
-      this.usedStorage = this.formatFileSize(totalBytes)
+      const totalBytes = this.files.reduce(
+        (sum, file) => sum + (file.size || 0),
+        0,
+      );
+      this.usedStorage = this.formatFileSize(totalBytes);
       this.storagePercentage = Math.min(
         100,
-        Math.round((totalBytes / (10 * 1024 * 1024 * 1024)) * 100)
-      )
+        Math.round((totalBytes / (10 * 1024 * 1024 * 1024)) * 100),
+      );
     },
-    
+
     // 处理上传点击
     handleUploadClick() {
-      this.$emit('upload-click')
+      this.$emit("upload-click");
     },
-    
+
     // 处理查看文件
     handleViewFile(file) {
-      this.$emit('file-click', file)
+      this.$emit("file-click", file);
     },
-    
+
     // 处理文件操作命令
     async handleFileCommand(command, file) {
       try {
         switch (command) {
-          case 'download':
-            this.$emit('file-download', file)
-            break
-          case 'delete':
-            await this.deleteFile(file)
-            break
+          case "download":
+            this.$emit("file-download", file);
+            break;
+          case "delete":
+            await this.deleteFile(file);
+            break;
         }
       } catch (error) {
-        console.error(`${command} 文件失败:`, error)
+        console.error(`${command} 文件失败:`, error);
       }
     },
-    
-    // 删除文件
+
+    // 删除文件 (软删除)
     async deleteFile(file) {
+      console.log("准备删除文件，fileId:", file.id, "userId:", this.userId);
       try {
-        await this.$confirm(`确定要删除 "${file.name}" 吗？`, '警告', {
-          confirmButtonText: '确定删除',
-          cancelButtonText: '取消',
-          type: 'warning'
-        })
-        
-        // 调用父组件的方法删除文件
-        this.$emit('file-delete', file)
-        
+        // 确认对话框
+        await this.$confirm(`确定要删除 "${file.name}" 吗？`, "警告", {
+          confirmButtonText: "确定删除",
+          cancelButtonText: "取消",
+          type: "warning",
+        });
+
+        // 调用API删除文件
+        await deleteFile(file.id, this.userId);
+
+        // 成功提示
+        this.$message.success("文件删除成功");
+
         // 从列表中移除
-        const index = this.files.findIndex(f => f.id === file.id)
+        const index = this.files.findIndex((f) => f.id === file.id);
         if (index !== -1) {
-          this.files.splice(index, 1)
-          this.updateStorageInfo()
+          this.files.splice(index, 1);
+          // 更新存储空间信息
+          this.updateStorageInfo();
         }
-        
       } catch (error) {
-        if (error !== 'cancel') {
-          console.error('删除文件失败:', error)
+        if (error !== "cancel") {
+          console.error("删除文件失败:", error);
         }
       }
     },
-    
+
     // 获取文件图标
     getFileIcon(fileType) {
       const iconMap = {
@@ -243,40 +284,40 @@ export default {
         pdf: "el-icon-document",
         zip: "el-icon-files",
         gz: "el-icon-files",
-        unknown: "el-icon-document"
+        unknown: "el-icon-document",
       };
       return iconMap[fileType] || "el-icon-document";
     },
-    
+
     // 格式化文件大小
     formatFileSize(bytes) {
-      if (typeof bytes !== 'number' || bytes < 0) return '0 B';
-      if (bytes === 0) return '0 B';
-      
+      if (typeof bytes !== "number" || bytes < 0) return "0 B";
+      if (bytes === 0) return "0 B";
+
       const k = 1024;
-      const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+      const sizes = ["B", "KB", "MB", "GB", "TB"];
       const i = Math.floor(Math.log(bytes) / Math.log(k));
-      
+
       const size = parseFloat((bytes / Math.pow(k, i)).toFixed(2));
-      return size + ' ' + sizes[i];
+      return size + " " + sizes[i];
     },
-    
+
     // 格式化时间
     formatTime(timestamp) {
       try {
-        if (!timestamp) return '未知时间';
-        
+        if (!timestamp) return "未知时间";
+
         let date;
-        if (typeof timestamp === 'string' && timestamp.includes(' ')) {
-          date = new Date(timestamp.replace(' ', 'T') + 'Z');
+        if (typeof timestamp === "string" && timestamp.includes(" ")) {
+          date = new Date(timestamp.replace(" ", "T") + "Z");
         } else {
           date = new Date(timestamp);
         }
-        
+
         if (isNaN(date.getTime())) {
-          return '未知时间';
+          return "未知时间";
         }
-        
+
         const now = new Date();
         const diffMs = now - date;
         const diffMins = Math.floor(diffMs / 60000);
@@ -284,7 +325,7 @@ export default {
         const diffDays = Math.floor(diffMs / 86400000);
 
         if (diffMins < 1) {
-          return '刚刚';
+          return "刚刚";
         } else if (diffMins < 60) {
           return `${diffMins}分钟前`;
         } else if (diffHours < 24) {
@@ -293,22 +334,22 @@ export default {
           return `${diffDays}天前`;
         } else {
           const year = date.getFullYear();
-          const month = (date.getMonth() + 1).toString().padStart(2, '0');
-          const day = date.getDate().toString().padStart(2, '0');
+          const month = (date.getMonth() + 1).toString().padStart(2, "0");
+          const day = date.getDate().toString().padStart(2, "0");
           return `${year}-${month}-${day}`;
         }
       } catch (error) {
-        console.error('格式化时间失败:', error);
-        return '时间错误';
+        console.error("格式化时间失败:", error);
+        return "时间错误";
       }
     },
-    
+
     // 刷新文件列表（公开方法）
     refresh() {
-      this.loadFiles()
-    }
-  }
-}
+      this.loadFiles();
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>
@@ -323,6 +364,11 @@ export default {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
+
+    .header-actions {
+      display: flex;
+      gap: 8px; // 两个按钮之间的间距
+    }
   }
 
   .file-list {
