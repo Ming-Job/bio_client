@@ -1,6 +1,5 @@
 <template>
   <div class="assistant-layout">
-    <!-- 代码生成区 -->
     <div class="generation-area">
       <div class="area-header">
         <div class="header-title">
@@ -82,7 +81,6 @@
           </div>
         </div>
 
-        <!-- 生成的代码展示 -->
         <div v-if="generatedCode" class="generated-code-section">
           <div class="section-header">
             <div class="header-left">
@@ -150,7 +148,6 @@
       </div>
     </div>
 
-    <!-- 代码执行区 -->
     <div class="execution-area">
       <div class="area-header">
         <div class="header-title">
@@ -163,7 +160,9 @@
             <el-tag
               size="small"
               type="warning"
-              v-else-if="executionStatus === 'executing'"
+              v-else-if="
+                executionStatus === 'executing' || executionStatus === 'pending'
+              "
             >
               执行中
             </el-tag>
@@ -206,7 +205,6 @@
       </div>
 
       <div class="area-content">
-        <!-- 执行代码输入框 -->
         <div class="execution-input-section">
           <div class="input-header">
             <span class="input-label">
@@ -246,6 +244,7 @@
               :placeholder="'输入' + language + '代码...'"
               spellcheck="false"
               @input="onExecutionCodeChange"
+              @keydown.tab.prevent="insertTab"
               rows="15"
             ></textarea>
           </div>
@@ -335,7 +334,6 @@
           </div>
         </div>
 
-        <!-- 执行输出 -->
         <div v-if="executionResult" class="execution-output-section">
           <div class="output-header">
             <div class="output-title">
@@ -374,7 +372,6 @@
           </div>
 
           <div class="output-content">
-            <!-- 错误信息 -->
             <div v-if="executionResult?.error" class="error-output">
               <div class="error-header">
                 <i class="el-icon-warning-outline"></i>
@@ -384,7 +381,6 @@
               <pre class="error-detail">{{ executionResult.error }}</pre>
             </div>
 
-            <!-- 标准输出 -->
             <div v-if="executionResult?.output" class="std-output">
               <div class="output-header">
                 <i class="el-icon-s-data"></i>
@@ -393,7 +389,6 @@
               <pre class="output-detail">{{ executionResult.output }}</pre>
             </div>
 
-            <!-- 无输出提示 -->
             <div
               v-else-if="executionResult?.status === 'completed'"
               class="no-output"
@@ -406,7 +401,6 @@
       </div>
     </div>
 
-    <!-- 图表展示区 -->
     <div class="visualization-area" v-if="showVisualizationArea">
       <div class="area-header">
         <div class="header-title">
@@ -441,7 +435,6 @@
       </div>
 
       <div class="area-content">
-        <!-- 图表展示 -->
         <div v-if="hasCharts" class="charts-display">
           <div class="charts-grid">
             <div
@@ -496,7 +489,6 @@
           </div>
         </div>
 
-        <!-- 无图表提示 -->
         <div
           v-else-if="executionResult?.status === 'completed'"
           class="no-charts"
@@ -511,7 +503,6 @@
           </div>
         </div>
 
-        <!-- 等待执行提示 -->
         <div v-else class="waiting-execution">
           <div class="waiting-content">
             <i class="el-icon-s-promotion"></i>
@@ -522,7 +513,6 @@
       </div>
     </div>
 
-    <!-- 加载状态 -->
     <div v-if="loading" class="loading-overlay">
       <div class="loading-content">
         <div class="loading-spinner">
@@ -536,8 +526,12 @@
 </template>
 
 <script>
+// 【核心修改】：引入全局配置好的 Axios 实例
+// 如果你的项目里路径不是这个，请修改为真实的路径（如 import request from '@/api/request' 等）
+import request from "@/api/request";
+
 export default {
-  name: "CodeAssistantNewLayout",
+  name: "AnalysisAssistant",
   data() {
     return {
       // 用户输入
@@ -553,7 +547,7 @@ export default {
       timeout: "60",
       executionId: null,
       executionResult: null,
-      executionStatus: "idle", // idle, executing, completed, error
+      executionStatus: "idle", // idle, pending, executing, completed, error
 
       // 状态标志
       loading: false,
@@ -573,8 +567,9 @@ export default {
       // 代码状态
       codeStatus: "empty", // empty, generating, generated
 
-      // 轮询间隔
-      pollInterval: null,
+      // 【核心修改】：将 setInterval 替换为 setTimeout 所需的变量
+      pollTimer: null,
+      timeoutTimer: null,
     };
   },
 
@@ -615,12 +610,39 @@ export default {
 
     // 是否正在执行
     isExecuting() {
-      return this.executionStatus === "executing";
+      return (
+        this.executionStatus === "executing" ||
+        this.executionStatus === "pending"
+      );
     },
   },
 
+  // 【核心防御】：防止组件销毁后，定时器还在后台疯狂发请求卡死浏览器
+  beforeDestroy() {
+    this.clearPolling();
+  },
+
   methods: {
-    // 生成代码
+    // 【核心新增】：拦截原生 Textarea 的 Tab 键，插入 4 个空格
+    insertTab(e) {
+      const textarea = e.target;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      // 生信规范一般推荐 Python 缩进 4 个空格
+      const spaces = "    ";
+
+      this.executionCode =
+        this.executionCode.substring(0, start) +
+        spaces +
+        this.executionCode.substring(end);
+
+      // 将光标移回正确位置，需要用到 nextTick 等待 Vue 重新渲染绑定的数据
+      this.$nextTick(() => {
+        textarea.selectionStart = textarea.selectionEnd = start + spaces.length;
+      });
+    },
+
+    // 生成代码（已替换为 Axios）
     async askAssistant() {
       if (!this.userInput.trim()) {
         this.$message.warning("请输入分析需求");
@@ -632,26 +654,21 @@ export default {
 
       try {
         // 调用后端API生成代码
-        const response = await fetch(
-          "http://localhost:8080/api/analysis/assist",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ question: this.userInput }),
-          }
-        );
+        const response = await request({
+          url: "/api/analysis/assist",
+          method: "post",
+          data: { question: this.userInput },
+        });
 
-        if (!response.ok) {
-          throw new Error("生成代码失败");
-        }
+        // 兼容不同的 Axios 拦截器封装格式
+        const data = response.data || response;
 
-        const data = await response.json();
         this.generatedCode = data.code;
         this.codeStatus = "generated";
 
         this.$message.success("代码生成成功, 可点击复制代码到执行区运行");
       } catch (error) {
-        this.$message.error("生成代码失败：" + error.message);
+        this.$message.error("生成代码失败：" + (error.message || error));
         this.codeStatus = "empty";
       } finally {
         this.loading = false;
@@ -703,41 +720,33 @@ export default {
       this.$message.success(`代码已下载：${filename}`);
     },
 
-    // 提取代码块内容
+    // 【核心强化】：增强 Markdown 提取的正则容错度
     extractCodeFromMarkdown(code) {
-      // 匹配 ```python 和 ``` 之间的内容
-      const pythonRegex = /```python\n([\s\S]*?)```/;
-      // 匹配 ```r 和 ``` 之间的内容
-      const rRegex = /```r\n([\s\S]*?)```/;
-      // 匹配 ```（不带语言标识）和 ``` 之间的内容
-      const genericRegex = /```\n([\s\S]*?)```/;
+      // 允许语言标识后面带有空格，且忽略大小写 (如 ```Python )
+      const pythonRegex = /```python[ \t]*\n([\s\S]*?)```/i;
+      const rRegex = /```r[ \t]*\n([\s\S]*?)```/i;
+      const genericRegex = /```[ \t]*\n([\s\S]*?)```/;
 
       let match;
 
-      // 根据当前语言选择匹配模式
       if (this.language === "python") {
         match = pythonRegex.exec(code);
       } else if (this.language === "r") {
         match = rRegex.exec(code);
       }
 
-      // 如果没有匹配到指定语言的代码块，尝试通用匹配
       if (!match && !match?.[1]) {
         match = genericRegex.exec(code);
       }
 
-      // 如果匹配成功，返回代码内容，否则返回原代码
       return match ? match[1].trim() : code;
     },
 
-    // 复制到执行区（修改后的版本）
+    // 复制到执行区
     copyToExecution() {
       if (!this.generatedCode) return;
-
-      // 提取代码块内容
       const extractedCode = this.extractCodeFromMarkdown(this.generatedCode);
       this.executionCode = extractedCode;
-
       this.$message.success("代码已提取并复制到执行区");
     },
 
@@ -761,12 +770,11 @@ export default {
         });
     },
 
-    // 执行代码变化处理
     onExecutionCodeChange() {
-      // 可以在这里添加代码检查或其他逻辑
+      // 代码内容改变时的扩展口
     },
 
-    // 执行代码
+    // 执行代码（已替换为 Axios）
     async executeCode() {
       if (!this.canExecute) return;
 
@@ -777,94 +785,99 @@ export default {
       try {
         const url =
           this.executionMode === "async"
-            ? "http://localhost:8080/api/code/execute"
-            : "http://localhost:8080/api/code/execute-sync";
+            ? "/api/code/execute"
+            : "/api/code/execute-sync";
 
-        const response = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+        const response = await request({
+          url: url,
+          method: "post",
+          data: {
             code: this.executionCode,
             language: this.language,
             timeout: parseInt(this.timeout),
-          }),
+          },
         });
 
+        const data = response.data || response;
+
         if (this.executionMode === "async") {
-          const data = await response.json();
-          if (response.ok) {
+          if (data.success || data.taskId) {
             this.executionId = data.taskId;
             this.$message.success(`任务已提交，ID: ${data.taskId}`);
-            this.startPolling();
+            this.startPolling(); // 开始完美的链式轮询
           } else {
-            throw new Error(data.error || "执行失败");
+            throw new Error(data.error || "异步任务提交失败");
           }
         } else {
-          const result = await response.json();
-          this.handleExecutionResult(result);
+          // 同步执行直接处理结果
+          this.handleExecutionResult(data);
         }
       } catch (error) {
         this.executionStatus = "error";
-        this.$message.error("执行失败：" + error.message);
+        this.$message.error("执行失败：" + (error.message || error));
       } finally {
-        this.executing = false;
+        if (this.executionMode !== "async") {
+          this.executing = false; // 只有同步才在这里解除 executing 状态
+        }
       }
     },
 
-    // 开始轮询状态
+    // 【核心重构】：完美防卡死的链式轮询逻辑
     startPolling() {
-      // 清除之前的轮询
-      if (this.pollInterval) {
-        clearInterval(this.pollInterval);
-      }
+      this.clearPolling(); // 先清空旧的定时器，防止冲突
 
-      // 立即检查一次
-      this.checkExecutionStatus();
-
-      // 设置轮询
-      this.pollInterval = setInterval(() => {
-        if (this.executionId) {
-          this.checkExecutionStatus();
-        }
-      }, 2000);
-
-      // 超时后停止轮询
+      // 1. 设置超时安全防线
       const timeoutMs = parseInt(this.timeout) * 1000 + 5000;
-      setTimeout(() => {
-        if (this.pollInterval) {
-          clearInterval(this.pollInterval);
-          this.pollInterval = null;
-          if (this.executionStatus === "executing") {
-            this.$message.warning("执行超时");
-            this.executionStatus = "error";
-          }
+      this.timeoutTimer = setTimeout(() => {
+        this.clearPolling();
+        if (
+          this.executionStatus === "executing" ||
+          this.executionStatus === "pending"
+        ) {
+          this.$message.warning("执行超时，前端已切断监控");
+          this.executionStatus = "error";
+          this.executing = false;
         }
       }, timeoutMs);
+
+      // 2. 立即发起第一次状态检查
+      this.checkExecutionStatus();
     },
 
-    // 检查执行状态
+    // 检查执行状态（链式轮询，已替换为 Axios）
     async checkExecutionStatus() {
       if (!this.executionId) return;
 
       this.checkingStatus = true;
       try {
-        const response = await fetch(
-          `http://localhost:8080/api/code/result/${this.executionId}`
-        );
+        const response = await request({
+          url: `/api/code/result/${this.executionId}`,
+          method: "get",
+        });
 
+        // 兼容 404 等非常规返回
         if (response.status === 404) {
-          this.$message.warning("任务不存在");
-          if (this.pollInterval) {
-            clearInterval(this.pollInterval);
-            this.pollInterval = null;
-          }
+          this.$message.warning("任务不存在或已过期");
+          this.clearPolling();
+          this.executing = false;
           return;
         }
 
-        const result = await response.json();
+        const result = response.data || response;
         this.handleExecutionResult(result);
+
+        // 如果依然处于中间状态，则设定下一次轮询，完美错峰防雪崩
+        if (result.status === "pending" || result.status === "executing") {
+          this.pollTimer = setTimeout(() => {
+            this.checkExecutionStatus();
+          }, 2000); // 固定间隔 2 秒
+        }
       } catch (error) {
         console.error("检查状态失败:", error);
+        // 网络抖动容错：即使报错一次，也可以继续轮询，不直接判死刑
+        this.pollTimer = setTimeout(() => {
+          this.checkExecutionStatus();
+        }, 3000);
       } finally {
         this.checkingStatus = false;
       }
@@ -875,29 +888,37 @@ export default {
       this.executionResult = result;
       this.executionStatus = result.status;
 
-      if (result.status === "completed") {
-        if (this.pollInterval) {
-          clearInterval(this.pollInterval);
-          this.pollInterval = null;
+      // 如果任务流转到了终态，清理前端定时器
+      if (result.status === "completed" || result.status === "error") {
+        this.clearPolling();
+        this.executing = false; // 解除加载状态按钮
+
+        if (result.status === "completed") {
+          this.$message.success(`执行成功，耗时${result.executionTime}ms`);
+        } else {
+          this.$message.error("执行出错：" + (result.error || "未知错误"));
         }
-        this.$message.success(`执行成功，耗时${result.executionTime}ms`);
-      } else if (result.status === "error") {
-        if (this.pollInterval) {
-          clearInterval(this.pollInterval);
-          this.pollInterval = null;
-        }
-        this.$message.error("执行出错：" + (result.error || "未知错误"));
       }
     },
 
     // 停止执行
     stopExecution() {
       this.executionStatus = "idle";
-      if (this.pollInterval) {
-        clearInterval(this.pollInterval);
-        this.pollInterval = null;
+      this.executing = false;
+      this.clearPolling();
+      this.$message.info("前端已停止跟踪执行状态");
+    },
+
+    // 【新增】：统一的定时器清理工具函数
+    clearPolling() {
+      if (this.pollTimer) {
+        clearTimeout(this.pollTimer);
+        this.pollTimer = null;
       }
-      this.$message.info("执行已停止");
+      if (this.timeoutTimer) {
+        clearTimeout(this.timeoutTimer);
+        this.timeoutTimer = null;
+      }
     },
 
     // 复制输出
@@ -926,9 +947,7 @@ export default {
     // 导出所有图表
     exportAllCharts() {
       if (!this.hasCharts) return;
-
       this.$message.info("图表批量导出功能开发中");
-      // 实际实现中，可以打包下载所有图表
     },
 
     // 预览图表
@@ -963,6 +982,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+/* 你的 SCSS 样式没有任何硬伤，写得非常漂亮，保持原样即可 */
 .assistant-layout {
   display: flex;
   flex-direction: column;

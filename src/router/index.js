@@ -89,12 +89,41 @@ const routes = [
           component: HomePage
         },
         {
-          // 课程列表：子路由path为courses，
+          // 分析中心页面 
           path: "analysis",
           name: "AnalysisPage",
           component: AnalysisPage,
           meta: { title: "分析页面" },
         },
+        {
+          // 课程中心页面
+          path: "course",
+          name: "CoursePage",
+          component: () => import('@/views/course/CoursePage.vue'),
+          meta: { title: "课程中心" }
+        },
+        // 课程详情页的路由配置
+        {
+          path: '/course/detail/:id',   // 这里的 :id 是必须的，用来接收传过来的 course.id
+          name: 'CourseDetail',         // 如果用方案一，这个 name 必须对应上
+          component: () => import('@/views/course/CourseDetail.vue'), // 指向我们刚刚写的详情页组件
+          meta: { title: '课程详情' }
+        },
+        // 继续学习 页面
+        {
+          path: '/course/learn/:id',
+          name: 'CourseLearn',
+          component: () => import('@/views/course/CourseLearn.vue'),
+          meta: { title: '沉浸式学习' }
+        },
+        // 我的学习页面
+        {
+          path: '/my-course',
+          name: 'MyCourse',
+          component: () => import('@/views/course/MyCourse.vue'),
+          meta: { title: '我的学习' }
+        },
+
         {
           // 文件上传页面
           path: "file-uploader",
@@ -113,7 +142,7 @@ const routes = [
           path: "assistant",  // 独立的路由，不是analysis的子路由
           name: "AnalysisAssistant",
           component: () => import('@/components/analysis/AnalysisAssistant.vue'),
-          meta: { title: "AI助手" }
+          meta: { title: "AI 助手" }
         },
         {
           path: "teaching-case",

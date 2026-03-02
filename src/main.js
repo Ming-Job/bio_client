@@ -9,6 +9,12 @@ import router from './router'
 import store from './store'
 Vue.use(ElementUI)
 
+// 1. 引入我们之前写的图片处理工具函数
+import { getImageUrl } from '@/utils/image' 
+
+// 2. 将它挂载到 Vue 的原型链上，命名为 $img
+Vue.prototype.$img = getImageUrl
+
 
 
 new Vue({

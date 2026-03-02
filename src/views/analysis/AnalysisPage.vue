@@ -573,7 +573,7 @@ export default {
     getRecentUploadFiles() {
       return this.$refs.recentFiles
         ? this.$refs.recentFiles.files.filter((file) =>
-            ["fasta", "fastq", "bam", "vcf", "csv"].includes(file.type)
+            ["fasta", "fastq", "bam", "vcf", "csv"].includes(file.type),
           )
         : [];
     },

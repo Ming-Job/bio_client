@@ -1,106 +1,94 @@
 <template>
   <header class="header">
-    <div class="container">
-      <div class="logo-section">
-        <img
-          src="@/assets/images/logo.png"
-          alt="生物科教平台"
-          class="logo"
-          v-if="$route.path === '/'"
-        />
-        <h1>生物科教信息平台</h1>
+    <div class="header-container">
+      <!-- 品牌区 -->
+      <div class="brand-section" @click="$router.push('/')">
+        <img src="@/assets/images/logo.png" alt="Logo" class="logo" />
+        <span class="brand-title">生物信息科教平台</span>
       </div>
-      <el-menu
-        :default-active="activeIndex"
-        mode="horizontal"
-        @select="handleSelect"
-        background-color="#2c3e50"
-        text-color="#fff"
-        active-text-color="#42b983"
-      >
-        <el-menu-item index="1">首页</el-menu-item>
-        <el-submenu index="2">
-          <template slot="title">分析工具</template>
-          <el-menu-item index="2-1">基础分析</el-menu-item>
-          <el-menu-item index="2-2">密码子分析</el-menu-item>
-          <el-menu-item index="2-3">特征分析</el-menu-item>
-          <el-menu-item index="2-4">蛋白质翻译</el-menu-item>
-        </el-submenu>
-        <el-menu-item index="3">分析中心</el-menu-item>
-        <el-menu-item index="4">教学案例库</el-menu-item>
-        <el-menu-item index="5">我的项目</el-menu-item>
-        <el-menu-item index="6">帮助中心</el-menu-item>
-      </el-menu>
 
-      <div class="user-section">
-        <!-- <el-input
-          placeholder="搜索生物知识..."
-          prefix-icon="el-icon-search"
+      <!-- 导航菜单 -->
+      <div class="nav-section">
+        <el-menu
+          :default-active="activeIndex"
+          mode="horizontal"
+          @select="handleSelect"
+          background-color="transparent"
+          text-color="#ecf0f1"
+          active-text-color="#42b983"
+        >
+          <el-menu-item index="1">首页</el-menu-item>
+          <el-menu-item index="2">课程中心</el-menu-item>
+          <el-menu-item index="3">分析中心</el-menu-item>
+          <el-menu-item index="4">教学案例库</el-menu-item>
+          <el-menu-item index="5">我的项目</el-menu-item>
+          <el-menu-item index="6">帮助中心</el-menu-item>
+        </el-menu>
+      </div>
+
+      <!-- 操作区 -->
+      <div class="action-section">
+        <el-input
           v-model="searchKeyword"
+          size="small"
+          placeholder="搜索知识..."
+          prefix-icon="el-icon-search"
+          class="header-search"
           @keyup.enter="handleSearch"
-          style="width: 200px; margin-right: 20px"
-        /> -->
+          aria-label="搜索知识"
+        />
 
-        <div class="user-info" @click="handleUserClick">
-          <!-- 修改头像显示部分 -->
-          <div class="avatar-container">
-            <!-- 用户已登录：显示用户头像 -->
-            <el-avatar
-              v-if="isLoggedIn && userInfo.avatar"
-              :src="getAvatarFullUrl(userInfo.avatar)"
-              :size="40"
-              class="user-avatar"
-              @error="handleAvatarError"
-            />
-            <!-- 用户已登录但没有头像：显示用户名首字母 -->
-            <el-avatar
-              v-else-if="isLoggedIn"
-              :size="40"
-              class="user-avatar"
-              :style="{ backgroundColor: getAvatarColor(userInfo.username) }"
-            >
-              {{ getUserInitial(userInfo.username) }}
-            </el-avatar>
-            <!-- 用户未登录：显示默认头像 -->
-            <div v-else class="avatar-placeholder">
-              <i class="el-icon-user"></i>
-            </div>
-          </div>
-          <div class="login-register">
-            <template v-if="isLoggedIn">
-              <span class="user-name">{{ userInfo.username }}</span>
-              <el-tag :type="roleTagType" size="small" class="role-tag">
-                {{ userRoleText }}
-              </el-tag>
-            </template>
-            <el-button v-else type="text" @click.stop="handleLogin"
-              >登录/注册</el-button
-            >
-          </div>
-        </div>
-
-        <!-- 用户已登录时的下拉菜单 -->
         <el-dropdown
           v-if="isLoggedIn"
-          class="user-dropdown"
           @command="handleUserCommand"
           trigger="click"
         >
-          <span class="el-dropdown-link">
-            <i class="el-icon-arrow-down el-icon--right"></i>
-          </span>
+          <div class="user-trigger">
+            <el-avatar
+              :size="36"
+              :src="avatarFullUrl"
+              class="avatar-ring"
+              @error="handleAvatarError"
+            >
+              {{ userInitial }}
+            </el-avatar>
+            <div class="user-meta">
+              <span class="username">{{ userInfo.username }}</span>
+              <span
+                class="role-badge"
+                :class="`role-badge--${userInfo.role || 'student'}`"
+              >
+                {{ userRoleText }}
+              </span>
+            </div>
+            <i class="el-icon-arrow-down"></i>
+          </div>
+
           <el-dropdown-menu slot="dropdown">
-            <el-dropdown-item command="profile">
-              <i class="el-icon-user"></i>个人中心
-            </el-dropdown-item>
-            <el-dropdown-item command="settings">
-              <i class="el-icon-setting"></i>账号设置
-            </el-dropdown-item>
-            <el-dropdown-item command="logout">
-              <i class="el-icon-switch-button"></i>退出登录
-            </el-dropdown-item>
+            <el-dropdown-item command="profile" icon="el-icon-user"
+              >个人中心</el-dropdown-item
+            >
+            <el-dropdown-item command="settings" icon="el-icon-setting"
+              >账号设置</el-dropdown-item
+            >
+            <el-dropdown-item
+              command="logout"
+              icon="el-icon-switch-button"
+              divided
+              >退出登录</el-dropdown-item
+            >
           </el-dropdown-menu>
         </el-dropdown>
+
+        <el-button
+          v-else
+          type="primary"
+          size="small"
+          round
+          @click="handleLogin"
+        >
+          登录 / 注册
+        </el-button>
       </div>
     </div>
   </header>
@@ -109,22 +97,43 @@
 <script>
 import { mapState, mapActions } from "vuex";
 import { getAvatarUrl } from "@/utils/auth";
-import { getRoleText, getRoleTagType } from "@/utils/role";
+import { getRoleText } from "@/utils/role";
+
+// 菜单索引与路由的映射关系（用于跳转）
+const MENU_ROUTE_MAP = {
+  1: { name: "HomePage" },
+  2: { name: "CoursePage" },
+  3: { name: "AnalysisPage" },
+  4: { name: "TeachingCase" },
+  5: { name: "MyProject" },
+  6: { name: "HelpCenter" },
+};
+
+// 路径前缀到菜单索引的映射（用于高亮）
+const PATH_TO_MENU = [
+  { prefix: "/my-course", index: "" },
+
+  { prefix: "/analysis", index: "3" },
+  { prefix: "/course", index: "2" },
+  { prefix: "/case", index: "4" },
+  { prefix: "/project", index: "5" },
+  { prefix: "/help", index: "6" },
+  { prefix: "/", index: "1" }, // 根路径放最后，避免覆盖其他
+];
 
 export default {
   name: "HeaderPage",
   data() {
     return {
-      activeIndex: "3",
+      activeIndex: "1",
       searchKeyword: "",
       avatarLoadError: false,
     };
   },
   computed: {
-    // 修复：从Vuex的user模块获取状态
     ...mapState("user", {
       isLoggedIn: (state) => state.isLoggedIn,
-      userInfo: (state) => state.userInfo,
+      userInfo: (state) => state.userInfo || {},
     }),
 
     // 用户角色文本
@@ -132,72 +141,84 @@ export default {
       return getRoleText(this.userInfo.role);
     },
 
-    // 用户角色标签类型
-    roleTagType() {
-      return getRoleTagType(this.userInfo.role);
+    // 用户头像首字母
+    userInitial() {
+      return this.userInfo.username
+        ? this.userInfo.username.charAt(0).toUpperCase()
+        : "U";
+    },
+
+    // 完整的头像URL（支持错误回退）
+    avatarFullUrl() {
+      if (this.avatarLoadError) {
+        return "https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png";
+      }
+      return getAvatarUrl(this.userInfo.avatar);
     },
   },
   created() {
-    console.log("Header组件创建，检查登录状态");
-
-    // 页面加载时检查用户登录状态
     this.checkLoginStatus();
-
-    // 调试：检查Vuex状态
-    setTimeout(() => {
-      console.log("Vuex状态检查:", {
-        store: this.$store,
-        userModule: this.$store.state.user,
-        isLoggedIn: this.isLoggedIn,
-        userInfo: this.userInfo,
-      });
-    }, 100);
+    this.updateActiveIndexByRoute(this.$route);
   },
   methods: {
-    // 映射user模块的actions
-    ...mapActions("user", ["checkLoginStatus", "logout", "setUserInfo"]),
+    ...mapActions("user", ["checkLoginStatus", "logout"]),
 
-    handleSearch() {
-      // 搜索逻辑...
+    // 根据当前路由更新菜单高亮
+    updateActiveIndexByRoute(route) {
+      const path = route.path;
+
+      // 🌟 针对首页做精确匹配：只有路径完全等于 "/" 或者 "/home" 时，才高亮首页
+      if (path === "/" || path === "/home") {
+        this.activeIndex = "1";
+        return;
+      }
+
+      // 遍历前缀匹配其他模块
+      for (const item of PATH_TO_MENU) {
+        if (path.startsWith(item.prefix)) {
+          this.activeIndex = item.index;
+          return;
+        }
+      }
+
+      // 如果都没匹配上，说明是不在导航栏里的独立页面，取消高亮
+      this.activeIndex = "";
     },
 
-    // 菜单选择事件，实现路由跳转
+    // 菜单选择事件
     handleSelect(index) {
-      // 建立菜单index和路由的映射表
-      const menuRouteMap = {
-        1: { name: "HomePage" }, // 首页对应根路径
-        3: { name: "AnalysisPage" }, // 课程列表对应CourseList路由（优先使用name，更稳定）
-        4: { name: "TeachingCase" }, // 教学案例库
-      };
-      // 获取当前选中index对应的路由配置
-      const targetRoute = menuRouteMap[index];
+      const targetRoute = MENU_ROUTE_MAP[index];
       if (targetRoute) {
-        // 更新当前激活的菜单索引
-        this.activeIndex = index;
-        // 跳转到对应路由界面
         this.$router.push(targetRoute);
+        // 路由变化后会触发 watch $route 自动更新高亮，此处无需手动设置
       }
     },
 
+    // 搜索
+    handleSearch() {
+      if (this.searchKeyword.trim()) {
+        this.$router.push({
+          name: "SearchResult",
+          query: { q: this.searchKeyword.trim() },
+        });
+      } else {
+        this.$message.info("请输入搜索关键词");
+      }
+    },
+
+    // 登录跳转
     handleLogin() {
       this.$router.push({ name: "LoginPage" });
     },
 
-    handleUserClick() {
-      if (this.isLoggedIn && this.userInfo) {
-        this.$router.push({ name: "UserProfile" });
-      } else {
-        this.handleLogin();
-      }
-    },
-
+    // 下拉菜单命令
     handleUserCommand(command) {
       switch (command) {
         case "profile":
           this.$router.push({ name: "UserProfile" });
           break;
         case "settings":
-          this.$router.push({ name: "AccountSettings" });
+          this.$router.push({ name: "AccountSetting" });
           break;
         case "logout":
           this.handleLogout();
@@ -205,6 +226,7 @@ export default {
       }
     },
 
+    // 退出登录
     async handleLogout() {
       try {
         await this.$confirm("确定要退出登录吗？", "提示", {
@@ -212,84 +234,25 @@ export default {
           cancelButtonText: "取消",
           type: "warning",
         });
-
-        // 调用Vuex action退出登录
         await this.logout();
-
-        this.$message({
-          type: "success",
-          message: "退出登录成功!",
-        });
-
-        // 跳转到首页
-        this.$router.push({ path: "/" });
+        this.$message.success("退出登录成功!");
+        this.$router.push("/");
       } catch (error) {
-        console.log("用户取消退出登录");
+        // 用户取消
       }
     },
 
-    getUserInitial(username) {
-      if (!username) return "U";
-      return username.charAt(0).toUpperCase();
-    },
-
-    getAvatarColor(username) {
-      const colors = [
-        "#f56a00",
-        "#7265e6",
-        "#ffbf00",
-        "#00a2ae",
-        "#42b983",
-        "#1890ff",
-        "#f759ab",
-        "#52c41a",
-      ];
-      if (!username) return colors[0];
-
-      let hash = 0;
-      for (let i = 0; i < username.length; i++) {
-        hash = username.charCodeAt(i) + ((hash << 5) - hash);
-      }
-      const index = Math.abs(hash % colors.length);
-      return colors[index];
-    },
-
-    // 计算属性：获取完整头像URL
-    getAvatarFullUrl(avatar) {
-      return getAvatarUrl(avatar);
-    },
-
+    // 头像加载失败
     handleAvatarError() {
-      console.warn("头像加载失败");
       this.avatarLoadError = true;
-
-      // 尝试加载默认头像
-      const defaultAvatar =
-        "https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png";
-      const img = new Image();
-      img.src = defaultAvatar;
     },
   },
-
   watch: {
-    $route(to) {
-      // 当路由变化时，重新检查登录状态
-      if (to.name === "LoginPage" || to.name === "Logout") {
-        this.checkLoginStatus();
-      }
-
-      // 同步路由与菜单高亮状态（核心：路由→菜单index映射）
-      const routeMenuMap = {
-        "/": "1", // 根路径对应首页index="1"
-        "/analysis": "3", // 分析中心路径对应index="3"
-        // 其他路由可后续补充
-      };
-
-      // 更新激活的菜单索引
-      const currentMenuIndex = routeMenuMap[to.path];
-      if (currentMenuIndex) {
-        this.activeIndex = currentMenuIndex;
-      }
+    $route: {
+      handler(newRoute) {
+        this.updateActiveIndexByRoute(newRoute);
+      },
+      immediate: true, // 确保初始加载时执行
     },
   },
 };
@@ -297,147 +260,160 @@ export default {
 
 <style lang="scss" scoped>
 .header {
-  background-color: #2c3e50;
-  color: white;
-  padding: 0 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  height: 64px;
+  background: #242f3e;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
 
-  .container {
-    max-width: 1200px;
+  .header-container {
+    max-width: 1400px;
     margin: 0 auto;
+    height: 100%;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 20px;
+    padding: 0 24px;
   }
 
-  .logo-section {
+  /* 品牌区 */
+  .brand-section {
     display: flex;
     align-items: center;
+    cursor: pointer;
+    min-width: 200px;
 
     .logo {
-      height: 50px;
-      margin-right: 15px;
+      height: 32px;
+      transition: transform 0.3s;
     }
 
-    h1 {
-      font-size: 1.5rem;
-      color: white;
+    .brand-title {
+      margin-left: 12px;
+      font-size: 18px;
+      font-weight: 600;
+      color: #fff;
+      white-space: nowrap;
+      letter-spacing: 0.5px;
+    }
+
+    &:hover .logo {
+      transform: scale(1.05);
     }
   }
 
-  .user-section {
+  /* 导航区 */
+  .nav-section {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+
+    ::v-deep .el-menu {
+      border: none;
+
+      .el-menu-item,
+      .el-submenu__title {
+        height: 64px;
+        line-height: 64px;
+        font-size: 15px;
+        padding: 0 15px;
+      }
+    }
+  }
+
+  /* 操作区 */
+  .action-section {
     display: flex;
     align-items: center;
-    position: relative;
+    gap: 20px;
 
-    .user-info {
+    .header-search {
+      width: 180px;
+      transition: width 0.3s;
+
+      ::v-deep .el-input__inner {
+        background: rgba(255, 255, 255, 0.1);
+        border: none;
+        color: #fff;
+        border-radius: 20px;
+      }
+
+      &:focus-within {
+        width: 240px;
+      }
+    }
+
+    .user-trigger {
       display: flex;
       align-items: center;
       cursor: pointer;
-      padding: 5px 10px;
-      border-radius: 20px;
-      transition: background-color 0.3s;
+      color: #fff;
 
-      &:hover {
-        background-color: rgba(255, 255, 255, 0.1);
+      .avatar-ring {
+        border: 2px solid #42b983;
+        box-shadow: 0 0 8px rgba(66, 185, 131, 0.4);
       }
 
-      .avatar-container {
-        margin-right: 10px;
-
-        .avatar-placeholder {
-          width: 40px;
-          height: 40px;
-          border-radius: 50%;
-          background-color: #42b983;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-size: 20px;
-        }
-
-        .user-avatar {
-          border: 2px solid rgba(255, 255, 255, 0.3);
-        }
-      }
-
-      .login-register {
+      .user-meta {
+        margin: 0 10px;
         display: flex;
         flex-direction: column;
-        align-items: flex-start;
 
-        .user-name {
-          color: white;
+        .username {
           font-size: 14px;
-          font-weight: 500;
           line-height: 1.2;
         }
 
-        .user-role {
-          font-size: 12px;
-          padding: 2px 6px;
-          border-radius: 10px;
+        .role-badge {
+          font-size: 10px;
+          padding: 1px 6px;
+          border-radius: 4px;
           margin-top: 2px;
+          width: fit-content;
+          opacity: 0.9;
 
-          &.role-user {
-            background-color: #eeee1e;
-            color: white;
+          &--admin {
+            background: #e6a23c;
           }
-
-          &.role-admin {
-            background-color: #f56c6c;
-            color: white;
+          &--teacher {
+            background: #67c23a;
           }
-        }
-
-        .el-button {
-          color: white;
-          font-size: 14px;
-          padding: 0;
-
-          &:hover {
-            color: #42b983;
+          &--student {
+            background: #409eff;
           }
+          // 默认样式
+          background: #42b983;
         }
       }
-    }
-
-    .user-dropdown {
-      margin-left: 5px;
-      cursor: pointer;
-
-      .el-dropdown-link {
-        color: white;
-        font-size: 16px;
-
-        &:hover {
-          color: #42b983;
-        }
-      }
-    }
-  }
-
-  ::v-deep .el-menu {
-    flex: 1;
-    margin: 0 40px;
-
-    &.el-menu--horizontal {
-      border-bottom: none;
-    }
-  }
-
-  ::v-deep .el-dropdown-menu {
-    min-width: 150px;
-
-    .el-dropdown-menu__item {
-      display: flex;
-      align-items: center;
 
       i {
-        margin-right: 8px;
+        font-size: 12px;
+        color: #bdc3c7;
       }
+    }
+  }
+
+  /* 简单响应式处理 */
+  @media (max-width: 768px) {
+    .brand-title {
+      display: none;
+    }
+
+    .nav-section {
+      ::v-deep .el-menu-item {
+        padding: 0 10px;
+        font-size: 13px;
+      }
+    }
+
+    .user-meta {
+      display: none !important;
+    }
+
+    .header-search {
+      width: 140px;
     }
   }
 }
