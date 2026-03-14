@@ -95,6 +95,49 @@ const routes = [
           component: AnalysisPage,
           meta: { title: "分析页面" },
         },
+        
+          // 新建分析页面
+        {
+          path: '/analysis/new',
+          name: 'NewAnalysis',
+          component: () => import('@/components/analysis/NewAnalysis.vue'), // 假设你放在了这里
+          meta: { title: '启动新分析' }
+        },
+
+        // 注册任务调度中心路由
+        {
+          path: '/analysis/tasks', // 浏览器地址栏的 URL 路径
+          name: 'TaskCenter',
+          // 路由懒加载（推荐写法），性能更好
+          component: () => import('@/views/analysis/TaskCenter.vue'), 
+          meta: { 
+            title: '任务调度中心 - Bio-OS',
+          }
+        },
+        // 分析流库页面
+        {
+          path: '/analysis/pipelines',
+          name: 'PipelineLibrary',
+          component: () => import('@/views/analysis/PipelineLibrary.vue'),
+          meta: { title: '分析流库' }
+        },
+        // 云端数据舱页面
+        {
+          path: '/analysis/data',
+          name: 'DataCabin',
+          component: () => import('@/views/analysis/DataCabin.vue'),
+          meta: { title: '云端数据舱' }
+        },
+
+        {
+          path: "assistant",  // 独立的路由，不是analysis的子路由
+          name: "AnalysisAssistant",
+          component: () => import('@/components/analysis/AnalysisAssistant.vue'),
+          meta: { title: "AI 助手" }
+        },
+
+
+
         {
           // 课程中心页面
           path: "course",
@@ -131,19 +174,11 @@ const routes = [
           component: () => import('@/components/analysis/FileUploader.vue'),
           meta: { title: "文件上传" } 
         },
-        {
-          // 新建分析页面
-          path: "new-analysis",
-          name: "NewAnalysisForm",
-          component: () => import('@/components/analysis/NewAnalysisForm.vue'),
-          meta: { title: "新建分析" }
-        },
-        {
-          path: "assistant",  // 独立的路由，不是analysis的子路由
-          name: "AnalysisAssistant",
-          component: () => import('@/components/analysis/AnalysisAssistant.vue'),
-          meta: { title: "AI 助手" }
-        },
+
+
+
+
+
         {
           path: "teaching-case",
           name: "TeachingCase",

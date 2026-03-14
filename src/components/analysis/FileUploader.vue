@@ -1,10 +1,14 @@
 <template>
-  <div class="simple-file-uploader">
+  <div class="glass-uploader-container">
+    <div class="ambient-bg"></div>
+
     <div
-      class="upload-area"
+      class="glass-dropzone"
+      :class="{ 'is-dragover': isDragover }"
       @click="triggerFileInput"
       @dragover.prevent="onDragOver"
       @drop.prevent="onDrop"
+      @dragleave.prevent="isDragover = false"
     >
       <input
         ref="fileInput"
@@ -14,72 +18,93 @@
         @change="handleFileChange"
         style="display: none"
       />
-
-      <div class="upload-content" :class="{ dragover: isDragover }">
-        <i class="el-icon-upload upload-icon"></i>
-        <h3 class="upload-title">点击或拖拽文件到此区域上传</h3>
-        <p class="upload-tips">
-          支持 {{ allowedExtensionsText }} 格式，单个文件最大
-          {{ maxFileSizeText }}
+      <div class="dropzone-content">
+        <div class="icon-ring">
+          <i class="el-icon-upload cloud-icon"></i>
+        </div>
+        <h3 class="title">点击或将文件拖拽至此处</h3>
+        <p class="subtitle">
+          支持 {{ allowedExtensionsText }} 格式，最大 {{ maxFileSizeText }}
         </p>
       </div>
     </div>
 
-    <div v-if="fileList.length > 0" class="file-list">
-      <div class="file-list-header">
-        <span class="header-title">待上传文件（{{ fileList.length }}个）</span>
-        <el-button
-          type="primary"
-          :loading="uploading"
-          :disabled="uploading"
-          @click="startUpload"
-        >
-          {{ uploading ? `上传中...` : "开始上传" }}
-        </el-button>
+    <div v-if="fileList.length > 0" class="glass-file-section">
+      <div class="section-header">
+        <span class="header-title">待上传列表 ({{ fileList.length }})</span>
+        <div class="header-actions">
+          <el-button type="text" class="glass-btn-text" @click="clearAllFiles">
+            <i class="el-icon-delete"></i> 清空
+          </el-button>
+          <el-button
+            type="text"
+            class="glass-btn-text"
+            @click="selectMoreFiles"
+          >
+            <i class="el-icon-plus"></i> 继续添加
+          </el-button>
+          <el-button
+            type="primary"
+            round
+            class="glass-btn-primary"
+            :loading="uploading"
+            :disabled="uploading"
+            @click="startUpload"
+          >
+            {{ uploading ? "上传中..." : "开始上传" }}
+          </el-button>
+        </div>
       </div>
 
-      <div class="file-items">
+      <div class="glass-file-list">
         <div
           v-for="(file, index) in fileList"
           :key="file.id"
-          class="file-item"
-          :class="{
-            uploading: file.status === 'uploading',
-            success: file.status === 'success',
-            error: file.status === 'error',
-          }"
+          class="glass-file-item"
+          :class="file.status"
         >
-          <div class="file-info">
-            <div class="file-icon">
-              <i :class="getFileIcon(file.name)"></i>
+          <div class="file-icon-box">
+            <i :class="getFileIcon(file.name)"></i>
+          </div>
+
+          <div class="file-info-box">
+            <div class="info-top">
+              <span class="file-name">{{ file.name }}</span>
+              <span class="file-size">{{ formatFileSize(file.size) }}</span>
             </div>
-            <div class="file-details">
-              <div class="file-name">
-                <span class="name-text">{{ file.name }}</span>
-              </div>
 
+            <div class="progress-wrapper" v-if="file.status === 'uploading'">
               <el-progress
-                v-if="file.status === 'uploading'"
                 :percentage="file.progress"
-                :stroke-width="4"
+                :stroke-width="6"
                 :show-text="false"
-                class="file-progress"
+                color="#007aff"
               ></el-progress>
+            </div>
 
-              <div class="file-meta">
-                <span class="file-size">{{ formatFileSize(file.size) }}</span>
-                <span class="file-status" :class="file.status">
-                  {{
-                    file.status === "uploading"
-                      ? `上传中 ${file.progress}%`
-                      : getStatusText(file.status)
-                  }}
-                </span>
-
-                <span v-if="file.status === 'error'" class="error-message">
-                  ({{ file.error }})
-                </span>
-              </div>
+            <div class="info-bottom">
+              <span class="status-text" :class="file.status">
+                <i
+                  v-if="file.status === 'success'"
+                  class="el-icon-circle-check"
+                ></i>
+                <i
+                  v-if="file.status === 'error'"
+                  class="el-icon-warning-outline"
+                ></i>
+                <i
+                  v-if="file.status === 'uploading'"
+                  class="el-icon-loading"
+                ></i>
+                {{
+                  file.status === "uploading"
+                    ? `上传中 ${file.progress}%`
+                    : getStatusText(file.status)
+                }}
+              </span>
+              <span v-if="file.status === 'error'" class="error-msg">
+                - {{ file.error }}
+              </span>
             </div>
           </div>
 
@@ -87,47 +112,27 @@
             <el-button
               v-if="file.status === 'pending' || file.status === 'error'"
               type="text"
-              icon="el-icon-delete"
-              @click="removeFile(index)"
-              class="remove-btn"
-              title="移除"
+              icon="el-icon-close"
+              class="action-btn remove"
+              @click.stop="removeFile(index)"
             ></el-button>
-            <i
-              v-if="file.status === 'success'"
-              class="el-icon-circle-check success-icon"
-              title="上传成功"
-            ></i>
-            <i
-              v-if="file.status === 'error'"
-              class="el-icon-circle-close error-icon"
-              title="上传失败"
-            ></i>
           </div>
         </div>
       </div>
 
-      <div class="batch-actions">
-        <el-button type="text" @click="clearAllFiles">
-          <i class="el-icon-delete"></i> 清空列表
-        </el-button>
-        <el-button type="text" @click="selectMoreFiles">
-          <i class="el-icon-folder-add"></i> 继续添加
-        </el-button>
-      </div>
-    </div>
-
-    <div v-if="fileList.length > 0" class="upload-stats">
-      <div class="stats-item">
-        <span class="stats-label">总大小：</span>
-        <span class="stats-value">{{ formatFileSize(totalSize) }}</span>
-      </div>
-      <div class="stats-item">
-        <span class="stats-label">成功：</span>
-        <span class="stats-value success">{{ successCount }} 个</span>
-      </div>
-      <div class="stats-item">
-        <span class="stats-label">失败/拦截：</span>
-        <span class="stats-value error">{{ errorCount }} 个</span>
+      <div class="glass-stats-pill">
+        <div class="stat-group">
+          <i class="el-icon-files"></i> 总大小:
+          <b>{{ formatFileSize(totalSize) }}</b>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-group success">
+          <i class="el-icon-success"></i> 成功: <b>{{ successCount }}</b>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-group error">
+          <i class="el-icon-error"></i> 失败/拦截: <b>{{ errorCount }}</b>
+        </div>
       </div>
     </div>
   </div>
@@ -174,6 +179,8 @@ export default {
         ".vcf",
         ".bed",
         ".gtf",
+        ".pdb",
+        ".sdf",
       ],
     },
   },
@@ -525,263 +532,354 @@ export default {
   },
 };
 </script>
-
 <style lang="scss" scoped>
-.simple-file-uploader {
-  padding: 20px;
+/* 🌟 容器与极光背景 (完全暗黑不透明版) */
+.glass-uploader-container {
+  position: relative;
+  padding: 30px; /* 增加一点内边距，大气一点 */
+  border-radius: 16px; /* 适配主页面的圆角风格 */
+  background: #111827; /* 实体极暗背景，彻底不透明 */
+  overflow: hidden;
+  z-index: 1;
+  border: 1px solid #374151; /* 加上一层淡淡的边框线 */
+
+  /* 压暗亮度的绚丽背景光晕，保留深邃感 */
+  .ambient-bg {
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(
+        circle at 50% 50%,
+        rgba(59, 130, 246, 0.08),
+        /* 降低蓝光的亮度 */ transparent 40%
+      ),
+      radial-gradient(
+        circle at 80% 20%,
+        rgba(139, 92, 246, 0.08),
+        /* 降低紫光的亮度 */ transparent 40%
+      ),
+      radial-gradient(
+        circle at 20% 80%,
+        rgba(16, 185, 129, 0.05),
+        /* 降低绿光的亮度 */ transparent 40%
+      );
+    z-index: -1;
+    pointer-events: none;
+    animation: slowDrift 15s infinite alternate ease-in-out;
+  }
 }
 
-.upload-area {
-  border: 2px dashed #dcdfe6;
-  border-radius: 8px;
-  padding: 60px 20px;
+@keyframes slowDrift {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    transform: translate(5%, 5%) scale(1.05);
+  }
+}
+
+/* 🌟 实体暗黑面板材质 (移除毛玻璃，使用实体色) */
+@mixin dark-panel {
+  background: #1f2937; /* 使用更深一层的灰色，彻底不透明 */
+  border: 1px solid #374151; /* 统一的边框色 */
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); /* 增强阴影，体现悬浮感 */
+}
+
+/* 🌟 上传拖拽区 */
+.glass-dropzone {
+  @include dark-panel;
+  border-radius: 12px;
+  padding: 40px 20px;
   text-align: center;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 2px dashed #4b5563; /* 虚线也压暗 */
   margin-bottom: 24px;
 
   &:hover {
-    border-color: #409eff;
-    background-color: rgba(64, 158, 255, 0.05);
+    background: #262f3f; /* 悬浮时稍微提亮，增加交互感 */
+    border-color: #3b82f6; /* 悬浮时边框变蓝 */
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(59, 130, 246, 0.15); /* 淡淡的蓝色光晕 */
+
+    .icon-ring {
+      transform: scale(1.05);
+      background: rgba(59, 130, 246, 0.15); /* 内部圆环变蓝 */
+    }
   }
 
-  &.dragover {
-    border-color: #409eff;
-    background-color: rgba(64, 158, 255, 0.1);
+  &.is-dragover {
+    background: rgba(59, 130, 246, 0.1); /* 拖拽时淡淡的蓝色背景 */
+    border-color: #3b82f6;
+    border-style: solid; /* 变实线 */
     transform: scale(1.01);
   }
 
-  .upload-content {
-    .upload-icon {
-      font-size: 48px;
-      color: #c0c4cc;
+  .dropzone-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    .icon-ring {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.03); /* 默认极暗的圆环 */
+      display: flex;
+      align-items: center;
+      justify-content: center;
       margin-bottom: 16px;
+      transition: all 0.3s ease;
+
+      .cloud-icon {
+        font-size: 36px;
+        color: #94a3b8; /* 默认灰色图标 */
+      }
     }
 
-    .upload-title {
-      font-size: 18px;
-      color: #606266;
-      margin-bottom: 8px;
+    .title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #e2e8f0; /* 适配暗黑风的浅灰白字体 */
+      margin: 0 0 8px 0;
     }
 
-    .upload-tips {
-      color: #909399;
-      margin: 4px 0;
+    .subtitle {
+      font-size: 13px;
+      color: #94a3b8; /* 适配暗黑风的深灰字体 */
+      margin: 0;
     }
   }
 }
 
-.file-list {
-  .file-list-header {
+/* 🌟 文件列表区 */
+.glass-file-section {
+  .section-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 16px;
+    padding: 0 8px;
 
     .header-title {
-      font-size: 16px;
+      font-size: 14px;
       font-weight: 600;
-      color: #303133;
+      color: #e2e8f0; /* 适配暗黑风字体 */
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      .glass-btn-text {
+        color: #94a3b8; /* 适配暗黑风字体 */
+        font-size: 13px;
+        padding: 4px 8px;
+        &:hover {
+          color: #3b82f6; /* 悬浮变蓝 */
+          background: rgba(255, 255, 255, 0.03); /* 淡淡的背景 */
+          border-radius: 4px;
+        }
+      }
+
+      .glass-btn-primary {
+        background: linear-gradient(
+          135deg,
+          #3b82f6,
+          #2563eb
+        ); /* 统一的主蓝色渐变 */
+        border: none;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        padding: 8px 24px;
+        font-weight: 500;
+        &:hover {
+          opacity: 0.9;
+          transform: translateY(-1px);
+        }
+      }
     }
   }
 
-  .file-items {
-    border: 1px solid #ebeef5;
-    border-radius: 8px;
-    overflow: hidden;
-    margin-bottom: 16px;
+  .glass-file-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 350px;
+    overflow-y: auto;
+    padding-bottom: 12px;
+    padding-right: 6px; /* 给滚动条留点空间 */
 
-    .file-item {
+    /* 暗黑风美化滚动条 */
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: #4b5563;
+      border-radius: 3px;
+    }
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .glass-file-item {
+      @include dark-panel;
+      border-radius: 10px;
+      padding: 16px;
       display: flex;
       align-items: center;
-      padding: 16px;
-      border-bottom: 1px solid #ebeef5;
       transition: all 0.3s ease;
 
-      &:last-child {
-        border-bottom: none;
-      }
-
       &:hover {
-        background-color: #f8f9fa;
+        background: #262f3f; /* 悬浮时提亮 */
+        border-color: #4b5563;
       }
 
       &.uploading {
-        background-color: rgba(64, 158, 255, 0.05);
+        border-left: 3px solid #3b82f6; /* 统一的蓝色 */
       }
-
       &.success {
-        background-color: rgba(103, 194, 58, 0.05);
+        border-left: 3px solid #10b981; /* 统一的绿色 */
       }
-
       &.error {
-        background-color: rgba(245, 108, 108, 0.05);
+        border-left: 3px solid #ef4444; /* 统一的红色 */
       }
 
-      .file-info {
+      .file-icon-box {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        background: rgba(0, 0, 0, 0.2); /* 图标背景压暗 */
         display: flex;
         align-items: center;
+        justify-content: center;
+        margin-right: 16px;
+        flex-shrink: 0;
+        i {
+          font-size: 20px;
+          color: #94a3b8; /* 图标灰色 */
+        }
+      }
+
+      .file-info-box {
         flex: 1;
-        overflow: hidden; // 防止长文件名撑破布局
+        min-width: 0;
 
-        .file-icon {
-          width: 40px;
-          height: 40px;
-          border-radius: 6px;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        .info-top {
           display: flex;
+          justify-content: space-between;
           align-items: center;
-          justify-content: center;
-          margin-right: 12px;
-          flex-shrink: 0; // 防止图标被压缩
-
-          i {
-            font-size: 20px;
-            color: white;
+          margin-bottom: 6px;
+          .file-name {
+            font-size: 13px;
+            font-weight: 500;
+            color: #f1f5f9; /* 适配暗黑风字体 */
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            padding-right: 12px;
+          }
+          .file-size {
+            font-size: 11px;
+            color: #64748b; /* 适配暗黑风灰色字体 */
+            flex-shrink: 0;
           }
         }
 
-        .file-details {
-          flex: 1;
-          overflow: hidden;
-
-          .file-name {
-            margin-bottom: 4px; // 为进度条留出紧凑空间
-
-            .name-text {
-              font-weight: 500;
-              color: #303133;
-              display: block;
-              overflow: hidden;
-              text-overflow: ellipsis;
-              white-space: nowrap;
-            }
+        .progress-wrapper {
+          margin-bottom: 6px;
+          ::v-deep .el-progress-bar__outer {
+            background-color: #374151; /* 进度条背景压暗 */
+            border-radius: 4px;
           }
-
-          // 【新增】进度条样式
-          .file-progress {
-            margin-bottom: 4px;
-            padding-right: 20px; // 避免贴边
+          ::v-deep .el-progress-bar__inner {
+            background-color: #3b82f6; /* 统一的蓝色进度条 */
           }
+        }
 
-          .file-meta {
+        .info-bottom {
+          font-size: 11px;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          .status-text {
             display: flex;
             align-items: center;
-            gap: 12px;
-            font-size: 12px;
-            color: #909399;
-            flex-wrap: wrap; // 允许标签和错误信息换行
-
-            .file-status {
-              &.success {
-                color: #67c23a;
-              }
-              &.error {
-                color: #f56c6c;
-              }
-              &.uploading {
-                color: #409eff;
-              }
+            gap: 4px;
+            &.pending {
+              color: #64748b;
             }
-
-            // 【新增】具体的错误信息文本样式
-            .error-message {
-              color: #f56c6c;
-              font-size: 12px;
+            &.uploading {
+              color: #3b82f6; /* 统一蓝色 */
+              font-weight: 500;
             }
+            &.success {
+              color: #10b981; /* 统一绿色 */
+              font-weight: 500;
+            }
+            &.error {
+              color: #ef4444; /* 统一红色 */
+              font-weight: 500;
+            }
+          }
+          .error-msg {
+            color: #ef4444; /* 红色错误信息 */
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
           }
         }
       }
 
       .file-actions {
-        padding-left: 16px;
-        flex-shrink: 0; // 防止操作按钮被压缩
-
-        .remove-btn {
-          color: #f56c6c;
+        margin-left: 12px;
+        .action-btn.remove {
+          color: #64748b; /* 适配灰色图标 */
+          font-size: 16px;
           &:hover {
-            background-color: rgba(245, 108, 108, 0.1);
+            color: #ef4444; /* 悬浮变红 */
+            background: rgba(239, 68, 68, 0.1);
+            border-radius: 50%;
           }
         }
-
-        .success-icon {
-          color: #67c23a;
-          font-size: 20px;
-        }
-
-        .error-icon {
-          color: #f56c6c;
-          font-size: 20px;
-        }
       }
     }
   }
 
-  .batch-actions {
-    text-align: center;
-    padding: 12px 0;
-    border-top: 1px solid #ebeef5;
-
-    .el-button {
-      margin: 0 12px;
-      color: #606266;
-
-      &:hover {
-        color: #409eff;
-      }
-    }
-  }
-}
-
-.upload-stats {
-  display: flex;
-  align-items: center;
-  gap: 32px;
-  padding: 16px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  margin-top: 0px;
-
-  .stats-item {
-    display: flex;
+  /* 🌟 底部统计药丸 (彻底压暗适应暗黑风) */
+  .glass-stats-pill {
+    @include dark-panel;
+    margin-top: 12px;
+    border-radius: 30px;
+    padding: 10px 20px;
+    display: inline-flex;
     align-items: center;
+    gap: 16px;
+    font-size: 12px;
+    color: #e2e8f0; /* 适配暗黑风字体 */
 
-    .stats-label {
-      color: #606266;
-      margin-right: 8px;
-    }
-
-    .stats-value {
-      font-weight: 600;
-      color: #303133;
-
+    .stat-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      i {
+        font-size: 14px;
+        opacity: 0.7;
+      }
       &.success {
-        color: #67c23a;
+        color: #10b981; /* 统一绿色 */
       }
-
       &.error {
-        color: #f56c6c;
+        color: #ef4444; /* 统一红色 */
       }
     }
-  }
-}
-
-// 响应式设计
-@media (max-width: 768px) {
-  .file-item {
-    flex-direction: column;
-    align-items: flex-start;
-
-    .file-actions {
-      align-self: flex-end;
-      margin-top: 12px;
+    .stat-divider {
+      width: 1px;
+      height: 12px;
+      background: rgba(255, 255, 255, 0.1); /* 压暗分割线 */
     }
-  }
-
-  .upload-stats {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
   }
 }
 </style>

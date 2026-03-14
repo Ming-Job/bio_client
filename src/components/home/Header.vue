@@ -1,32 +1,33 @@
 <template>
   <header class="header">
     <div class="header-container">
-      <!-- 品牌区 -->
       <div class="brand-section" @click="$router.push('/')">
         <img src="@/assets/images/logo.png" alt="Logo" class="logo" />
         <span class="brand-title">生物信息科教平台</span>
       </div>
 
-      <!-- 导航菜单 -->
       <div class="nav-section">
         <el-menu
-          :default-active="activeIndex"
+          :default-active="activePath"
           mode="horizontal"
-          @select="handleSelect"
+          router
           background-color="transparent"
           text-color="#ecf0f1"
           active-text-color="#42b983"
         >
-          <el-menu-item index="1">首页</el-menu-item>
-          <el-menu-item index="2">课程中心</el-menu-item>
-          <el-menu-item index="3">分析中心</el-menu-item>
-          <el-menu-item index="4">教学案例库</el-menu-item>
-          <el-menu-item index="5">我的项目</el-menu-item>
-          <el-menu-item index="6">帮助中心</el-menu-item>
+          <el-menu-item index="/home">首页</el-menu-item>
+          <el-menu-item index="/course">课程中心</el-menu-item>
+          <el-menu-item index="/analysis">云端分析</el-menu-item>
+          <el-menu-item index="/case">实战案例</el-menu-item>
+
+          <el-menu-item index="/project" v-if="isLoggedIn"
+            >我的项目</el-menu-item
+          >
+
+          <el-menu-item index="/help">帮助中心</el-menu-item>
         </el-menu>
       </div>
 
-      <!-- 操作区 -->
       <div class="action-section">
         <el-input
           v-model="searchKeyword"
@@ -34,7 +35,7 @@
           placeholder="搜索知识..."
           prefix-icon="el-icon-search"
           class="header-search"
-          @keyup.enter="handleSearch"
+          @keyup.enter.native="handleSearch"
           aria-label="搜索知识"
         />
 
@@ -99,33 +100,12 @@ import { mapState, mapActions } from "vuex";
 import { getAvatarUrl } from "@/utils/auth";
 import { getRoleText } from "@/utils/role";
 
-// 菜单索引与路由的映射关系（用于跳转）
-const MENU_ROUTE_MAP = {
-  1: { name: "HomePage" },
-  2: { name: "CoursePage" },
-  3: { name: "AnalysisPage" },
-  4: { name: "TeachingCase" },
-  5: { name: "MyProject" },
-  6: { name: "HelpCenter" },
-};
-
-// 路径前缀到菜单索引的映射（用于高亮）
-const PATH_TO_MENU = [
-  { prefix: "/my-course", index: "" },
-
-  { prefix: "/analysis", index: "3" },
-  { prefix: "/course", index: "2" },
-  { prefix: "/case", index: "4" },
-  { prefix: "/project", index: "5" },
-  { prefix: "/help", index: "6" },
-  { prefix: "/", index: "1" }, // 根路径放最后，避免覆盖其他
-];
+// 🌟 优化点 4：完全删除了原本这里几十行的 MENU_ROUTE_MAP 和 PATH_TO_MENU 常量！
 
 export default {
   name: "HeaderPage",
   data() {
     return {
-      activeIndex: "1",
       searchKeyword: "",
       avatarLoadError: false,
     };
@@ -135,6 +115,19 @@ export default {
       isLoggedIn: (state) => state.isLoggedIn,
       userInfo: (state) => state.userInfo || {},
     }),
+
+    // 🌟 优化点 5：用极其优雅的计算属性，直接监听当前路由路径，决定高亮哪个菜单！
+    // 告别了之前的 watch 监听器和各种生命周期里的手动赋值。
+    activePath() {
+      const path = this.$route.path;
+      if (path === "/" || path === "/home") return "/home";
+      if (path.startsWith("/course")) return "/course";
+      if (path.startsWith("/analysis")) return "/analysis";
+      if (path.startsWith("/case")) return "/case";
+      if (path.startsWith("/project")) return "/project";
+      if (path.startsWith("/help")) return "/help";
+      return ""; // 不在导航栏的页面，不亮起任何菜单
+    },
 
     // 用户角色文本
     userRoleText() {
@@ -148,7 +141,7 @@ export default {
         : "U";
     },
 
-    // 完整的头像URL（支持错误回退）
+    // 完整的头像URL
     avatarFullUrl() {
       if (this.avatarLoadError) {
         return "https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png";
@@ -158,41 +151,9 @@ export default {
   },
   created() {
     this.checkLoginStatus();
-    this.updateActiveIndexByRoute(this.$route);
   },
   methods: {
     ...mapActions("user", ["checkLoginStatus", "logout"]),
-
-    // 根据当前路由更新菜单高亮
-    updateActiveIndexByRoute(route) {
-      const path = route.path;
-
-      // 🌟 针对首页做精确匹配：只有路径完全等于 "/" 或者 "/home" 时，才高亮首页
-      if (path === "/" || path === "/home") {
-        this.activeIndex = "1";
-        return;
-      }
-
-      // 遍历前缀匹配其他模块
-      for (const item of PATH_TO_MENU) {
-        if (path.startsWith(item.prefix)) {
-          this.activeIndex = item.index;
-          return;
-        }
-      }
-
-      // 如果都没匹配上，说明是不在导航栏里的独立页面，取消高亮
-      this.activeIndex = "";
-    },
-
-    // 菜单选择事件
-    handleSelect(index) {
-      const targetRoute = MENU_ROUTE_MAP[index];
-      if (targetRoute) {
-        this.$router.push(targetRoute);
-        // 路由变化后会触发 watch $route 自动更新高亮，此处无需手动设置
-      }
-    },
 
     // 搜索
     handleSearch() {
@@ -245,14 +206,6 @@ export default {
     // 头像加载失败
     handleAvatarError() {
       this.avatarLoadError = true;
-    },
-  },
-  watch: {
-    $route: {
-      handler(newRoute) {
-        this.updateActiveIndexByRoute(newRoute);
-      },
-      immediate: true, // 确保初始加载时执行
     },
   },
 };
@@ -383,7 +336,7 @@ export default {
           &--student {
             background: #409eff;
           }
-          // 默认样式
+          /* 默认样式 */
           background: #42b983;
         }
       }

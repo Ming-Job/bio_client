@@ -393,18 +393,36 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-/* ======= 你原本的样式保持不变 ======= */
 .data-files {
-  background: white;
-  border-radius: 12px;
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 16px;
   padding: 24px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+
+  /* === 新增：弹性伸缩与溢出隐藏 === */
+  display: flex;
+  flex-direction: column;
+  flex: 1; /* 自动撑满右侧下方所有的剩余高度 */
+  overflow: hidden; /* 截断溢出部分 */
 }
 .files-header {
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  .section-title {
+    font-size: 16px;
+    color: #f8fafc;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    i {
+      color: #3b82f6;
+    }
+  }
   .header-actions {
     display: flex;
     gap: 8px;
@@ -414,41 +432,50 @@ export default {
   .loading-files {
     text-align: center;
     padding: 40px 20px;
-    color: #bdc3c7;
+    color: #64748b;
     i {
       font-size: 32px;
       margin-bottom: 12px;
     }
-    p {
-      margin: 0;
-      font-size: 14px;
+
+    /* 极客风暗黑滚动条美化 */
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: #374151;
+      border-radius: 3px;
+    }
+    &::-webkit-scrollbar-track {
+      background: transparent;
     }
   }
   .file-item {
     display: flex;
     align-items: center;
     padding: 12px;
-    border-radius: 8px;
-    border: 1px solid #e8e8e8;
+    border-radius: 10px;
+    background: #1f2937;
+    border: 1px solid #374151;
     margin-bottom: 12px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
     &:hover {
-      border-color: #3498db;
-      background: #f8fafc;
+      border-color: #4b5563;
+      background: #262f3f;
     }
     .file-icon {
       width: 40px;
       height: 40px;
       border-radius: 8px;
-      background: #f5f5f5;
+      background: rgba(255, 255, 255, 0.05);
       display: flex;
       align-items: center;
       justify-content: center;
       margin-right: 12px;
       i {
         font-size: 20px;
-        color: #7f8c8d;
+        color: #94a3b8;
       }
     }
     .file-info {
@@ -462,7 +489,7 @@ export default {
         span {
           flex: 1;
           font-weight: 500;
-          color: #2c3e50;
+          color: #f8fafc;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
@@ -472,7 +499,7 @@ export default {
         display: flex;
         justify-content: space-between;
         font-size: 12px;
-        color: #95a5a6;
+        color: #64748b;
       }
     }
     .file-actions {
@@ -481,10 +508,10 @@ export default {
         padding: 8px;
         border-radius: 4px;
         &:hover {
-          background: #f5f5f5;
+          background: rgba(255, 255, 255, 0.1);
         }
         i {
-          color: #7f8c8d;
+          color: #94a3b8;
           font-size: 16px;
         }
       }
@@ -493,77 +520,58 @@ export default {
   .empty-files {
     text-align: center;
     padding: 30px 20px;
-    color: #bdc3c7;
-    border: 1px dashed #e8e8e8;
+    color: #64748b;
+    border: 1px dashed #374151;
     border-radius: 8px;
     margin-bottom: 16px;
     i {
       font-size: 36px;
       margin-bottom: 12px;
     }
-    p {
-      margin-bottom: 12px;
-      font-size: 14px;
-    }
   }
   .file-storage {
     padding-top: 16px;
-    border-top: 1px solid #e8e8e8;
+    border-top: 1px solid #374151;
     .storage-info {
       display: flex;
       justify-content: space-between;
       margin-bottom: 8px;
       font-size: 14px;
-      color: #2c3e50;
+      color: #94a3b8;
     }
   }
 }
 
-/* ======= 【新增】：预览弹窗样式 ======= */
+/* 弹窗及内部保持你的深色设计即可 */
 ::v-deep .preview-dialog {
   border-radius: 8px;
   overflow: hidden;
   .el-dialog__header {
-    background-color: #f8f9fa;
-    border-bottom: 1px solid #ebeef5;
+    background-color: #111827;
+    border-bottom: 1px solid #1f2937;
     padding: 15px 20px;
+    .el-dialog__title {
+      color: #f8fafc;
+      font-size: 16px;
+    }
   }
   .el-dialog__body {
-    padding: 0; /* 移除默认内边距，让黑色代码框撑满 */
-    background-color: #1e1e1e;
-  }
-  .el-dialog__title {
-    font-size: 16px;
-    font-weight: 600;
+    padding: 0;
+    background-color: #0b0f19;
   }
 }
-
 .preview-container {
   min-height: 250px;
   max-height: 65vh;
   overflow-y: auto;
   padding: 20px;
-  background-color: #1e1e1e;
-
-  /* 滚动条美化 */
-  &::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-  &::-webkit-scrollbar-thumb {
-    background: #555;
-    border-radius: 4px;
-  }
-  &::-webkit-scrollbar-track {
-    background: #1e1e1e;
-  }
-
+  background-color: #0b0f19;
   .code-block {
     margin: 0;
     font-family: Consolas, "Courier New", monospace;
     font-size: 14px;
     line-height: 1.6;
-    color: #d4d4d4;
+    color: #10b981; /* 代码高亮用荧光绿，更有极客感 */
     white-space: pre-wrap;
     word-break: break-all;
   }
