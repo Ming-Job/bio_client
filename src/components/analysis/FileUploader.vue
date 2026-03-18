@@ -32,7 +32,30 @@
     <div v-if="fileList.length > 0" class="glass-file-section">
       <div class="section-header">
         <span class="header-title">待上传列表 ({{ fileList.length }})</span>
+
         <div class="header-actions">
+          <el-select
+            v-model="selectedProjectId"
+            size="small"
+            placeholder="请选择归属科研课题 (必填)"
+            class="dark-select project-select"
+            clearable
+            popper-class="bio-dark-select-dropdown"
+          >
+            <el-option
+              v-for="proj in projectList"
+              :key="proj.id"
+              :label="proj.name"
+              :value="proj.id"
+            >
+              <i
+                class="el-icon-folder"
+                style="color: #3b82f6; margin-right: 5px"
+              ></i>
+              {{ proj.name }}
+            </el-option>
+          </el-select>
+
           <el-button type="text" class="glass-btn-text" @click="clearAllFiles">
             <i class="el-icon-delete"></i> 清空
           </el-button>
@@ -51,7 +74,8 @@
             :disabled="uploading"
             @click="startUpload"
           >
-            {{ uploading ? "上传中..." : "开始上传" }}
+            <i class="el-icon-upload2"></i>
+            {{ uploading ? "数据传输中..." : "发射至云端" }}
           </el-button>
         </div>
       </div>
@@ -69,7 +93,7 @@
 
           <div class="file-info-box">
             <div class="info-top">
-              <span class="file-name">{{ file.name }}</span>
+              <span class="file-name" :title="file.name">{{ file.name }}</span>
               <span class="file-size">{{ formatFileSize(file.size) }}</span>
             </div>
 
@@ -98,11 +122,15 @@
                 ></i>
                 {{
                   file.status === "uploading"
-                    ? `上传中 ${file.progress}%`
+                    ? `上行链路 ${file.progress}%`
                     : getStatusText(file.status)
                 }}
               </span>
-              <span v-if="file.status === 'error'" class="error-msg">
+              <span
+                v-if="file.status === 'error'"
+                class="error-msg"
+                :title="file.error"
+              >
                 - {{ file.error }}
               </span>
             </div>
@@ -122,12 +150,12 @@
 
       <div class="glass-stats-pill">
         <div class="stat-group">
-          <i class="el-icon-files"></i> 总大小:
+          <i class="el-icon-files"></i> 总载荷:
           <b>{{ formatFileSize(totalSize) }}</b>
         </div>
         <div class="stat-divider"></div>
         <div class="stat-group success">
-          <i class="el-icon-success"></i> 成功: <b>{{ successCount }}</b>
+          <i class="el-icon-success"></i> 挂载成功: <b>{{ successCount }}</b>
         </div>
         <div class="stat-divider"></div>
         <div class="stat-group error">
@@ -141,28 +169,16 @@
 <script>
 import { mapState } from "vuex";
 import { uploadSingleFile } from "@/api/file";
+import { getUserProjects } from "@/api/project"; // 🌟 引入拉取项目列表的 API
 import { EventBus } from "@/utils/event-bus";
 
 export default {
   name: "FileUploader",
 
   props: {
-    // 项目ID（可选）
-    projectId: {
-      type: [Number, String],
-      default: null,
-    },
-    // 文件描述（可选）
-    description: {
-      type: String,
-      default: "",
-    },
-    // 最大文件大小（字节）
-    maxFileSize: {
-      type: Number,
-      default: 10 * 1024 * 1024 * 1024, // 10GB
-    },
-    // 允许的文件扩展名
+    projectId: { type: [Number, String], default: null }, // 如果外部强行传入了 ID，也可以接收
+    description: { type: String, default: "" },
+    maxFileSize: { type: Number, default: 10 * 1024 * 1024 * 1024 }, // 10GB
     allowedExtensions: {
       type: Array,
       default: () => [
@@ -187,82 +203,96 @@ export default {
 
   data() {
     return {
-      // 文件列表
       fileList: [],
-      // 上传状态
       uploading: false,
       isDragover: false,
+
+      // 🌟 新增：项目选择相关
+      projectList: [],
+      selectedProjectId: "", // 绑定下拉框选中的项目
     };
   },
 
   computed: {
-    // 直接从 Vuex 的 user 模块获取用户信息
     ...mapState("user", {
       userId: (state) => state.userInfo?.id,
       userInfo: (state) => state.userInfo,
       isLoggedIn: (state) => state.isLoggedIn,
     }),
-
     allowedExtensionsText() {
       return this.allowedExtensions.join(",");
     },
-
-    // 格式化最大文件大小
     maxFileSizeText() {
       return this.formatFileSize(this.maxFileSize);
     },
-
-    // 统计信息
     totalSize() {
       return this.fileList.reduce((sum, file) => sum + file.size, 0);
     },
-
     successCount() {
       return this.fileList.filter((file) => file.status === "success").length;
     },
-
     errorCount() {
       return this.fileList.filter((file) => file.status === "error").length;
     },
   },
 
   watch: {
-    // 监听用户登录状态变化，如果用户登出，清空文件列表
     isLoggedIn(newVal) {
       if (!newVal) {
         this.fileList = [];
+        this.projectList = [];
       }
+    },
+    // 如果父组件动态传入了 projectId，同步给下拉框
+    projectId: {
+      immediate: true,
+      handler(newVal) {
+        if (newVal) this.selectedProjectId = Number(newVal);
+      },
     },
   },
 
+  mounted() {
+    // 组件挂载时，去云端拉取当前用户的项目列表
+    if (this.isLoggedIn && this.userId) {
+      this.loadUserProjects();
+    }
+  },
+
   methods: {
-    // 检查用户是否已登录
+    // 🌟 新增：拉取科研课题列表
+    async loadUserProjects() {
+      try {
+        const res = await getUserProjects(this.userId);
+        if (res && res.data) {
+          this.projectList = res.data;
+        }
+      } catch (error) {
+        console.error("项目列表拉取失败:", error);
+      }
+    },
+
     checkLogin() {
       if (!this.isLoggedIn || !this.userId) {
-        this.$message.warning("请先登录后再上传文件");
+        this.$message.warning("鉴权失败：请先登录后再访问云端数据舱");
         this.$router.push("/login");
         return false;
       }
       return true;
     },
 
-    // 触发文件选择
     triggerFileInput() {
       if (!this.checkLogin()) return;
       this.$refs.fileInput.click();
     },
 
-    // 处理文件选择
     handleFileChange(event) {
       if (!this.checkLogin()) return;
-
       const files = Array.from(event.target.files);
       this.addFiles(files);
-      // 清空input，以便可以选择相同的文件
       event.target.value = "";
     },
 
-    // 拖拽相关方法
     onDragOver() {
       if (!this.checkLogin()) return;
       this.isDragover = true;
@@ -270,29 +300,23 @@ export default {
 
     onDrop(event) {
       if (!this.checkLogin()) return;
-
       this.isDragover = false;
       const files = Array.from(event.dataTransfer.files);
       this.addFiles(files);
     },
 
-    // 添加文件到列表
     addFiles(files) {
       files.forEach((file) => {
-        // 检查文件大小
         if (file.size > this.maxFileSize) {
           this.$message.error(
-            `文件 ${file.name} 超过最大限制 ${this.maxFileSizeText}`,
+            `文件 ${file.name} 体积超出集群限制 (${this.maxFileSizeText})`,
           );
           return;
         }
 
-        // 检查文件类型
         const allowedExts = this.allowedExtensions.map((ext) =>
           ext.toLowerCase(),
         );
-
-        // 简单后缀校验，针对 .tar.gz 这种双后缀可以稍微放宽
         let isValidExt = false;
         for (let ext of allowedExts) {
           if (file.name.toLowerCase().endsWith(ext)) {
@@ -303,70 +327,69 @@ export default {
 
         if (!isValidExt) {
           this.$message.error(
-            `不支持的文件类型，允许的类型：${this.allowedExtensions.join(
-              "、",
-            )}`,
+            `拦截格式异常数据，允许格式：${this.allowedExtensions.join("、")}`,
           );
           return;
         }
 
-        // 检查是否已存在同名文件
         const exists = this.fileList.some(
           (f) => f.name === file.name && f.size === file.size,
         );
         if (exists) {
-          this.$message.warning(`文件 ${file.name} 已存在列表中`);
+          this.$message.warning(`拦截重复项：${file.name} 已在待传序列中`);
           return;
         }
 
-        // 添加到文件列表
         this.fileList.push({
           id: Date.now() + Math.random(),
           file: file,
           name: file.name,
           size: file.size,
-          status: "pending", // pending, uploading, success, error
-          progress: 0, // 初始化进度为0
-          error: "", // 初始化错误信息为空
-          retryCount: 0,
+          status: "pending",
+          progress: 0,
+          error: "",
         });
       });
 
-      if (files.length > 0) {
-        this.$message.success(`成功添加 ${files.length} 个文件`);
-      }
+      if (files.length > 0)
+        this.$message.success(`已挂载 ${files.length} 个数据载荷，准备就绪`);
     },
 
-    // 并发处理独立上传
     async startUpload() {
       if (!this.checkLogin()) return;
+
+      // 🌟 核心拦截：如果没有选中项目，直接弹窗阻止上传！
+      if (!this.selectedProjectId) {
+        this.$message.error(
+          "拦截操作：数据必须挂载到指定的科研空间，请先选择归属项目！",
+        );
+        return; // 直接 return，打断上传流程
+      }
 
       const pendingFiles = this.fileList.filter(
         (f) => f.status === "pending" || f.status === "error",
       );
       if (pendingFiles.length === 0) {
-        this.$message.warning("没有需要上传的文件");
+        this.$message.warning("序列舱内暂无需要发射的数据");
         return;
       }
 
       this.uploading = true;
-
-      // 为每个文件创建一个独立的上传任务
-      const uploadPromises = pendingFiles.map((fileItem) => {
-        return this.uploadSingle(fileItem);
-      });
+      const uploadPromises = pendingFiles.map((fileItem) =>
+        this.uploadSingle(fileItem),
+      );
 
       try {
-        // 使用 Promise.all 来等待所有上传任务完成 (无论成功还是失败)
         await Promise.all(uploadPromises);
       } finally {
         this.uploading = false;
-
         if (this.errorCount === 0) {
-          this.$message.success(`全部上传完成，共 ${this.successCount} 个文件`);
+          this.$message.success(
+            `数据流传输完毕，共成功挂载 ${this.successCount} 个载荷`,
+          );
         } else {
           this.$message.warning(
-            `上传结束，成功 ${this.successCount} 个，失败/拦截 ${this.errorCount} 个`,
+            `传输结束。成功 ${this.successCount} 项，拦截或失败 ${this.errorCount} 项`,
           );
         }
 
@@ -378,54 +401,51 @@ export default {
       }
     },
 
-    // 单个文件的上传于进度监听
     async uploadSingle(fileItem) {
       const index = this.fileList.findIndex((f) => f.id === fileItem.id);
-      if (index === -1) return Promise.resolve(); // 文件不在列表中，直接返回
+      if (index === -1) return Promise.resolve();
 
-      // 重置状态
       this.$set(this.fileList[index], "status", "uploading");
       this.$set(this.fileList[index], "progress", 0);
       this.$set(this.fileList[index], "error", "");
 
       const formData = new FormData();
-
-      // 这里的参数名与后端接口要求的保持一致
       formData.append("file", fileItem.file);
       formData.append("userId", this.userId);
-      if (this.projectId) {
-        formData.append("projectId", this.projectId);
+
+      // 🌟 核心绑定：如果有下拉框选中的项目，就传给后端！
+      if (this.selectedProjectId) {
+        formData.append("projectId", this.selectedProjectId);
       }
+
       if (this.description) {
         formData.append("description", this.description);
       }
 
       try {
-        // 调用带进度监听的 API
         const response = await uploadSingleFile(formData, (progressEvent) => {
-          // 计算百分比 并更新文件项的进度
           let percent = Math.round(
             (progressEvent.loaded * 100) / progressEvent.total,
           );
-          // 避免进度条提早跑满但后端还在处理 MD5，最高跑到 99%，真正完成时再设置为100%
-          if (percent > 99) percent = 99;
+          if (percent > 99) percent = 99; // 预留 1% 等待服务器落盘
           this.$set(this.fileList[index], "progress", percent);
         });
 
-        const resultData = response.data || response; // 兼容不同的响应格式
+        const resultData = response.data || response;
 
-        // 【处理秒传/拦截防重逻辑】
         if (resultData.isDuplicate) {
-          // 命中后端拦截：文件已存在
           this.$set(this.fileList[index], "status", "error");
-          this.$set(this.fileList[index], "error", "文件已存在，请勿重复上传");
-          this.$set(this.fileList[index], "progress", 0); // 进度条归零
+          this.$set(
+            this.fileList[index],
+            "error",
+            "MD5防重拦截：该数据已在集群内存在",
+          );
+          this.$set(this.fileList[index], "progress", 0);
         } else if (
           resultData.status === "completed" ||
           resultData.status === "ready" ||
           resultData.id
         ) {
-          // 正常上传成功
           this.$set(this.fileList[index], "status", "success");
           this.$set(this.fileList[index], "progress", 100);
           this.$set(this.fileList[index], "result", resultData);
@@ -433,63 +453,48 @@ export default {
           EventBus.$emit("file-uploaded", {
             file: resultData,
             userId: this.userId,
-            projectId: this.projectId,
+            projectId: this.selectedProjectId, // 这里也附带上，方便其它组件监听
             timestamp: new Date(),
           });
         } else {
-          // 其他未知异常
-          this.$set(this.fileList[index], "status", "error");
-          this.$set(
-            this.fileList[index],
-            "error",
-            resultData.message || "服务器响应异常",
-          );
+          throw new Error(resultData.message || "节点响应异常");
         }
       } catch (error) {
-        console.error(`文件 ${fileItem.name} 上传失败:`, error);
         this.$set(this.fileList[index], "status", "error");
         this.$set(this.fileList[index], "progress", 0);
-
         const errorMsg =
-          error.response?.data?.message || error.message || "网络或服务器错误";
+          error.response?.data?.message || error.message || "链路中断";
         this.$set(this.fileList[index], "error", errorMsg);
 
         if (error.response && error.response.status === 401) {
-          this.$message.error("登录已过期，请重新登录");
+          this.$message.error("鉴权令牌失效，请重新连接");
           this.$router.push("/login");
         }
       }
     },
 
-    // 移除文件
     removeFile(index) {
       this.fileList.splice(index, 1);
-      if (this.fileList.length === 0) {
-        this.$emit("clear-all");
-      }
+      if (this.fileList.length === 0) this.$emit("clear-all");
     },
 
-    // 清空所有文件
     clearAllFiles() {
-      this.$confirm("确定要清空所有文件吗？", "提示", {
+      this.$confirm("确定要清空挂载舱吗？", "指令确认", {
         type: "warning",
+        customClass: "bio-dark-message-box",
       })
         .then(() => {
           this.fileList = [];
-          this.$message.success("已清空文件列表");
+          this.$message.success("挂载舱已清空");
           this.$emit("clear-all");
         })
-        .catch(() => {
-          // 用户取消清空
-        });
+        .catch(() => {});
     },
 
-    // 选择更多文件
     selectMoreFiles() {
       this.triggerFileInput();
     },
 
-    // 工具方法
     getFileExtension(filename) {
       if (!filename) return "";
       const lastDot = filename.lastIndexOf(".");
@@ -498,52 +503,46 @@ export default {
 
     getFileIcon(filename) {
       const ext = this.getFileExtension(filename).toLowerCase();
-      if (ext.includes("fastq") || ext.includes("fq")) {
+      if (ext.includes("fastq") || ext.includes("fq"))
         return "el-icon-document";
-      } else if (ext.includes("fasta") || ext.includes("fa")) {
-        return "el-icon-files";
-      } else if (ext.includes("bam") || ext.includes("sam")) {
-        return "el-icon-coin";
-      } else if (ext.includes("vcf")) {
-        return "el-icon-s-flag";
-      } else if (ext.includes("bed") || ext.includes("gtf")) {
-        return "el-icon-s-data";
-      }
+      if (ext.includes("fasta") || ext.includes("fa")) return "el-icon-files";
+      if (ext.includes("bam") || ext.includes("sam")) return "el-icon-coin";
+      if (ext.includes("vcf")) return "el-icon-s-flag";
+      if (ext.includes("pdb") || ext.includes("sdf")) return "el-icon-discover"; // 给 3D 结构文件单独的图标
       return "el-icon-document";
     },
 
     getStatusText(status) {
       const textMap = {
-        pending: "等待上传",
+        pending: "等待传输",
         uploading: "上传中",
-        success: "上传成功",
-        error: "上传失败",
+        success: "已归档",
+        error: "传输中止",
       };
       return textMap[status] || status;
     },
 
     formatFileSize(bytes) {
       if (bytes === 0) return "0 B";
-      const k = 1024;
-      const sizes = ["B", "KB", "MB", "GB", "TB"];
+      const k = 1024,
+        sizes = ["B", "KB", "MB", "GB", "TB"];
       const i = Math.floor(Math.log(bytes) / Math.log(k));
       return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
     },
   },
 };
 </script>
+
 <style lang="scss" scoped>
-/* 🌟 容器与极光背景 (完全暗黑不透明版) */
+/* 🌟 容器与极光背景 (完全暗黑版) */
 .glass-uploader-container {
   position: relative;
-  padding: 30px; /* 增加一点内边距，大气一点 */
-  border-radius: 16px; /* 适配主页面的圆角风格 */
-  background: #111827; /* 实体极暗背景，彻底不透明 */
+  padding: 30px;
+  border-radius: 16px;
+  background: #111827;
   overflow: hidden;
   z-index: 1;
-  border: 1px solid #374151; /* 加上一层淡淡的边框线 */
-
-  /* 压暗亮度的绚丽背景光晕，保留深邃感 */
+  border: 1px solid #374151;
   .ambient-bg {
     position: absolute;
     top: -50%;
@@ -553,24 +552,23 @@ export default {
     background: radial-gradient(
         circle at 50% 50%,
         rgba(59, 130, 246, 0.08),
-        /* 降低蓝光的亮度 */ transparent 40%
+        transparent 40%
       ),
       radial-gradient(
         circle at 80% 20%,
         rgba(139, 92, 246, 0.08),
-        /* 降低紫光的亮度 */ transparent 40%
+        transparent 40%
       ),
       radial-gradient(
         circle at 20% 80%,
         rgba(16, 185, 129, 0.05),
-        /* 降低绿光的亮度 */ transparent 40%
+        transparent 40%
       );
     z-index: -1;
     pointer-events: none;
     animation: slowDrift 15s infinite alternate ease-in-out;
   }
 }
-
 @keyframes slowDrift {
   0% {
     transform: translate(0, 0) scale(1);
@@ -579,12 +577,10 @@ export default {
     transform: translate(5%, 5%) scale(1.05);
   }
 }
-
-/* 🌟 实体暗黑面板材质 (移除毛玻璃，使用实体色) */
 @mixin dark-panel {
-  background: #1f2937; /* 使用更深一层的灰色，彻底不透明 */
-  border: 1px solid #374151; /* 统一的边框色 */
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); /* 增强阴影，体现悬浮感 */
+  background: #1f2937;
+  border: 1px solid #374151;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 /* 🌟 上传拖拽区 */
@@ -594,62 +590,55 @@ export default {
   padding: 40px 20px;
   text-align: center;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 2px dashed #4b5563; /* 虚线也压暗 */
+  transition: all 0.3s ease;
+  border: 2px dashed #4b5563;
   margin-bottom: 24px;
-
   &:hover {
-    background: #262f3f; /* 悬浮时稍微提亮，增加交互感 */
-    border-color: #3b82f6; /* 悬浮时边框变蓝 */
+    background: #262f3f;
+    border-color: #3b82f6;
     transform: translateY(-2px);
-    box-shadow: 0 12px 40px rgba(59, 130, 246, 0.15); /* 淡淡的蓝色光晕 */
-
+    box-shadow: 0 12px 40px rgba(59, 130, 246, 0.15);
     .icon-ring {
       transform: scale(1.05);
-      background: rgba(59, 130, 246, 0.15); /* 内部圆环变蓝 */
+      background: rgba(59, 130, 246, 0.15);
     }
   }
-
   &.is-dragover {
-    background: rgba(59, 130, 246, 0.1); /* 拖拽时淡淡的蓝色背景 */
+    background: rgba(59, 130, 246, 0.1);
     border-color: #3b82f6;
-    border-style: solid; /* 变实线 */
+    border-style: solid;
     transform: scale(1.01);
   }
-
   .dropzone-content {
     display: flex;
     flex-direction: column;
     align-items: center;
-
     .icon-ring {
       width: 72px;
       height: 72px;
       border-radius: 50%;
-      background: rgba(255, 255, 255, 0.03); /* 默认极暗的圆环 */
+      background: rgba(255, 255, 255, 0.03);
       display: flex;
       align-items: center;
       justify-content: center;
       margin-bottom: 16px;
       transition: all 0.3s ease;
-
       .cloud-icon {
         font-size: 36px;
-        color: #94a3b8; /* 默认灰色图标 */
+        color: #94a3b8;
       }
     }
-
     .title {
       font-size: 16px;
       font-weight: 600;
-      color: #e2e8f0; /* 适配暗黑风的浅灰白字体 */
+      color: #e2e8f0;
       margin: 0 0 8px 0;
     }
-
     .subtitle {
       font-size: 13px;
-      color: #94a3b8; /* 适配暗黑风的深灰字体 */
+      color: #94a3b8;
       margin: 0;
+      font-family: Consolas, monospace;
     }
   }
 }
@@ -662,40 +651,44 @@ export default {
     align-items: center;
     margin-bottom: 16px;
     padding: 0 8px;
-
     .header-title {
       font-size: 14px;
       font-weight: 600;
-      color: #e2e8f0; /* 适配暗黑风字体 */
+      color: #e2e8f0;
     }
-
     .header-actions {
       display: flex;
       align-items: center;
       gap: 12px;
-
+      /* 🔥 下拉框暗黑覆盖 */
+      ::v-deep .dark-select {
+        width: 220px;
+        .el-input__inner {
+          background-color: #1e293b;
+          border: 1px solid #334155;
+          color: #f8fafc;
+          &:focus {
+            border-color: #3b82f6;
+          }
+        }
+      }
       .glass-btn-text {
-        color: #94a3b8; /* 适配暗黑风字体 */
+        color: #94a3b8;
         font-size: 13px;
         padding: 4px 8px;
         &:hover {
-          color: #3b82f6; /* 悬浮变蓝 */
-          background: rgba(255, 255, 255, 0.03); /* 淡淡的背景 */
+          color: #3b82f6;
+          background: rgba(255, 255, 255, 0.03);
           border-radius: 4px;
         }
       }
-
       .glass-btn-primary {
-        background: linear-gradient(
-          135deg,
-          #3b82f6,
-          #2563eb
-        ); /* 统一的主蓝色渐变 */
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
         border: none;
         box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
         padding: 8px 24px;
         font-weight: 500;
-        &:hover {
+        &:hover:not(:disabled) {
           opacity: 0.9;
           transform: translateY(-1px);
         }
@@ -710,9 +703,7 @@ export default {
     max-height: 350px;
     overflow-y: auto;
     padding-bottom: 12px;
-    padding-right: 6px; /* 给滚动条留点空间 */
-
-    /* 暗黑风美化滚动条 */
+    padding-right: 6px;
     &::-webkit-scrollbar {
       width: 6px;
     }
@@ -723,7 +714,6 @@ export default {
     &::-webkit-scrollbar-track {
       background: transparent;
     }
-
     .glass-file-item {
       @include dark-panel;
       border-radius: 10px;
@@ -731,27 +721,24 @@ export default {
       display: flex;
       align-items: center;
       transition: all 0.3s ease;
-
       &:hover {
-        background: #262f3f; /* 悬浮时提亮 */
+        background: #262f3f;
         border-color: #4b5563;
       }
-
       &.uploading {
-        border-left: 3px solid #3b82f6; /* 统一的蓝色 */
+        border-left: 3px solid #3b82f6;
       }
       &.success {
-        border-left: 3px solid #10b981; /* 统一的绿色 */
+        border-left: 3px solid #10b981;
       }
       &.error {
-        border-left: 3px solid #ef4444; /* 统一的红色 */
+        border-left: 3px solid #ef4444;
       }
-
       .file-icon-box {
         width: 40px;
         height: 40px;
         border-radius: 8px;
-        background: rgba(0, 0, 0, 0.2); /* 图标背景压暗 */
+        background: rgba(0, 0, 0, 0.2);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -759,14 +746,12 @@ export default {
         flex-shrink: 0;
         i {
           font-size: 20px;
-          color: #94a3b8; /* 图标灰色 */
+          color: #94a3b8;
         }
       }
-
       .file-info-box {
         flex: 1;
         min-width: 0;
-
         .info-top {
           display: flex;
           justify-content: space-between;
@@ -775,35 +760,36 @@ export default {
           .file-name {
             font-size: 13px;
             font-weight: 500;
-            color: #f1f5f9; /* 适配暗黑风字体 */
+            color: #f1f5f9;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
             padding-right: 12px;
+            font-family: Consolas, monospace;
           }
           .file-size {
             font-size: 11px;
-            color: #64748b; /* 适配暗黑风灰色字体 */
+            color: #64748b;
             flex-shrink: 0;
+            font-family: Consolas, monospace;
           }
         }
-
         .progress-wrapper {
           margin-bottom: 6px;
           ::v-deep .el-progress-bar__outer {
-            background-color: #374151; /* 进度条背景压暗 */
+            background-color: #374151;
             border-radius: 4px;
           }
           ::v-deep .el-progress-bar__inner {
-            background-color: #3b82f6; /* 统一的蓝色进度条 */
+            background-color: #3b82f6;
           }
         }
-
         .info-bottom {
           font-size: 11px;
           display: flex;
           align-items: center;
           gap: 6px;
+          font-family: Consolas, monospace;
           .status-text {
             display: flex;
             align-items: center;
@@ -812,34 +798,33 @@ export default {
               color: #64748b;
             }
             &.uploading {
-              color: #3b82f6; /* 统一蓝色 */
+              color: #3b82f6;
               font-weight: 500;
             }
             &.success {
-              color: #10b981; /* 统一绿色 */
+              color: #10b981;
               font-weight: 500;
             }
             &.error {
-              color: #ef4444; /* 统一红色 */
+              color: #ef4444;
               font-weight: 500;
             }
           }
           .error-msg {
-            color: #ef4444; /* 红色错误信息 */
+            color: #ef4444;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
           }
         }
       }
-
       .file-actions {
         margin-left: 12px;
         .action-btn.remove {
-          color: #64748b; /* 适配灰色图标 */
+          color: #64748b;
           font-size: 16px;
           &:hover {
-            color: #ef4444; /* 悬浮变红 */
+            color: #ef4444;
             background: rgba(239, 68, 68, 0.1);
             border-radius: 50%;
           }
@@ -848,7 +833,7 @@ export default {
     }
   }
 
-  /* 🌟 底部统计药丸 (彻底压暗适应暗黑风) */
+  /* 🌟 底部统计药丸 */
   .glass-stats-pill {
     @include dark-panel;
     margin-top: 12px;
@@ -858,8 +843,8 @@ export default {
     align-items: center;
     gap: 16px;
     font-size: 12px;
-    color: #e2e8f0; /* 适配暗黑风字体 */
-
+    color: #e2e8f0;
+    font-family: Consolas, monospace;
     .stat-group {
       display: flex;
       align-items: center;
@@ -869,16 +854,16 @@ export default {
         opacity: 0.7;
       }
       &.success {
-        color: #10b981; /* 统一绿色 */
+        color: #10b981;
       }
       &.error {
-        color: #ef4444; /* 统一红色 */
+        color: #ef4444;
       }
     }
     .stat-divider {
       width: 1px;
       height: 12px;
-      background: rgba(255, 255, 255, 0.1); /* 压暗分割线 */
+      background: rgba(255, 255, 255, 0.1);
     }
   }
 }

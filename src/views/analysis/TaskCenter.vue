@@ -45,20 +45,32 @@
       v-loading="loading"
       element-loading-background="rgba(11, 15, 25, 0.8)"
     >
-      <el-table
-        :data="taskList"
-        style="width: 100%"
-        class="bio-dark-table"
-        :row-class-name="tableRowClassName"
-      >
+      <el-table :data="taskList" style="width: 100%" class="bio-dark-table">
         <el-table-column
           prop="name"
           label="任务名称"
-          min-width="250"
+          min-width="320"
           show-overflow-tooltip
         >
           <template slot-scope="scope">
-            <span class="task-name-text">{{ scope.row.taskName }}</span>
+            <div style="display: flex; align-items: center; gap: 8px">
+              <span class="task-name-text">{{ scope.row.taskName }}</span>
+
+              <el-tag
+                v-if="
+                  scope.row.projectName &&
+                  scope.row.projectName !== '未绑定课题'
+                "
+                size="mini"
+                type="info"
+                effect="plain"
+                class="dark-project-tag"
+              >
+                <i class="el-icon-folder-opened"></i>
+                {{ scope.row.projectName }}
+              </el-tag>
+              <span v-else class="dark-no-project">- 独立任务 -</span>
+            </div>
           </template>
         </el-table-column>
 
@@ -119,6 +131,13 @@
             >
           </template>
         </el-table-column>
+
+        <template slot="empty">
+          <el-empty
+            description="调度矩阵内空空如也"
+            :image-size="80"
+          ></el-empty>
+        </template>
       </el-table>
     </div>
 
@@ -135,6 +154,7 @@
       >
       </el-pagination>
     </div>
+
     <TaskTerminalDrawer ref="terminalDrawer" />
   </div>
 </template>
@@ -147,7 +167,7 @@ import TaskTerminalDrawer from "@/components/analysis/TaskTerminalDrawer.vue";
 export default {
   name: "TaskCenter",
   components: {
-    TaskTerminalDrawer, // 注册它
+    TaskTerminalDrawer,
   },
   data() {
     return {
@@ -173,7 +193,6 @@ export default {
     async fetchTaskList() {
       this.loading = true;
       try {
-        // 组装发送给后端的参数
         const params = {
           page: this.queryParams.page,
           size: this.queryParams.size,
@@ -181,11 +200,10 @@ export default {
           status: this.queryParams.status,
         };
 
-        // 发起真实请求 (假设你封装了 getTaskPage)
-        const res = await getTaskPage(params, this.userId); // 如果 axios 里统一加了 header，就不需要传 userId
+        const res = await getTaskPage(params, this.userId);
 
         if (res && res.code === 200) {
-          // 赋值真实数据
+          // 赋值真实数据（后端已经加入了 projectName）
           this.taskList = res.data.records;
           this.total = res.data.total;
         } else {
@@ -231,18 +249,20 @@ export default {
     // 格式化时间
     formatTime(timeStr) {
       if (!timeStr) return "-";
-      return timeStr;
+      return typeof timeStr === "string"
+        ? timeStr.substring(0, 16).replace("T", " ")
+        : "-";
     },
 
     // 操作
     handleViewDetail(row) {
-      // 🚀 核心魔法：直接调用子组件的 open 方法，把真实的 taskId 和 userId 传过去！
       this.$refs.terminalDrawer.open(row.id, this.userId);
     },
 
     handleKillTask() {
       this.$confirm("强行终止任务可能导致数据丢失，是否继续？", "警告", {
         type: "warning",
+        customClass: "bio-dark-message-box",
       })
         .then(() => {
           this.$message.success("终止指令已发送");
@@ -266,29 +286,9 @@ export default {
 <style lang="scss" scoped>
 .bio-task-center {
   padding: 30px;
-  background-color: #0b0f19; /* 全局极暗背景 */
+  background-color: #0b0f19;
   min-height: calc(100vh - 60px);
   color: #e2e8f0;
-}
-/* 进度条与文字的终极排版 */
-.progress-cell {
-  display: flex;
-  align-items: center; /* 保证进度条和百分比文字在同一水平线上垂直居中 */
-  width: 100%;
-}
-
-.matrix-progress {
-  flex: 1; /* 🚀 核心魔法 1：让进度条自动弹开，霸占所有剩余空间 */
-  margin-right: 12px; /* 和右边的文字留出舒适的间距 */
-}
-
-.progress-text {
-  flex-shrink: 0; /* 🚀 核心魔法 2：打死也不允许文字被挤压换行 */
-  width: 36px; /* 固定宽度，这样即使是 5% 和 100%，整个列也能保持完美对齐，不会左右乱跳 */
-  text-align: right;
-  color: #94a3b8;
-  font-family: Consolas, monospace; /* 极客代码字体 */
-  font-size: 12px;
 }
 
 /* 顶部操作区 */
@@ -319,7 +319,6 @@ export default {
     gap: 16px;
     align-items: center;
 
-    /* 输入框暗黑改造 */
     ::v-deep .dark-input .el-input__inner {
       background-color: #1e293b;
       border: 1px solid #334155;
@@ -348,11 +347,62 @@ export default {
 
 /* 1. 表格外层容器 */
 .table-container {
-  background: #0b0f19; /* 和整个网页的最深底色融为一体 */
+  background: #0b0f19;
   border: 1px solid #1f2937;
   border-radius: 12px;
   padding: 20px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+/* 🌟 项目归属标签专属暗黑样式 */
+.dark-project-tag {
+  background: transparent !important;
+  border-color: #374151 !important;
+  color: #94a3b8 !important;
+}
+.dark-no-project {
+  color: #4b5563;
+  font-size: 12px;
+}
+.task-name-text {
+  font-weight: 500;
+  color: #f8fafc;
+}
+
+/* 进度条排版 */
+.progress-cell {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+.matrix-progress {
+  flex: 1;
+  margin-right: 12px;
+}
+.progress-text {
+  flex-shrink: 0;
+  width: 36px;
+  text-align: right;
+  color: #94a3b8;
+  font-family: Consolas, monospace;
+  font-size: 12px;
+}
+.text-gray {
+  color: #64748b;
+  font-family: Consolas, monospace;
+  font-size: 13px;
+}
+.action-btn {
+  font-size: 13px;
+  &.view {
+    color: #3b82f6;
+  }
+  &.kill {
+    color: #ef4444;
+  }
+  &:hover {
+    opacity: 0.8;
+  }
 }
 
 /* 2. el-table 彻底扒皮黑化 */
@@ -362,48 +412,41 @@ export default {
   color: #e2e8f0;
   border: none !important;
 
-  /* 杀掉所有自带的包裹层白底 */
   .el-table__header-wrapper,
   .el-table__body-wrapper,
   .el-table__footer-wrapper {
     background-color: transparent !important;
   }
 
-  /* 杀掉最外层的两条恶心亮色伪线 */
   &::before,
   &::after {
     display: none !important;
   }
 
-  /* 表头：稍微提亮一点做区分，边框改为暗色 */
   th.el-table__cell {
     background-color: #1e293b !important;
     border-bottom: 1px solid #334155 !important;
-    border-right: 1px solid #1f2937 !important; /* 🌟 新增：表头竖线 */
+    border-right: 1px solid #1f2937 !important;
     color: #94a3b8;
     font-weight: 600;
   }
 
-  /* 行与单元格：全透，边框极暗 */
   tr,
   td.el-table__cell {
     background-color: transparent !important;
     border-bottom: 1px solid #1f2937 !important;
-    border-right: 1px solid #1f2937 !important; /* 🌟 新增：数据单元格竖线 */
+    border-right: 1px solid #1f2937 !important;
   }
 
-  /* 🌟 新增：杀掉最后一列的竖线，防止和外层容器的边框重叠变粗 */
   th.el-table__cell:last-child,
   td.el-table__cell:last-child {
     border-right: none !important;
   }
 
-  /* 悬浮高亮当前行：丝滑的幽幽蓝光 */
   .el-table__body tr:hover > td.el-table__cell {
     background-color: #1e293b !important;
   }
 
-  /* 固定列的彻底暗黑适配 */
   .el-table__fixed-right::before,
   .el-table__fixed::before {
     display: none !important;
@@ -413,7 +456,6 @@ export default {
     background-color: #0b0f19 !important;
   }
 
-  /* 暂无数据时的兜底 */
   .el-table__empty-block {
     background-color: transparent !important;
     border-top: 1px solid #1f2937 !important;
@@ -434,14 +476,12 @@ export default {
   .el-pagination__jump {
     color: #64748b;
   }
-  /* 上一页/下一页按钮去白底 */
   .btn-prev,
   .btn-next,
   button:disabled {
     background-color: transparent !important;
     color: #64748b !important;
   }
-  /* 页码按钮去白底 */
   .el-pager li {
     background-color: transparent !important;
     color: #94a3b8;
@@ -455,11 +495,26 @@ export default {
       color: #60a5fa !important;
     }
   }
-  /* 跳转输入框去白底 */
   .el-input__inner {
     background-color: #1e293b !important;
     border: 1px solid #334155 !important;
     color: #f8fafc !important;
   }
+}
+</style>
+
+<style>
+/* 弹窗下拉框适配暗黑 */
+.bio-dark-select-dropdown {
+  background-color: #1e293b !important;
+  border: 1px solid #334155 !important;
+}
+.bio-dark-select-dropdown .el-select-dropdown__item {
+  color: #94a3b8 !important;
+}
+.bio-dark-select-dropdown .el-select-dropdown__item.hover,
+.bio-dark-select-dropdown .el-select-dropdown__item:hover {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
 }
 </style>

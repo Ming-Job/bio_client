@@ -12,23 +12,26 @@ export function getPipelines() {
 
 /**
  * 2. 轮询获取大盘统计和任务真实进度
- * @param {Number} userId - 当前用户ID (如果 request 拦截器里统一加了，这里就可以不传)
+ * 🌟 核心修改：增加 projectId 参数
  */
-export function getDashboard(userId) {
+export function getDashboard(userId, projectId) {
   return request({
     url: '/api/analysis/dashboard',
     method: 'get',
-    headers: { 'userId': userId } // 传给后端的身份凭证
+    params: { projectId: projectId }, // 会变成 /dashboard?projectId=1
+    headers: { 'userId': userId } 
   })
 }
 
 /**
  * 3. 获取云端数据舱最近挂载的文件
+ * 🌟 核心修改：增加 projectId 参数
  */
-export function getRecentFiles(userId) {
+export function getRecentFiles(userId, projectId) {
   return request({
     url: '/api/analysis/files/recent',
     method: 'get',
+    params: { projectId: projectId }, // 会变成 /files/recent?projectId=1
     headers: { 'userId': userId }
   })
 }
@@ -73,4 +76,18 @@ export function getTaskPage(params, userId) {
       'userId': userId 
     }
   });
+}
+
+
+// 新增流程
+export function createPipeline(data) {
+  return request({ url: '/api/pipelines', method: 'post', data })
+}
+// 更新流程
+export function updatePipeline(data) {
+  return request({ url: '/api/pipelines', method: 'put', data })
+}
+// 删除流程
+export function deletePipeline(id) {
+  return request({ url: `/api/pipelines/${id}`, method: 'delete' })
 }

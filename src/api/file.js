@@ -1,15 +1,17 @@
 // @/api/file.js
 import request from './request'
 
-// 获取最近上传的文件
-export function getRecentUploadFiles(userId, limit = 10, projectId = null) {
+/**
+ * 获取最近挂载的文件
+ */
+export function getRecentUploadFiles(userId, projectId) {
   return request({
-    url: '/api/files/recent',
+    url: '/api/files/recent', 
     method: 'get',
-    params: {
-      userId,
-      limit,
-      projectId
+    // 🌟 核心修复：把 userId 和 projectId 全都放进 params 里！匹配后端的 @RequestParam
+    params: { 
+      userId: userId,
+      projectId: projectId 
     }
   })
 }
@@ -49,6 +51,15 @@ export function uploadFiles(data) {
 export function getFileList(params) {
   return request({
     url: '/api/files/list',
+    method: 'get',
+    params
+  })
+}
+
+// 🌟 新增：获取全量数据舱文件
+export function getAllFileList(params) {
+  return request({
+    url: '/api/files/all', // 指向我们后端刚写好的新接口
     method: 'get',
     params
   })

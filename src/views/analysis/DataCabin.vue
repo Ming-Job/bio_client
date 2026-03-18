@@ -47,70 +47,52 @@
     </div>
 
     <div class="cabin-main">
-      <div class="sidebar-filters">
-        <ul class="filter-menu">
-          <li
-            :class="{ active: activeType === 'all' }"
-            @click="activeType = 'all'"
-          >
-            <i class="el-icon-menu"></i> 全部文件
-          </li>
-          <li
-            :class="{ active: activeType === 'fastq' }"
-            @click="activeType = 'fastq'"
-          >
-            <i class="el-icon-document"></i> 原始测序 (FastQ/FASTA)
-          </li>
-          <li
-            :class="{ active: activeType === 'bam' }"
-            @click="activeType = 'bam'"
-          >
-            <i class="el-icon-coin"></i> 比对结果 (BAM/SAM)
-          </li>
-          <li
-            :class="{ active: activeType === 'vcf' }"
-            @click="activeType = 'vcf'"
-          >
-            <i class="el-icon-s-flag"></i> 变异检测 (VCF)
-          </li>
-          <li
-            :class="{ active: activeType === 'csv' }"
-            @click="activeType = 'csv'"
-          >
-            <i class="el-icon-s-data"></i> 数据矩阵 (CSV/TXT)
-          </li>
-          <li
-            :class="{ active: activeType === 'pdf' }"
-            @click="activeType = 'pdf'"
-          >
-            <i class="el-icon-document-checked"></i> 分析结题 (PDF/报告)
-          </li>
-        </ul>
-      </div>
-
       <div class="file-table-wrapper">
         <div class="table-toolbar">
-          <el-radio-group
-            v-model="sourceFilter"
-            size="small"
-            class="dark-radio-group"
-          >
-            <el-radio-button label="all">全部文件</el-radio-button>
-            <el-radio-button label="upload"
-              ><i class="el-icon-upload2"></i> 我上传的</el-radio-button
+          <div class="toolbar-left">
+            <el-radio-group
+              v-model="sourceFilter"
+              size="small"
+              class="dark-radio-group"
             >
-            <el-radio-button label="generate"
-              ><i class="el-icon-cpu"></i> 分析产出物</el-radio-button
+              <el-radio-button label="all">全部文件</el-radio-button>
+              <el-radio-button label="upload"
+                ><i class="el-icon-upload2"></i> 我上传的</el-radio-button
+              >
+              <el-radio-button label="generate"
+                ><i class="el-icon-cpu"></i> 分析产出物</el-radio-button
+              >
+            </el-radio-group>
+          </div>
+
+          <div class="toolbar-right">
+            <el-select
+              v-model="activeType"
+              size="small"
+              placeholder="请选择文件格式"
+              class="dark-select"
+              popper-class="dark-dropdown"
             >
-          </el-radio-group>
+              <el-option label="全部格式" value="all"></el-option>
+              <el-option
+                label="原始测序 (FastQ/FASTA)"
+                value="fastq"
+              ></el-option>
+              <el-option label="比对结果 (BAM/SAM)" value="bam"></el-option>
+              <el-option label="变异检测 (VCF)" value="vcf"></el-option>
+              <el-option label="分子结构 (PDB/SDF)" value="struct"></el-option>
+              <el-option label="数据矩阵 (CSV/TXT)" value="csv"></el-option>
+              <el-option label="分析结题 (PDF/报告)" value="pdf"></el-option>
+            </el-select>
+          </div>
         </div>
 
         <el-table
-          :data="filteredFiles"
+          :data="paginatedFiles"
           v-loading="loading"
           element-loading-background="rgba(11, 15, 25, 0.8)"
           class="dark-table"
-          height="calc(100vh - 330px)"
+          height="calc(100vh - 380px)"
         >
           <el-table-column label="文件名" min-width="280">
             <template slot-scope="scope">
@@ -128,6 +110,32 @@
               <el-tag size="mini" effect="plain" type="info">{{
                 scope.row.type.toUpperCase()
               }}</el-tag>
+            </template>
+          </el-table-column>
+
+          <el-table-column
+            label="归属课题"
+            min-width="160"
+            show-overflow-tooltip
+          >
+            <template slot-scope="scope">
+              <el-tag
+                v-if="scope.row.projectName !== '未绑定课题'"
+                size="mini"
+                type="info"
+                effect="plain"
+                style="
+                  background: transparent;
+                  border-color: #334155;
+                  color: #94a3b8;
+                "
+              >
+                <i class="el-icon-folder-opened"></i>
+                {{ scope.row.projectName }}
+              </el-tag>
+              <span v-else style="color: #475569; font-size: 13px"
+                >- 独立文件 -</span
+              >
             </template>
           </el-table-column>
 
@@ -194,6 +202,20 @@
             ></el-empty>
           </template>
         </el-table>
+
+        <div class="pagination-container">
+          <el-pagination
+            @size-change="handleSizeChange"
+            @current-change="handleCurrentChange"
+            :current-page="currentPage"
+            :page-sizes="[10, 20, 50, 100]"
+            :page-size="pageSize"
+            layout="total, sizes, prev, pager, next, jumper"
+            :total="filteredFilesAll.length"
+            class="bio-dark-pagination"
+          >
+          </el-pagination>
+        </div>
       </div>
     </div>
 
@@ -237,7 +259,8 @@
 </template>
 
 <script>
-import { getRecentUploadFiles, deleteFile, previewFile } from "@/api/file";
+// 🌟 使用新的全局无限制接口 getAllFileList
+import { getAllFileList, deleteFile, previewFile } from "@/api/file";
 import FileUploader from "@/components/analysis/FileUploader.vue";
 import { mapGetters } from "vuex";
 
@@ -249,49 +272,46 @@ export default {
       loading: false,
       searchQuery: "",
       activeType: "all",
-      sourceFilter: "all", // 新增：来源过滤状态
+      sourceFilter: "all",
       files: [],
 
       showUploadDialog: false,
-
       previewVisible: false,
       previewLoading: false,
       previewContent: "",
       previewFileName: "",
+
+      // 🌟 新增：分页状态控制
+      currentPage: 1,
+      pageSize: 10,
     };
   },
   computed: {
     ...mapGetters("user", ["userId"]),
 
-    // 🌟 核心过滤逻辑：同时处理搜索框、左侧边栏分类、顶部来源
-    // 🌟 核心过滤逻辑：同时处理搜索框、左侧边栏分类、顶部来源
-    filteredFiles() {
+    // 🌟 1. 获取满足当前过滤条件的【总数据】
+    filteredFilesAll() {
       return this.files.filter((f) => {
-        // 1. 搜索词匹配
         const matchSearch = f.name
           .toLowerCase()
           .includes(this.searchQuery.toLowerCase());
-
-        // 2. 来源匹配
         const matchSource =
           this.sourceFilter === "all" || f.source === this.sourceFilter;
 
-        // 3. 🌟 修复后的格式分类匹配 (支持一对多映射)
         let matchType = false;
         const fType = f.type.toLowerCase();
 
         if (this.activeType === "all") {
           matchType = true;
         } else if (this.activeType === "fastq") {
-          // 原始测序大类：把 fasta, fa, fq 全包进来
           matchType = ["fastq", "fq", "fasta", "fa"].some((t) =>
             fType.includes(t),
           );
         } else if (this.activeType === "csv") {
-          // 数据矩阵大类：把 tsv, txt 也顺便包进来
           matchType = ["csv", "tsv", "txt"].some((t) => fType.includes(t));
+        } else if (this.activeType === "struct") {
+          matchType = ["pdb", "sdf"].some((t) => fType.includes(t));
         } else {
-          // 其他单一分类 (bam, vcf, pdf) 正常匹配
           matchType = fType.includes(this.activeType);
         }
 
@@ -299,17 +319,37 @@ export default {
       });
     },
 
-    // 统计容量
+    // 🌟 2. 纯前端内存切片，渲染【当前页】的数据
+    paginatedFiles() {
+      const start = (this.currentPage - 1) * this.pageSize;
+      const end = start + this.pageSize;
+      return this.filteredFilesAll.slice(start, end);
+    },
+
     totalUsedStorage() {
       const totalBytes = this.files.reduce((sum, f) => sum + (f.size || 0), 0);
       return this.formatFileSize(totalBytes);
     },
     storagePercentage() {
       const totalBytes = this.files.reduce((sum, f) => sum + (f.size || 0), 0);
-      const maxBytes = 100 * 1024 * 1024 * 1024; // 假设总容量 100GB
+      const maxBytes = 100 * 1024 * 1024 * 1024;
       return Math.min(100, Math.round((totalBytes / maxBytes) * 100));
     },
   },
+
+  // 🌟 监听过滤条件，一变化就自动回到第一页
+  watch: {
+    searchQuery() {
+      this.currentPage = 1;
+    },
+    activeType() {
+      this.currentPage = 1;
+    },
+    sourceFilter() {
+      this.currentPage = 1;
+    },
+  },
+
   mounted() {
     this.fetchFiles();
   },
@@ -317,21 +357,33 @@ export default {
     async fetchFiles() {
       this.loading = true;
       try {
-        const res = await getRecentUploadFiles(this.userId || 6, 1000);
+        // 🌟 核心：请求无任何限制的 all 接口，把文件和分析产出物一网打尽
+        const res = await getAllFileList({ userId: this.userId || 6 });
         const dataList = res.data || res;
         if (Array.isArray(dataList)) {
-          this.files = dataList.map((file) => ({
-            id: file.id,
-            name: file.originalName,
-            type: file.fileType || this.extractExt(file.originalName),
-            size: file.sizeBytes,
-            formattedSize:
-              file.formattedSize || this.formatFileSize(file.sizeBytes),
-            uploadTime: file.uploadTime,
+          this.files = dataList.map((file) => {
+            // 兼容性识别产出物标记
+            let sourceFlag = "upload";
+            if (file.fileSource) {
+              sourceFlag = file.fileSource.toLowerCase();
+            } else if (file.source) {
+              sourceFlag = file.source.toLowerCase();
+            } else if (file.taskId) {
+              sourceFlag = "generate";
+            }
 
-            // 🌟 直接采用后端返回的新字段 fileSource，容错默认给 upload
-            source: file.fileSource || file.source || "upload",
-          }));
+            return {
+              id: file.id,
+              name: file.originalName,
+              type: file.fileType || this.extractExt(file.originalName),
+              size: file.sizeBytes,
+              formattedSize:
+                file.formattedSize || this.formatFileSize(file.sizeBytes),
+              uploadTime: file.uploadTime,
+              source: sourceFlag,
+              projectName: file.projectName || "未绑定课题",
+            };
+          });
         }
       } catch (error) {
         this.$message.error("无法连接到数据舱集群");
@@ -340,8 +392,22 @@ export default {
       }
     },
 
+    // 🌟 分页控制方法
+    handleSizeChange(val) {
+      this.pageSize = val;
+      this.currentPage = 1;
+    },
+    handleCurrentChange(val) {
+      this.currentPage = val;
+    },
+
     handleUploadComplete(result) {
-      if (result.error === 0) {
+      if (result && result.error === 0) {
+        setTimeout(() => {
+          this.showUploadDialog = false;
+          this.fetchFiles();
+        }, 1000);
+      } else {
         setTimeout(() => {
           this.showUploadDialog = false;
           this.fetchFiles();
@@ -349,7 +415,6 @@ export default {
       }
     },
 
-    // 🌟 下载复用 a 标签大法
     handleDownload(file) {
       const downloadUrl = `/api/files/download/${file.id}?userId=${
         this.userId || 6
@@ -363,7 +428,6 @@ export default {
       this.$message.success(`已下发传输指令: ${file.name}`);
     },
 
-    // 预览逻辑
     async handlePreview(file) {
       if (["bam", "sam", "gz", "zip"].includes(file.type.toLowerCase())) {
         this.$message.warning("二进制大文件不支持在线预览，请下载后查看");
@@ -384,7 +448,6 @@ export default {
       }
     },
 
-    // 删除逻辑
     async handleDelete(file) {
       try {
         await this.$confirm(
@@ -405,10 +468,10 @@ export default {
       }
     },
 
-    // 辅助工具函数
     extractExt(filename) {
       return filename ? filename.split(".").pop().toLowerCase() : "unknown";
     },
+
     getFileIcon(type) {
       const map = {
         fastq: "el-icon-document",
@@ -416,14 +479,18 @@ export default {
         fasta: "el-icon-files",
         fa: "el-icon-files",
         bam: "el-icon-coin",
+        sam: "el-icon-coin",
         pdf: "el-icon-document-checked",
         vcf: "el-icon-s-flag",
         csv: "el-icon-s-data",
         tsv: "el-icon-s-data",
         txt: "el-icon-tickets",
+        pdb: "el-icon-connection",
+        sdf: "el-icon-connection",
       };
       return map[type.toLowerCase()] || "el-icon-document";
     },
+
     formatFileSize(bytes) {
       if (!bytes) return "0 B";
       const k = 1024,
@@ -431,6 +498,7 @@ export default {
         i = Math.floor(Math.log(bytes) / Math.log(k));
       return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
     },
+
     formatTime(timeStr) {
       if (!timeStr) return "-";
       return typeof timeStr === "string"
@@ -516,50 +584,19 @@ export default {
   }
 }
 
-/* 主体内容区：左侧菜单 + 右侧表格 */
+/* 主体内容区 */
 .cabin-main {
   display: flex;
   gap: 24px;
 }
 
-.sidebar-filters {
-  width: 220px;
-  flex-shrink: 0;
-  .filter-menu {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    li {
-      padding: 12px 16px;
-      margin-bottom: 8px;
-      border-radius: 8px;
-      cursor: pointer;
-      color: #94a3b8;
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      transition: 0.3s;
-      i {
-        margin-right: 12px;
-        font-size: 18px;
-      }
-      &:hover {
-        background: rgba(59, 130, 246, 0.1);
-        color: #e2e8f0;
-      }
-      &.active {
-        background: #1e293b;
-        color: #3b82f6;
-        font-weight: bold;
-        border-left: 3px solid #3b82f6;
-      }
-    }
-  }
-}
-
 /* ================= 工具栏与来源切换 ================= */
 .table-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 16px;
+
   ::v-deep .dark-radio-group {
     .el-radio-button__inner {
       background: #0f172a;
@@ -579,6 +616,19 @@ export default {
     }
     .el-radio-button:last-child .el-radio-button__inner {
       border-radius: 0 6px 6px 0;
+    }
+  }
+
+  ::v-deep .dark-select {
+    width: 220px;
+    .el-input__inner {
+      background-color: #0f172a;
+      border-color: #334155;
+      color: #f8fafc;
+      border-radius: 6px;
+      &:focus {
+        border-color: #3b82f6;
+      }
     }
   }
 }
@@ -657,6 +707,43 @@ export default {
   }
 }
 
+/* 🌟 分页器彻底扒皮黑化 */
+.pagination-container {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+::v-deep .bio-dark-pagination {
+  .el-pagination__total,
+  .el-pagination__jump {
+    color: #64748b;
+  }
+  .btn-prev,
+  .btn-next,
+  button:disabled {
+    background-color: transparent !important;
+    color: #64748b !important;
+  }
+  .el-pager li {
+    background-color: transparent !important;
+    color: #94a3b8;
+    border: none;
+
+    &.active {
+      color: #3b82f6 !important;
+      font-weight: bold;
+    }
+    &:hover:not(.active) {
+      color: #60a5fa !important;
+    }
+  }
+  .el-input__inner {
+    background-color: #1e293b !important;
+    border: 1px solid #334155 !important;
+    color: #f8fafc !important;
+  }
+}
+
 /* 预览弹窗样式复用 */
 ::v-deep .preview-dialog {
   border-radius: 12px;
@@ -720,5 +807,27 @@ export default {
   &:hover {
     background: rgba(239, 68, 68, 0.8);
   }
+}
+</style>
+
+<style>
+.dark-dropdown {
+  background-color: #1e293b !important;
+  border: 1px solid #334155 !important;
+}
+.dark-dropdown .el-select-dropdown__item {
+  color: #94a3b8;
+}
+.dark-dropdown .el-select-dropdown__item.hover,
+.dark-dropdown .el-select-dropdown__item:hover {
+  background-color: #0f172a !important;
+}
+.dark-dropdown .el-select-dropdown__item.selected {
+  color: #3b82f6 !important;
+  font-weight: bold;
+}
+.dark-dropdown .popper__arrow::after {
+  border-bottom-color: #1e293b !important;
+  border-top-color: #1e293b !important;
 }
 </style>

@@ -7,7 +7,7 @@ import Cookies from 'js-cookie'
 // 创建axios实例 - 直接设置基础URL
 const service = axios.create({
   baseURL: 'http://localhost:8080', // 直接写死你的后端地址
-  timeout: 10000 // 请求超时时间
+  timeout: 60000 // 请求超时时间
 })
 
 // 请求拦截器

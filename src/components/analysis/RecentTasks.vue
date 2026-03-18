@@ -1,4 +1,4 @@
-<template>
+<!-- <template>
   <div class="recent-tasks">
     <div class="tasks-header">
       <h3 class="section-title">
@@ -40,6 +40,18 @@
             <el-tooltip :content="task.name" placement="top">
               <span class="task-name">{{ task.name }}</span>
             </el-tooltip>
+
+            <el-tag
+              v-if="task.projectName && task.projectName !== '未绑定课题'"
+              size="mini"
+              type="info"
+              effect="plain"
+              class="project-tag"
+            >
+              <i class="el-icon-folder-opened"></i> {{ task.projectName }}
+            </el-tag>
+            <span v-else class="no-project-tag">- 独立任务 -</span>
+
             <el-tag
               size="mini"
               :type="getStatusType(task.status)"
@@ -224,6 +236,8 @@ export default {
       margin-bottom: 12px;
       cursor: pointer;
       transition: all 0.3s ease;
+
+      /* 悬停时的变色效果 */
       &:hover {
         border-color: #3498db;
         background: #f8fafc;
@@ -231,6 +245,7 @@ export default {
           color: #3498db;
         }
       }
+
       &.task-running {
         border-left: 4px solid #3498db;
       }
@@ -252,6 +267,8 @@ export default {
           gap: 12px;
           margin-bottom: 8px;
         }
+
+        /* 🌟 把这些样式从 hover 里拿出来，放到正常层级！ */
         .task-name {
           font-weight: 500;
           color: #2c3e50;
@@ -260,6 +277,18 @@ export default {
           text-overflow: ellipsis;
           white-space: nowrap;
         }
+        .project-tag {
+          margin-right: 8px;
+          border-color: #e4e7ed;
+          color: #7f8c8d;
+          background: #f8f9fa;
+        }
+        .no-project-tag {
+          color: #bdc3c7;
+          font-size: 12px;
+          margin-right: 8px;
+        }
+
         .task-meta {
           display: flex;
           gap: 20px;
@@ -320,4 +349,4 @@ export default {
     }
   }
 }
-</style>
+</style> -->

@@ -18,13 +18,13 @@
           <el-menu-item index="/home">首页</el-menu-item>
           <el-menu-item index="/course">课程中心</el-menu-item>
           <el-menu-item index="/analysis">云端分析</el-menu-item>
-          <el-menu-item index="/case">实战案例</el-menu-item>
+          <el-menu-item index="/case">案例广场</el-menu-item>
 
           <el-menu-item index="/project" v-if="isLoggedIn"
             >我的项目</el-menu-item
           >
 
-          <el-menu-item index="/help">帮助中心</el-menu-item>
+          <el-menu-item index="/help">开发者文档</el-menu-item>
         </el-menu>
       </div>
 
@@ -43,6 +43,7 @@
           v-if="isLoggedIn"
           @command="handleUserCommand"
           trigger="click"
+          placement="bottom-end"
         >
           <div class="user-trigger">
             <el-avatar
@@ -65,7 +66,7 @@
             <i class="el-icon-arrow-down"></i>
           </div>
 
-          <el-dropdown-menu slot="dropdown">
+          <el-dropdown-menu slot="dropdown" class="header-dropdown-menu">
             <el-dropdown-item command="profile" icon="el-icon-user"
               >个人中心</el-dropdown-item
             >
@@ -86,6 +87,7 @@
           type="primary"
           size="small"
           round
+          class="login-btn"
           @click="handleLogin"
         >
           登录 / 注册
@@ -99,8 +101,6 @@
 import { mapState, mapActions } from "vuex";
 import { getAvatarUrl } from "@/utils/auth";
 import { getRoleText } from "@/utils/role";
-
-// 🌟 优化点 4：完全删除了原本这里几十行的 MENU_ROUTE_MAP 和 PATH_TO_MENU 常量！
 
 export default {
   name: "HeaderPage",
@@ -116,35 +116,37 @@ export default {
       userInfo: (state) => state.userInfo || {},
     }),
 
-    // 🌟 优化点 5：用极其优雅的计算属性，直接监听当前路由路径，决定高亮哪个菜单！
-    // 告别了之前的 watch 监听器和各种生命周期里的手动赋值。
     activePath() {
       const path = this.$route.path;
-      if (path === "/" || path === "/home") return "/home";
-      if (path.startsWith("/course")) return "/course";
-      if (path.startsWith("/analysis")) return "/analysis";
-      if (path.startsWith("/case")) return "/case";
-      if (path.startsWith("/project")) return "/project";
-      if (path.startsWith("/help")) return "/help";
-      return ""; // 不在导航栏的页面，不亮起任何菜单
+
+      // 1. 如果是纯根路径，默认高亮首页
+      if (!path || path === "/" || path === "") {
+        return "/home";
+      }
+
+      // 2. 魔法正则：截取第一级路径
+      // 例如：把 "/analysis/tasks/123" 截取为 "/analysis"
+      const match = path.match(/^\/[^/]+/);
+
+      // 3. 返回截取结果，匹配 <el-menu-item> 的 index
+      return match ? match[0] : "/home";
     },
 
-    // 用户角色文本
     userRoleText() {
       return getRoleText(this.userInfo.role);
     },
 
-    // 用户头像首字母
     userInitial() {
       return this.userInfo.username
         ? this.userInfo.username.charAt(0).toUpperCase()
         : "U";
     },
 
-    // 完整的头像URL
+    // 🌟 终极优化：头像 URL 计算
     avatarFullUrl() {
-      if (this.avatarLoadError) {
-        return "https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png";
+      // 如果发生错误或者原本就没头像，直接返回空字符串
+      if (this.avatarLoadError || !this.userInfo.avatar) {
+        return "";
       }
       return getAvatarUrl(this.userInfo.avatar);
     },
@@ -155,7 +157,6 @@ export default {
   methods: {
     ...mapActions("user", ["checkLoginStatus", "logout"]),
 
-    // 搜索
     handleSearch() {
       if (this.searchKeyword.trim()) {
         this.$router.push({
@@ -167,12 +168,10 @@ export default {
       }
     },
 
-    // 登录跳转
     handleLogin() {
       this.$router.push({ name: "LoginPage" });
     },
 
-    // 下拉菜单命令
     handleUserCommand(command) {
       switch (command) {
         case "profile":
@@ -187,7 +186,6 @@ export default {
       }
     },
 
-    // 退出登录
     async handleLogout() {
       try {
         await this.$confirm("确定要退出登录吗？", "提示", {
@@ -203,7 +201,6 @@ export default {
       }
     },
 
-    // 头像加载失败
     handleAvatarError() {
       this.avatarLoadError = true;
     },
@@ -222,13 +219,13 @@ export default {
   z-index: 1000;
 
   .header-container {
-    max-width: 1400px;
+    max-width: 1440px;
     margin: 0 auto;
     height: 100%;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 24px;
+    padding: 0 32px; /* 针对 PC 端放大两侧边距 */
   }
 
   /* 品牌区 */
@@ -236,11 +233,11 @@ export default {
     display: flex;
     align-items: center;
     cursor: pointer;
-    min-width: 200px;
+    min-width: 220px;
 
     .logo {
       height: 32px;
-      transition: transform 0.3s;
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .brand-title {
@@ -253,7 +250,7 @@ export default {
     }
 
     &:hover .logo {
-      transform: scale(1.05);
+      transform: scale(1.08) rotate(-5deg); /* 加一点极客俏皮感 */
     }
   }
 
@@ -266,12 +263,18 @@ export default {
     ::v-deep .el-menu {
       border: none;
 
-      .el-menu-item,
-      .el-submenu__title {
+      .el-menu-item {
         height: 64px;
         line-height: 64px;
         font-size: 15px;
-        padding: 0 15px;
+        font-weight: 500;
+        padding: 0 20px;
+        transition: color 0.3s, background-color 0.3s;
+
+        &:hover {
+          color: #42b983 !important;
+          background-color: rgba(255, 255, 255, 0.05) !important;
+        }
       }
     }
   }
@@ -280,21 +283,34 @@ export default {
   .action-section {
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 24px;
+    min-width: 280px;
+    justify-content: flex-end;
 
     .header-search {
-      width: 180px;
-      transition: width 0.3s;
+      width: 200px;
+      transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
       ::v-deep .el-input__inner {
         background: rgba(255, 255, 255, 0.1);
-        border: none;
+        border: 1px solid transparent;
         color: #fff;
         border-radius: 20px;
+        transition: all 0.3s;
+
+        &::placeholder {
+          color: rgba(255, 255, 255, 0.5);
+        }
+
+        &:focus {
+          background: rgba(255, 255, 255, 0.15);
+          border-color: #42b983;
+          box-shadow: 0 0 8px rgba(66, 185, 131, 0.2);
+        }
       }
 
       &:focus-within {
-        width: 240px;
+        width: 260px; /* PC端搜索框展开更长，体验更好 */
       }
     }
 
@@ -303,20 +319,31 @@ export default {
       align-items: center;
       cursor: pointer;
       color: #fff;
+      padding: 4px 8px;
+      border-radius: 8px;
+      transition: background 0.3s;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.08);
+      }
 
       .avatar-ring {
         border: 2px solid #42b983;
+        background-color: #3b82f6; /* 头像加载失败时的文字背景底色 */
+        font-weight: bold;
+        color: #fff;
         box-shadow: 0 0 8px rgba(66, 185, 131, 0.4);
       }
 
       .user-meta {
-        margin: 0 10px;
+        margin: 0 12px;
         display: flex;
         flex-direction: column;
 
         .username {
           font-size: 14px;
           line-height: 1.2;
+          font-weight: 500;
         }
 
         .role-badge {
@@ -326,47 +353,47 @@ export default {
           margin-top: 2px;
           width: fit-content;
           opacity: 0.9;
+          font-family: Consolas, monospace; /* 角色标签用等宽字体更专业 */
 
           &--admin {
             background: #e6a23c;
+            color: #fff;
           }
           &--teacher {
             background: #67c23a;
+            color: #fff;
           }
           &--student {
-            background: #409eff;
+            background: #3b82f6;
+            color: #fff;
           }
-          /* 默认样式 */
           background: #42b983;
         }
       }
 
       i {
         font-size: 12px;
-        color: #bdc3c7;
+        color: #94a3b8;
+        transition: transform 0.3s;
       }
-    }
-  }
 
-  /* 简单响应式处理 */
-  @media (max-width: 768px) {
-    .brand-title {
-      display: none;
-    }
-
-    .nav-section {
-      ::v-deep .el-menu-item {
-        padding: 0 10px;
-        font-size: 13px;
+      /* 下拉框展开时箭头翻转 */
+      &[aria-expanded="true"] i {
+        transform: rotate(180deg);
       }
     }
 
-    .user-meta {
-      display: none !important;
-    }
+    .login-btn {
+      padding: 8px 20px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      background: linear-gradient(135deg, #42b983, #27ae60);
+      border: none;
 
-    .header-search {
-      width: 140px;
+      &:hover {
+        box-shadow: 0 4px 12px rgba(66, 185, 131, 0.4);
+        transform: translateY(-1px);
+      }
     }
   }
 }

@@ -42,6 +42,34 @@
           <div class="file-info">
             <div class="file-name">
               <span>{{ file.name }}</span>
+
+              <el-tag
+                v-if="file.projectName !== '未绑定课题'"
+                size="mini"
+                type="info"
+                effect="plain"
+                style="
+                  background: transparent;
+                  border-color: #374151;
+                  color: #94a3b8;
+                  margin-left: 8px;
+                  margin-right: 8px;
+                "
+              >
+                <i class="el-icon-folder-opened"></i> {{ file.projectName }}
+              </el-tag>
+              <span
+                v-else
+                style="
+                  color: #4b5563;
+                  font-size: 12px;
+                  margin-left: 8px;
+                  margin-right: 8px;
+                "
+              >
+                - 独立文件 -
+              </span>
+
               <el-tag v-if="file.isPublic" size="mini" type="success"
                 >公开</el-tag
               >
@@ -135,6 +163,11 @@ export default {
       type: [Number, String],
       required: true,
     },
+    // 🌟 新增：接收从大盘(父组件)传进来的项目ID
+    projectId: {
+      type: [Number, String],
+      default: null,
+    },
   },
 
   data() {
@@ -168,6 +201,13 @@ export default {
         if (newVal) this.loadFiles();
       },
     },
+
+    // 🌟 新增：当用户进出专属课题时，立刻重新拉取文件！
+    projectId: {
+      handler() {
+        this.loadFiles();
+      },
+    },
   },
 
   methods: {
@@ -182,12 +222,33 @@ export default {
     async loadFiles() {
       try {
         this.loading = true;
-        const response = await getRecentUploadFiles(this.userId);
+        // 🌟 1. 确保带上 this.projectId 传给后端
+        const response = await getRecentUploadFiles(
+          this.userId,
+          this.projectId,
+        );
 
-        if (response && Array.isArray(response)) {
-          // 这里为了兼容 Axios 不同的响应拦截器配置，可能是 response 也可能是 response.data
-          const dataList = response.data || response;
-          this.files = dataList.map((file) => ({
+        // 🌟 2. 无敌兼容解析：不管 Axios 怎么拦截，都能把数组剥出来
+        let dataList = [];
+        if (Array.isArray(response)) {
+          dataList = response;
+        } else if (response && Array.isArray(response.data)) {
+          dataList = response.data;
+        } else if (
+          response &&
+          response.data &&
+          Array.isArray(response.data.data)
+        ) {
+          dataList = response.data.data; // 兼容 { code: 200, data: [...] } 格式
+        }
+
+        if (dataList.length > 0) {
+          // 核心拦截：只要源头是 generate 的，统统踢掉！只留原始上传数据！
+          const uploadOnlyList = dataList.filter(
+            (file) => file.fileSource !== "generate",
+          );
+
+          this.files = uploadOnlyList.map((file) => ({
             id: file.id,
             name: file.originalName,
             type: file.fileType,
@@ -196,6 +257,8 @@ export default {
             isPublic: file.isPublic || file.accessLevel === "public",
             downloadUrl: file.downloadUrl,
             formattedSize: file.formattedSize,
+            // 🌟 核心新增：接住项目名称，容错处理
+            projectName: file.projectName || "未绑定课题",
           }));
         } else {
           this.files = [];

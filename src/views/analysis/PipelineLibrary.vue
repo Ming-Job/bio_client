@@ -15,6 +15,14 @@
           clearable
           class="dark-search-input"
         ></el-input>
+        <el-button
+          type="primary"
+          icon="el-icon-plus"
+          class="dark-btn-submit"
+          @click="openDialog('add')"
+        >
+          新建流程
+        </el-button>
       </div>
     </div>
 
@@ -54,13 +62,36 @@
           <div class="icon-box" :style="{ background: tpl.color || '#3b82f6' }">
             <i :class="tpl.icon || 'el-icon-data-analysis'"></i>
           </div>
-          <el-tag
-            size="mini"
-            effect="dark"
-            :type="tpl.isActive ? 'success' : 'info'"
-          >
-            {{ tpl.isActive ? "v2.1.0 稳定" : "维护中" }}
-          </el-tag>
+
+          <div class="header-right-actions">
+            <el-tag
+              size="mini"
+              effect="dark"
+              :type="tpl.isActive ? 'success' : 'info'"
+            >
+              {{ tpl.isActive ? "v2.1.0 稳定" : "维护中" }}
+            </el-tag>
+
+            <el-dropdown trigger="click" @command="handleCommand($event, tpl)">
+              <span class="el-dropdown-link">
+                <i
+                  class="el-icon-more el-icon--right"
+                  style="cursor: pointer; color: #94a3b8"
+                ></i>
+              </span>
+              <el-dropdown-menu slot="dropdown" class="bio-dark-dropdown">
+                <el-dropdown-item command="edit" icon="el-icon-edit"
+                  >编辑配置</el-dropdown-item
+                >
+                <el-dropdown-item
+                  command="delete"
+                  icon="el-icon-delete"
+                  class="text-danger"
+                  >删除模板</el-dropdown-item
+                >
+              </el-dropdown-menu>
+            </el-dropdown>
+          </div>
         </div>
 
         <div class="card-body">
@@ -104,26 +135,167 @@
         ></el-empty>
       </div>
     </div>
+
+    <el-dialog
+      :title="dialogType === 'add' ? '新建分析流程' : '编辑分析流程'"
+      :visible.sync="dialogVisible"
+      width="600px"
+      custom-class="bio-dark-dialog"
+      :close-on-click-modal="false"
+    >
+      <el-form
+        ref="form"
+        :model="form"
+        :rules="rules"
+        label-position="top"
+        class="bio-dark-form"
+      >
+        <div style="display: flex; gap: 16px">
+          <el-form-item label="流程名称 (Name)" prop="name" style="flex: 1">
+            <el-input
+              v-model="form.name"
+              placeholder="例如：RNA-Seq 差异表达分析"
+            ></el-input>
+          </el-form-item>
+          <el-form-item
+            label="唯一编码 (Code)"
+            prop="pipelineCode"
+            style="flex: 1"
+          >
+            <el-input
+              v-model="form.pipelineCode"
+              placeholder="例如：rna_seq (需英文)"
+              :disabled="dialogType === 'edit'"
+            ></el-input>
+          </el-form-item>
+        </div>
+
+        <el-form-item label="所属领域 (Category)" prop="category">
+          <el-select
+            v-model="form.category"
+            style="width: 100%"
+            popper-class="bio-dark-select-dropdown"
+          >
+            <el-option label="基因组学 (Genomics)" value="genomics"></el-option>
+            <el-option
+              label="转录组学 (Transcriptomics)"
+              value="transcriptomics"
+            ></el-option>
+            <el-option label="蛋白质组/分子对接" value="proteomics"></el-option>
+          </el-select>
+        </el-form-item>
+
+        <el-form-item label="功能描述 (Description)">
+          <el-input
+            type="textarea"
+            :rows="3"
+            v-model="form.description"
+            placeholder="简单描述该流程的输入输出与算法特点..."
+          ></el-input>
+        </el-form-item>
+
+        <div style="display: flex; gap: 16px">
+          <el-form-item label="展示图标 (Icon)">
+            <el-select
+              v-model="form.icon"
+              style="width: 100%"
+              popper-class="bio-dark-select-dropdown"
+            >
+              <el-option label="数据曲线 (Data Line)" value="el-icon-data-line"
+                ><i class="el-icon-data-line"></i> 数据曲线</el-option
+              >
+              <el-option label="算力芯片 (CPU)" value="el-icon-cpu"
+                ><i class="el-icon-cpu"></i> 算力芯片</el-option
+              >
+              <el-option label="分析图表 (Pie Chart)" value="el-icon-pie-chart"
+                ><i class="el-icon-pie-chart"></i> 分析图表</el-option
+              >
+              <el-option
+                label="连接拓扑 (Connection)"
+                value="el-icon-connection"
+                ><i class="el-icon-connection"></i> 连接拓扑</el-option
+              >
+            </el-select>
+          </el-form-item>
+          <el-form-item label="卡片主色调 (Color)">
+            <el-color-picker v-model="form.color" show-alpha></el-color-picker>
+          </el-form-item>
+        </div>
+
+        <el-form-item label="上线状态">
+          <el-switch
+            v-model="form.isActive"
+            active-color="#10b981"
+            inactive-color="#475569"
+            :active-value="1"
+            :inactive-value="0"
+            active-text="上线运行"
+            inactive-text="维护下线"
+          ></el-switch>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="dialogVisible = false" class="dark-btn-cancel"
+          >取 消</el-button
+        >
+        <el-button
+          type="primary"
+          @click="submitForm"
+          :loading="submitLoading"
+          class="dark-btn-submit"
+          >确 定</el-button
+        >
+      </span>
+    </el-dialog>
   </div>
 </template>
 
 <script>
-import { getPipelines } from "@/api/analysis";
+// 🌟 引入增删改查接口 (如果你的 api 文件还没有写 create/update/delete，记得补上)
+import {
+  getPipelines,
+  createPipeline,
+  updatePipeline,
+  deletePipeline,
+} from "@/api/analysis";
 
 export default {
   name: "PipelineLibrary",
   data() {
     return {
       loading: true,
+      submitLoading: false,
       searchQuery: "",
       activeCategory: "all",
       pipelines: [],
+
+      // 🌟 表单弹窗控制
+      dialogVisible: false,
+      dialogType: "add", // 'add' 或 'edit'
+      form: {
+        id: null,
+        pipelineCode: "",
+        name: "",
+        description: "",
+        category: "genomics",
+        icon: "el-icon-data-line",
+        color: "#3b82f6",
+        isActive: 1,
+      },
+      rules: {
+        name: [{ required: true, message: "请输入流程名称", trigger: "blur" }],
+        pipelineCode: [
+          { required: true, message: "请输入唯一编码", trigger: "blur" },
+        ],
+        category: [
+          { required: true, message: "请选择领域", trigger: "change" },
+        ],
+      },
     };
   },
   computed: {
     filteredPipelines() {
       return this.pipelines.filter((p) => {
-        // 1. 搜索词匹配
         const matchQuery =
           p.name.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
           (p.description &&
@@ -131,7 +303,6 @@ export default {
               .toLowerCase()
               .includes(this.searchQuery.toLowerCase()));
 
-        // 2. 分类匹配 (模拟逻辑：如果你的后端没有返回 category，这里默认全展示)
         const matchCategory =
           this.activeCategory === "all" || p.category === this.activeCategory;
 
@@ -151,13 +322,17 @@ export default {
       try {
         const res = await getPipelines();
         if (res && res.data) {
-          // 兼容 axios 的响应结构
-          this.pipelines = res.data.data || res.data;
+          // 兼容 axios 的多层数据结构
+          let pList = [];
+          if (Array.isArray(res.data)) pList = res.data;
+          else if (res.data.data && Array.isArray(res.data.data))
+            pList = res.data.data;
 
-          // 如果后端数据没有 category 字段，我们给它模拟分配一下以便测试筛选功能
-          this.pipelines = this.pipelines.map((p, index) => ({
+          this.pipelines = pList.map((p, index) => ({
             ...p,
-            isActive: p.isActive !== 0,
+            id: p.id,
+            pipelineCode: p.pipelineCode,
+            isActive: p.isActive === 1 || p.isActive === true, // 兼容 boolean 和 integer
             category:
               p.category || (index % 2 === 0 ? "genomics" : "transcriptomics"),
           }));
@@ -168,13 +343,95 @@ export default {
         this.loading = false;
       }
     },
-    // 🌟 核心跳转：带上选中的模板 ID 回到主页面！
     usePipeline(tpl) {
       this.$message.success(`已选定流程: ${tpl.name}，正在返回工作台装载...`);
       this.$router.push({
         path: "/analysis",
-        query: { autoLaunchPipelineId: tpl.id }, // 把 ID 挂在 URL 后面带过去
+        query: { autoLaunchPipelineId: tpl.id },
       });
+    },
+
+    // 🌟 处理卡片右上角的下拉菜单点击
+    handleCommand(command, tpl) {
+      if (command === "edit") {
+        this.openDialog("edit", tpl);
+      } else if (command === "delete") {
+        this.handleDelete(tpl);
+      }
+    },
+
+    // 🌟 打开弹窗
+    openDialog(type, row = null) {
+      this.dialogType = type;
+      if (type === "edit" && row) {
+        this.form = {
+          ...row,
+          isActive: row.isActive ? 1 : 0,
+        };
+      } else {
+        this.form = {
+          id: null,
+          pipelineCode: "",
+          name: "",
+          description: "",
+          category: "genomics",
+          icon: "el-icon-data-line",
+          color: "#3b82f6",
+          isActive: 1,
+        };
+      }
+      this.dialogVisible = true;
+      this.$nextTick(() => {
+        this.$refs.form?.clearValidate();
+      });
+    },
+
+    // 🌟 提交表单 (新增或更新)
+    submitForm() {
+      this.$refs.form.validate(async (valid) => {
+        if (!valid) return;
+        this.submitLoading = true;
+        try {
+          if (this.dialogType === "add") {
+            await createPipeline(this.form);
+            this.$message.success("新建流程成功！");
+          } else {
+            await updatePipeline(this.form);
+            this.$message.success("修改流程成功！");
+          }
+          this.dialogVisible = false;
+          this.fetchData(); // 刷新列表
+        } catch (error) {
+          this.$message.error(
+            error.response?.data?.message || "操作失败，请重试",
+          );
+        } finally {
+          this.submitLoading = false;
+        }
+      });
+    },
+
+    // 🌟 删除流程
+    async handleDelete(row) {
+      try {
+        await this.$confirm(
+          `确定要删除流程 "${row.name}" 吗？此操作不可恢复。`,
+          "高危操作",
+          {
+            confirmButtonText: "确定删除",
+            cancelButtonText: "取消",
+            type: "warning",
+            customClass: "bio-dark-message-box",
+          },
+        );
+        await deletePipeline(row.id);
+        this.$message.success("流程删除成功");
+        this.fetchData(); // 刷新列表
+      } catch (error) {
+        if (error !== "cancel") {
+          this.$message.error("删除失败");
+        }
+      }
     },
   },
 };
@@ -208,14 +465,19 @@ export default {
   }
 
   .header-actions {
-    width: 350px;
-    ::v-deep .dark-search-input .el-input__inner {
-      background-color: #1e293b;
-      border: 1px solid #334155;
-      color: #f8fafc;
-      border-radius: 20px;
-      &:focus {
-        border-color: #3b82f6;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    ::v-deep .dark-search-input {
+      width: 280px;
+      .el-input__inner {
+        background-color: #1e293b;
+        border: 1px solid #334155;
+        color: #f8fafc;
+        border-radius: 20px;
+        &:focus {
+          border-color: #3b82f6;
+        }
       }
     }
   }
@@ -271,6 +533,7 @@ export default {
       justify-content: space-between;
       align-items: flex-start;
       margin-bottom: 16px;
+
       .icon-box {
         width: 48px;
         height: 48px;
@@ -282,6 +545,11 @@ export default {
           font-size: 24px;
           color: white;
         }
+      }
+
+      .header-right-actions {
+        display: flex;
+        align-items: center;
       }
     }
 
@@ -352,5 +620,91 @@ export default {
     justify-content: center;
     padding: 60px;
   }
+}
+
+/* 按钮通用暗黑风格 */
+.dark-btn-submit {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  border: none;
+  color: white;
+  &:hover {
+    opacity: 0.9;
+  }
+}
+.dark-btn-cancel {
+  background: transparent;
+  border: 1px solid #475569;
+  color: #94a3b8;
+  &:hover {
+    border-color: #f8fafc;
+    color: #f8fafc;
+  }
+}
+
+/* 表单与弹窗彻底黑化 */
+::v-deep .bio-dark-form {
+  .el-form-item__label {
+    color: #94a3b8;
+    padding-bottom: 4px;
+    font-weight: 500;
+  }
+  .el-input__inner,
+  .el-textarea__inner {
+    background-color: #1e293b;
+    border: 1px solid #334155;
+    color: #f8fafc;
+    &:focus {
+      border-color: #3b82f6;
+    }
+  }
+  .el-input.is-disabled .el-input__inner {
+    background-color: #111827;
+    color: #64748b;
+  }
+}
+.text-danger {
+  color: #ef4444 !important;
+}
+</style>
+
+<style>
+/* 弹出层全局暗黑 */
+.bio-dark-dropdown,
+.bio-dark-select-dropdown {
+  background-color: #1e293b !important;
+  border: 1px solid #334155 !important;
+}
+.bio-dark-dropdown .el-dropdown-menu__item,
+.bio-dark-select-dropdown .el-select-dropdown__item {
+  color: #94a3b8 !important;
+}
+.bio-dark-dropdown .el-dropdown-menu__item:hover,
+.bio-dark-select-dropdown .el-select-dropdown__item.hover,
+.bio-dark-select-dropdown .el-select-dropdown__item:hover {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+}
+.bio-dark-dialog {
+  background-color: #0f172a !important;
+  border: 1px solid #1e293b;
+  border-radius: 12px;
+}
+.bio-dark-dialog .el-dialog__title {
+  color: #f8fafc;
+  font-weight: 600;
+}
+.bio-dark-dialog .el-dialog__header {
+  border-bottom: 1px solid #1e293b;
+  padding: 16px 20px;
+}
+.bio-dark-dialog .el-dialog__body {
+  padding: 24px;
+  background: #0b0f19;
+}
+.bio-dark-dialog .el-dialog__footer {
+  border-top: 1px solid #1e293b;
+  background: #0f172a;
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
 }
 </style>

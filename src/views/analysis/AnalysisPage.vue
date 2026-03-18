@@ -5,6 +5,16 @@
         <div class="greeting">
           <h2 class="title">
             <i class="el-icon-cpu"></i> 云端生信工作台 (Bio-OS)
+            <el-tag
+              v-if="currentProjectId"
+              type="warning"
+              effect="dark"
+              style="margin-left: 15px; cursor: pointer"
+              @click="exitWorkspace"
+            >
+              <i class="el-icon-folder-opened"></i> 当前课题 ID:
+              {{ currentProjectId }} <i class="el-icon-close"></i>
+            </el-tag>
             <span v-if="username" class="user-badge"
               >{{ username }}，欢迎回来</span
             >
@@ -106,7 +116,24 @@
                 @click="openTaskDetail(task)"
               >
                 <div class="item-info">
-                  <div class="item-title">{{ task.name }}</div>
+                  <div class="item-title">
+                    <span class="t-name" :title="task.name">{{
+                      task.name
+                    }}</span>
+                    <el-tag
+                      v-if="
+                        task.projectName && task.projectName !== '未绑定课题'
+                      "
+                      size="mini"
+                      type="info"
+                      effect="plain"
+                      class="dark-project-tag"
+                    >
+                      <i class="el-icon-folder-opened"></i>
+                      {{ task.projectName }}
+                    </el-tag>
+                    <span v-else class="dark-no-project">- 独立任务 -</span>
+                  </div>
                   <div class="item-meta">{{ task.time }} · {{ task.type }}</div>
                 </div>
                 <el-tag :type="task.statusType" size="mini" effect="plain">{{
@@ -186,7 +213,11 @@
               </div>
             </div>
           </div>
-          <RecentFiles :userId="userId" @upload-click="handleUploadData" />
+          <RecentFiles
+            :userId="userId"
+            :projectId="currentProjectId"
+            @upload-click="handleUploadData"
+          />
         </div>
       </div>
     </div>
@@ -212,16 +243,45 @@
         </div>
 
         <el-form :model="taskForm" label-position="top" class="bio-dark-form">
-          <el-form-item label="挂载输入数据 (Fastq/BAM/FASTA/SDF)">
+          <el-form-item label="归属科研空间 (Workspace)" prop="projectId">
+            <el-select
+              v-model="taskForm.projectId"
+              placeholder="请选择本次任务归属的课题"
+              style="width: 100%"
+              popper-class="bio-dark-select-dropdown"
+              @change="handleProjectChange"
+            >
+              <el-option
+                v-for="proj in projectList"
+                :key="proj.id"
+                :label="proj.name"
+                :value="proj.id"
+              >
+                <span style="float: left"
+                  ><i class="el-icon-folder"></i> {{ proj.name }}</span
+                >
+              </el-option>
+            </el-select>
+          </el-form-item>
+
+          <el-form-item
+            label="挂载输入数据 (Fastq/BAM/FASTA/SDF)"
+            prop="fileIds"
+          >
             <el-select
               v-model="taskForm.fileIds"
               multiple
-              placeholder="请从云端数据舱选择文件"
+              :disabled="!taskForm.projectId"
+              :placeholder="
+                taskForm.projectId
+                  ? '请选择该空间下的数据文件'
+                  : '请先在上方选择归属空间'
+              "
               style="width: 100%"
               popper-class="bio-dark-select-dropdown"
             >
               <el-option
-                v-for="file in availableFiles"
+                v-for="file in filteredProjectFiles"
                 :key="file.id"
                 :label="file.originalName || file.name"
                 :value="file.id"
@@ -370,6 +430,7 @@ import AnalysisTemplates from "@/components/analysis/AnalysisTemplates.vue";
 import RecentFiles from "@/components/analysis/RecentFiles.vue";
 import FileUploader from "@/components/analysis/FileUploader.vue";
 import TaskTerminalDrawer from "@/components/analysis/TaskTerminalDrawer.vue";
+import { getUserProjects } from "@/api/project";
 import {
   getPipelines,
   getDashboard,
@@ -400,25 +461,44 @@ export default {
       submitting: false,
       selectedPipeline: null,
       availableFiles: [],
+      projectList: [],
       taskForm: {
+        projectId: null,
         fileIds: [],
         params: '{\n  "genome": "hg38",\n  "pvalue": 0.05,\n  "threads": 8\n}',
       },
+      rules: {
+        projectId: [
+          {
+            required: true,
+            message: "为了保证数据溯源，必须选择归属的科研空间",
+            trigger: "change",
+          },
+        ],
+        fileIds: [
+          {
+            required: true,
+            message: "请至少挂载一个输入数据文件",
+            trigger: "change",
+          },
+        ],
+      },
 
-      // 🌟 --- 3D 渲染舱专属状态 ---
+      // --- 3D 渲染舱专属状态 ---
       show3DViewer: false,
       loading3D: false,
       selectedStructure: "",
       renderStyle: "cartoon",
-      viewer3D: null, // 存放 3Dmol WebGL 实例
-      currentMolData: "", // 存放纯文本的分子数据
+      viewer3D: null,
+      currentMolData: "",
+
+      currentProjectId: null,
     };
   },
   computed: {
     ...mapState("user", ["isLoggedIn", "userInfo"]),
     ...mapGetters("user", ["userId", "username", "userRole"]),
 
-    // 🌟 从所有可用文件中，智能过滤出结构文件 (PDB, SDF 等)
     structureFiles() {
       return this.availableFiles.filter((f) => {
         const fileName = (f.originalName || f.name || "").toLowerCase();
@@ -430,6 +510,15 @@ export default {
         );
       });
     },
+
+    filteredProjectFiles() {
+      if (!this.taskForm.projectId) {
+        return [];
+      }
+      return this.availableFiles.filter(
+        (file) => file.projectId === this.taskForm.projectId,
+      );
+    },
   },
   watch: {
     isLoggedIn(newVal) {
@@ -438,16 +527,21 @@ export default {
     },
   },
   mounted() {
+    if (this.$route.query.projectId) {
+      this.currentProjectId = this.$route.query.projectId;
+      this.$message.success("已进入专属课题工作台");
+    }
+
     this.fetchPipelineData();
     if (this.isLoggedIn) {
       this.startDashboardPolling();
-      this.fetchAvailableFiles(); // 预先拉取文件数据
+      this.fetchAvailableFiles();
+      this.fetchUserProjects();
     }
     this.checkAutoLaunch();
   },
   beforeDestroy() {
     this.stopDashboardPolling();
-    // 销毁 3D 引擎释放内存
     if (this.viewer3D) {
       this.viewer3D.clear();
       this.viewer3D = null;
@@ -477,7 +571,7 @@ export default {
       if (result.error === 0) {
         setTimeout(() => {
           this.showUploadDialog = false;
-          this.fetchAvailableFiles(); // 上传完毕后更新本地可选列表
+          this.fetchAvailableFiles();
         }, 1200);
       } else {
         this.$message.warning("部分文件上传遇到问题，请检查列表");
@@ -487,11 +581,12 @@ export default {
     async fetchDashboardData() {
       if (!this.userId) return;
       try {
-        const res = await getDashboard(this.userId);
+        const res = await getDashboard(this.userId, this.currentProjectId);
         const dashData = res.data?.data || res.data;
         if (dashData) {
           if (dashData.stats) this.stats = dashData.stats;
           if (dashData.recentTasks && Array.isArray(dashData.recentTasks)) {
+            // 🌟 核心修改：在映射数据时，把后端传的 projectName 也接过来
             this.recentTasks = dashData.recentTasks.map((task) => {
               const statusInfo = this.parseTaskStatus(task.status);
               return {
@@ -504,6 +599,7 @@ export default {
                 status: statusInfo.text,
                 statusType: statusInfo.type,
                 progress: task.progress,
+                projectName: task.projectName || "未绑定课题", // 接收项目名
               };
             });
           }
@@ -560,7 +656,7 @@ export default {
     async fetchAvailableFiles() {
       if (!this.userId) return;
       try {
-        const res = await getRecentFiles(this.userId);
+        const res = await getRecentFiles(this.userId, this.currentProjectId);
         if (res && res.data) {
           this.availableFiles = res.data;
         }
@@ -572,6 +668,10 @@ export default {
     async submitTask() {
       if (this.taskForm.fileIds.length === 0) {
         this.$message.warning("指令错误：请至少挂载一个输入数据文件！");
+        return;
+      }
+      if (!this.taskForm.projectId) {
+        this.$message.warning("发射失败：请先选择任务归属的科研空间！");
         return;
       }
 
@@ -591,6 +691,7 @@ export default {
       this.submitting = true;
       try {
         const dto = {
+          projectId: this.taskForm.projectId,
           pipelineId: this.selectedPipeline.id,
           fileIds: this.taskForm.fileIds,
           params: validJsonString,
@@ -652,9 +753,31 @@ export default {
       }
     },
 
-    // 🌟 ================= 3D 渲染专属逻辑 ================= 🌟
+    async fetchUserProjects() {
+      try {
+        const res = await getUserProjects(this.userId);
+        if (res && res.data) {
+          this.projectList = res.data;
+        }
+      } catch (error) {
+        console.error("拉取项目列表失败", error);
+      }
+    },
 
-    // 打开 3D 渲染弹窗
+    handleProjectChange() {
+      this.taskForm.fileIds = [];
+      this.$message.info("已切换空间，请重新挂载对应的数据文件");
+    },
+
+    exitWorkspace() {
+      this.currentProjectId = null;
+      this.$router.replace({ query: {} }).catch(() => {});
+      this.$message.info("已退出专属空间，恢复全局视角");
+
+      this.fetchAvailableFiles();
+      this.fetchDashboardData();
+    },
+
     async openStructureViewer() {
       if (!this.isLoggedIn) {
         this.$message.warning("请先验证研究员身份 (登录)");
@@ -663,23 +786,18 @@ export default {
       this.show3DViewer = true;
       this.selectedStructure = "";
 
-      // 拉取一次最新文件列表，供下拉框选择
       await this.fetchAvailableFiles();
 
-      // 清空可能遗留的旧模型
       if (this.viewer3D) {
         this.viewer3D.clear();
       }
     },
 
-    // 🌟WebGL 结构加载引擎
     async loadStructure(fileId) {
       if (!fileId) return;
       this.loading3D = true;
 
       try {
-        // 🚨 核心修复 1：放弃 preview 接口，直接请求 download 接口获取完整物理文件流
-        // 这里使用原生的 fetch API，完美绕过 axios 可能存在的 JSON 拦截器
         const fileUrl = `/api/files/download/${fileId}?userId=${this.userId}`;
         const response = await fetch(fileUrl);
 
@@ -687,10 +805,8 @@ export default {
           throw new Error("文件流获取失败");
         }
 
-        // 把文件流转换为纯文本字符串
         this.currentMolData = await response.text();
 
-        // 🚨 核心修复 2：防崩溃安检！拦截模拟的假文件或被污染的文本
         if (
           this.currentMolData.includes("【Bio-OS 系统提示】") ||
           this.currentMolData.includes("<!DOCTYPE html>")
@@ -702,22 +818,18 @@ export default {
           return;
         }
 
-        // 确保 DOM 已经就绪
         this.$nextTick(() => {
           let element = document.getElementById("glcontainer");
 
-          // 如果是首次加载，初始化引擎
           if (!this.viewer3D) {
-            element.innerHTML = ""; // 清空占位文字
+            element.innerHTML = "";
             this.viewer3D = window.$3Dmol.createViewer(element, {
-              backgroundColor: "black", // 契合暗黑主题
+              backgroundColor: "black",
             });
           }
 
-          // 清理旧模型画布
           this.viewer3D.clear();
 
-          // 自动判断后缀格式
           const fileObj = this.structureFiles.find((f) => f.id === fileId);
           const format = (fileObj.originalName || fileObj.name)
             .toLowerCase()
@@ -725,10 +837,8 @@ export default {
             ? "sdf"
             : "pdb";
 
-          // 🚨 核心：把完整、纯净的数据喂给渲染引擎
           this.viewer3D.addModel(this.currentMolData, format);
 
-          // 应用皮肤并居中缩放
           this.updateRenderStyle();
           this.viewer3D.zoomTo();
 
@@ -742,7 +852,6 @@ export default {
       }
     },
 
-    // 切换 3D 渲染皮肤
     updateRenderStyle() {
       if (!this.viewer3D) return;
 
@@ -963,7 +1072,7 @@ export default {
   }
 }
 
-/* ================= 4. 动态任务列表样式 ================= */
+/* ================= 4. 动态任务列表样式 (核心修改) ================= */
 .static-list {
   display: flex;
   flex-direction: column;
@@ -983,13 +1092,34 @@ export default {
     background: #262f3f;
     cursor: pointer;
   }
+  /* 🌟 这里是改过的 CSS 样式，包含超出隐藏和标签美化 */
   .item-info {
     flex: 1;
+    overflow: hidden; /* 防止溢出 */
     .item-title {
-      font-size: 14px;
-      color: #f8fafc;
-      margin-bottom: 4px;
-      font-weight: 500;
+      display: flex;
+      align-items: center;
+      margin-bottom: 6px;
+      .t-name {
+        font-size: 14px;
+        color: #f8fafc;
+        font-weight: 500;
+        margin-right: 10px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 140px; /* 给右边的项目标签留出空间 */
+      }
+      /* 专属暗黑标签样式 */
+      .dark-project-tag {
+        background: transparent;
+        border-color: #374151;
+        color: #94a3b8;
+      }
+      .dark-no-project {
+        color: #4b5563;
+        font-size: 12px;
+      }
     }
     .item-meta {
       font-size: 12px;
