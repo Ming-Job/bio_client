@@ -2,7 +2,7 @@
   <footer class="minimal-footer">
     <div class="footer-content">
       <div class="footer-copyright">
-        <span>&copy; 2025 生物科教信息平台</span>
+        <span>&copy; 2026 生物科教信息平台</span>
         <span class="separator">|</span>
         <span class="contact-email">
           <i class="el-icon-message"></i>

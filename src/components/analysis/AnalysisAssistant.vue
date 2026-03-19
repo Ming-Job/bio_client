@@ -45,7 +45,7 @@
 
         <div class="area-content">
           <div class="input-section">
-            <div
+          <div
               class="data-mount-bar"
               style="
                 margin-bottom: 16px;
@@ -55,6 +55,7 @@
               "
             >
               <el-upload
+                v-if="!isCloudMounted"
                 action="/api/sandbox-files/upload"
                 :limit="1"
                 :show-file-list="false"
@@ -70,17 +71,23 @@
                   挂载本地实验数据 (Max 10MB)
                 </el-button>
               </el-upload>
+
               <div v-if="mountedFile" class="mounted-tag">
                 <el-tag
                   size="small"
-                  type="success"
+                  :type="isCloudMounted ? 'warning' : 'success'"
                   effect="dark"
                   closable
                   @close="handleRemoveFile"
                 >
-                  <i class="el-icon-document"></i> 已对接沙箱: {{ mountedFile }}
+                  <i :class="isCloudMounted ? 'el-icon-cloudy' : 'el-icon-document'"></i>
+                  {{ isCloudMounted ? '云端案例数据已就绪: ' : '已对接沙箱: ' }} {{ mountedFile }}
                 </el-tag>
               </div>
+              
+              <span v-if="isCloudMounted" style="font-size: 12px; color: #64748b;">
+                (系统已完成沙箱挂载预热)
+              </span>
             </div>
 
             <el-input
@@ -706,6 +713,8 @@ export default {
       checkingStatus: false,
       fixing: false,
 
+      
+
       // 🌟 核心升级 1：拆分通用提示词与数据就绪提示词
       defaultExamples: [
         "生成随机矩阵数据，做主成分分析(PCA)并绘制散点图 (全英文)",
@@ -725,7 +734,10 @@ export default {
       previewVisible: false,
       currentPreviewImage: "",
       mountedFile: null,
+      isCloudMounted: false, // 🌟 新增：标记是否为系统自动挂载的数据
       showWelcomeModal: false,
+
+      
     };
   },
   computed: {
@@ -761,8 +773,25 @@ export default {
     },
   },
   mounted() {
+    // 🌟 1. 拦截从案例大厅传过来的参数
+    const { mount_dataset, fork_prompt } = this.$route.query;
+
+    if (mount_dataset) {
+      this.mountedFile = mount_dataset;
+      this.isCloudMounted = true; 
+      // 延迟一点弹出，视觉效果更好
+      setTimeout(() => {
+        this.$message.success(`🚀 算力节点已锚定云端数据：${mount_dataset}`);
+      }, 300);
+    }
+
+    if (fork_prompt) {
+      this.userInput = fork_prompt;
+    }
+
+    // 2. 原有的指引弹窗逻辑（如果带数据跳转过来，就不弹窗打扰用户了）
     const hasSeenTutorial = localStorage.getItem("bio_os_tutorial_seen");
-    if (!hasSeenTutorial) {
+    if (!hasSeenTutorial && !mount_dataset) {
       setTimeout(() => {
         this.showWelcomeModal = true;
       }, 500);
@@ -796,9 +825,10 @@ export default {
         this.$message.error(res.message || "上传失败，连接中断");
       }
     },
-    handleRemoveFile() {
+ handleRemoveFile() {
       this.mountedFile = null;
-      this.$message.info("已卸载当前实验数据");
+      this.isCloudMounted = false; // 🌟 恢复初始状态
+      this.$message.info("已切断数据舱连接");
     },
     insertTab(e) {
       const textarea = e.target;
@@ -820,11 +850,18 @@ export default {
       }
       this.loading = true;
       this.codeStatus = "generating";
+
+      // 🌟 终极紧箍咒：把文件名放在开头，强制规范变量名
+      let finalQuestion = this.userInput;
+      if (this.mountedFile) {
+        finalQuestion = `【最高优先级指令】：底层沙箱已就绪，当前挂载的真实文件绝对路径为 "/tmp/sandbox/${this.mountedFile}"。你接下来生成的 Python 代码中，所有的 pd.read_csv() 必须精准使用这个路径，绝不能使用 'expression_matrix.csv' 等任何假名字！！！\n\n用户需求：` + finalQuestion;
+      }
       try {
         const response = await request({
           url: "/api/analysis/assist",
           method: "post",
-          data: { question: this.userInput, fileName: this.mountedFile },
+          // 这里发给后端的是加工过带有真实文件名的 finalQuestion
+          data: { question: finalQuestion, fileName: this.mountedFile }, 
         });
         const data = response.data || response;
         this.generatedCode = data.code;
@@ -905,6 +942,7 @@ export default {
             code: this.executionCode,
             language: this.language,
             timeout: parseInt(this.timeout),
+            fileName: this.mountedFile,
           },
         });
         const data = response.data || response;

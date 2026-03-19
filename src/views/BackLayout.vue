@@ -48,30 +48,15 @@
             <span slot="title">课程管理</span>
           </el-menu-item>
 
-          <el-menu-item index="/back/admin/datasets">
+          <el-menu-item index="/back/admin/cases">
             <i class="el-icon-files menu-icon"></i>
-            <span slot="title">数据集管理</span>
+            <span slot="title">案例管理</span>
           </el-menu-item>
         </template>
 
-        <!-- 学生菜单 -->
-        <template v-else-if="isUser">
-          <el-menu-item index="/back/user/dashboard">
-            <i class="el-icon-s-opportunity menu-icon"></i>
-            <span slot="title">仪表盘</span>
-          </el-menu-item>
+        <!-- 普通用户菜单 -->
 
-          <el-menu-item index="/back/user/learning-center">
-            <i class="el-icon-school menu-icon"></i>
-            <span slot="title">学习中心</span>
-          </el-menu-item>
-
-          <el-menu-item index="/back/user/courses">
-            <i class="el-icon-collection menu-icon"></i>
-            <span slot="title">我的课程</span>
-          </el-menu-item>
-        </template>
-
+        
         <!-- 公共个人设置菜单 -->
         <el-submenu
           index="settings"

@@ -21,6 +21,8 @@
     "js-cookie": "^3.0.5",
     "js-md5": "^0.8.3",
     "lodash": "^4.17.23",
+    "markdown-it": "^14.1.1",
+    "markdown-it-katex": "^2.0.3",
     "marked": "^17.0.3",
     "three": "^0.183.2",
     "vue": "^2.6.14",

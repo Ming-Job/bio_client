@@ -34,7 +34,7 @@
             ><i class="el-icon-discover"></i> 三维洞察</el-radio-button
           >
           <el-radio-button label="template"
-            ><i class="el-icon-document-copy"></i> 零代码模板</el-radio-button
+            ><i class="el-icon-document-copy"></i> 分析模板</el-radio-button
           >
           <el-radio-button label="copilot"
             ><i class="el-icon-cpu"></i> 极客副驾</el-radio-button
@@ -43,69 +43,40 @@
       </div>
 
       <div class="case-grid">
-        <div
+       <div
           v-for="caseItem in filteredCases"
           :key="caseItem.id"
           class="case-card"
+          @click="previewCase(caseItem)" 
+          style="cursor: pointer;"
         >
           <div class="card-image-wrapper">
-            <img
-              :src="resolveImageUrl(caseItem.imageUrl)"
-              :alt="caseItem.title"
-              class="card-image"
-            />
+            <img :src="resolveImageUrl(caseItem.imageUrl)" :alt="caseItem.title" class="card-image" />
             <div class="image-overlay">
-              <el-button
-                type="primary"
-                size="mini"
-                icon="el-icon-view"
-                circle
-                class="preview-btn"
-                @click="previewCase(caseItem)"
-              ></el-button>
+              <el-button type="primary" size="mini" icon="el-icon-view" circle class="preview-btn"></el-button>
             </div>
-
             <div class="module-badge" :class="caseItem.category">
               {{ getCategoryName(caseItem.category) }}
             </div>
           </div>
 
           <div class="card-body">
-            <div class="tags">
-              <el-tag
-                v-for="tag in caseItem.tags"
-                :key="tag"
-                size="mini"
-                effect="dark"
-                class="cyber-tag"
-                >{{ tag }}</el-tag
-              >
-            </div>
-            <h3 class="case-title">{{ caseItem.title }}</h3>
-            <p class="case-desc">{{ caseItem.description }}</p>
+             <h3 class="case-title">{{ caseItem.title }}</h3>
+             <p class="case-desc">{{ caseItem.description }}</p>
+             </div>
 
-            <div class="case-meta">
-              <span class="dataset-info">
-                <i class="el-icon-coin"></i> 数据集: {{ caseItem.dataset }}
-              </span>
-              <span class="views-info">
-                <i class="el-icon-download"></i> {{ caseItem.forks }} Forks
-              </span>
-            </div>
-          </div>
-
-          <div class="card-footer">
+          <!-- <div class="card-footer">
             <el-button
               :type="getButtonType(caseItem.category)"
               size="small"
               class="fork-btn"
               :class="getButtonGlowClass(caseItem.category)"
-              @click="dispatchToEngine(caseItem)"
+              @click.stop="dispatchToEngine(caseItem)" 
               :icon="getButtonIcon(caseItem.category)"
             >
               {{ getButtonText(caseItem.category) }}
             </el-button>
-          </div>
+          </div> -->
         </div>
       </div>
 
@@ -214,10 +185,18 @@ export default {
       };
       return map[cat] || "";
     },
-    previewCase(caseItem) {
+   previewCase(caseItem) {
+      // 🌟 极客探针：看看 ID 到底有没有拿到！
+      console.log("【准备发车】当前点击的案例数据：", caseItem);
+      
+      if (!caseItem.id) {
+        this.$message.error("致命错误：当前案例缺少主键 ID，请检查后端字段！");
+        return;
+      }
+
       this.$router.push({
-        name: "CaseDetail", // 👈 对应 router 里的 name
-        params: { id: caseItem.id }, // 👈 这里的 id 对应 path: "case/:id"
+        name: "CaseDetail",
+        params: { id: caseItem.id },
       });
     },
     dispatchToEngine(caseItem) {

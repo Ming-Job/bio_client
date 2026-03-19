@@ -1,20 +1,21 @@
 <template>
   <div class="carousel-container">
-    <el-carousel height="400px" indicator-position="outside" :interval="5000">
+    <el-carousel height="420px" indicator-position="outside" :interval="6000">
       <el-carousel-item v-for="(item, index) in carouselItems" :key="index">
         <div
           class="carousel-item"
           :style="{ backgroundImage: `url(${getImageUrl(item.image)})` }"
         >
           <div class="carousel-content">
-            <h2>{{ item.title }}</h2>
-            <p>{{ item.description }}</p>
+            <h2 class="glow-text">{{ item.title }}</h2>
+            <p class="cyber-desc">{{ item.description }}</p>
             <el-button
               type="primary"
               size="medium"
+              class="cyber-btn"
               @click="handleLearnMore(item)"
             >
-              了解更多
+              {{ item.btnText || '了解更多' }}
             </el-button>
           </div>
         </div>
@@ -31,46 +32,41 @@ export default {
       carouselItems: [
         {
           id: 1,
-          title: "探索生命奥秘",
-          description: "从微观细胞到宏观生态系统，全方位了解生命科学",
+          title: "Bio-OS 云原生算力沙箱",
+          description: "告别繁琐环境配置。一键分配 Python/R 隔离容器，千兆带宽静默挂载云端数据集，随时随地开启极客推演。",
           image: "ceil01.webp",
-          link: "/category/biodiversity",
+          link: "/analysis",
+          btnText: "启动算力节点"
         },
         {
           id: 2,
-          title: "基因科技前沿",
-          description: "CRISPR基因编辑、合成生物学等最新研究成果",
+          title: "AI 极客副驾 (Copilot)",
+          description: "由硅基流动驱动。通过自然语言对话，自动生成并执行 Pandas 分析与可视化代码，让 AI 成为你的专属生信工程师。",
           image: "ceil02.webp",
-          link: "/category/gene-tech",
+          link: "/assistant",
+          btnText: "唤醒副驾"
         },
         {
           id: 3,
-          title: "生态保护行动",
-          description: "保护生物多样性，共建和谐生态环境",
+          title: "3D 分子与组学管线矩阵",
+          description: "内置 3D-Mol 空间引擎与零代码工作流。从虚拟筛选到转录组差异分析，科研成果触手可及。",
           image: "struture01.jpg",
-          link: "/category/ecology",
+          link: "/case",
+          btnText: "进入控制台"
         },
       ],
     };
   },
   methods: {
-    // 获取图片路径的正确方法
     getImageUrl(imageName) {
-      // 在 Vue 中处理静态资源路径
       if (process.env.NODE_ENV === "development") {
-        // 开发环境
         return require(`@/assets/carousel/${imageName}`);
       } else {
-        // 生产环境
         return `/img/${imageName}`;
       }
     },
-
     handleLearnMore(item) {
-      // 根据 item 的 link 属性进行路由跳转
-      if (item.link) {
-        this.$router.push(item.link);
-      }
+      if (item.link) this.$router.push(item.link);
     },
     preloadImages() {
       this.carouselItems.forEach((item) => {
@@ -80,7 +76,6 @@ export default {
     },
   },
   mounted() {
-    // 组件挂载后可以预加载图片
     this.preloadImages();
   },
 };
@@ -90,10 +85,10 @@ export default {
 .carousel-container {
   max-width: 1200px;
   margin: 40px auto 40px;
-  border-radius: 10px;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  background-color: #f5f5f5;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  background-color: #111827;
 }
 
 .carousel-item {
@@ -107,157 +102,65 @@ export default {
   position: relative;
 }
 
+/* 加深遮罩，让文字更清晰 */
 .carousel-item::before {
   content: "";
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(to right, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.3));
+  inset: 0;
+  background: linear-gradient(90deg, rgba(15, 23, 42, 0.9) 0%, rgba(15, 23, 42, 0.4) 100%);
 }
 
 .carousel-content {
   position: relative;
   z-index: 2;
-  text-align: center;
-  color: white;
-  padding: 40px;
-  max-width: 800px;
-  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+  text-align: left; /* 改为左对齐，更具大厂控制台风格 */
+  width: 100%;
+  padding: 0 80px;
+  max-width: 1000px;
 }
 
-.carousel-content h2 {
-  font-size: 2.5rem;
+.glow-text {
+  font-size: 2.8rem;
   margin-bottom: 20px;
-  font-weight: bold;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 1px;
+  text-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
   animation: fadeInDown 0.8s ease;
 }
 
-.carousel-content p {
-  font-size: 1.2rem;
-  margin-bottom: 30px;
-  line-height: 1.6;
-  opacity: 0.9;
+.cyber-desc {
+  font-size: 1.15rem;
+  margin-bottom: 35px;
+  line-height: 1.8;
+  color: #e2e8f0;
+  max-width: 600px;
   animation: fadeInUp 0.8s ease 0.3s both;
 }
 
-.carousel-content .el-button {
+.cyber-btn {
   animation: fadeIn 0.8s ease 0.6s both;
-  padding: 12px 36px;
-  font-size: 1rem;
+  padding: 12px 32px;
+  font-size: 1.05rem;
   font-weight: bold;
-  border-radius: 25px;
-  background-color: #4caf50;
-  border-color: #4caf50;
+  border-radius: 8px; /* 方形圆角更具科技感 */
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  border: none;
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
   transition: all 0.3s ease;
 }
 
-.carousel-content .el-button:hover {
-  background-color: #3d8b40;
-  border-color: #3d8b40;
+.cyber-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6);
 }
 
-/* 响应式设计 */
 @media (max-width: 768px) {
-  .carousel-container {
-    margin: 0 10px 30px;
-    height: 300px;
-  }
-
-  .carousel-content {
-    padding: 20px;
-  }
-
-  .carousel-content h2 {
-    font-size: 1.8rem;
-  }
-
-  .carousel-content p {
-    font-size: 1rem;
-  }
-
-  .carousel-content .el-button {
-    padding: 10px 24px;
-    font-size: 0.9rem;
-  }
+  .carousel-content { padding: 0 30px; text-align: center; }
+  .glow-text { font-size: 2rem; }
 }
 
-@media (max-width: 480px) {
-  .carousel-container {
-    height: 250px;
-  }
-
-  .carousel-content h2 {
-    font-size: 1.5rem;
-    margin-bottom: 15px;
-  }
-
-  .carousel-content p {
-    font-size: 0.9rem;
-    margin-bottom: 20px;
-  }
-}
-
-/* 动画效果 */
-@keyframes fadeInDown {
-  from {
-    opacity: 0;
-    transform: translateY(-30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* 增强轮播指示器样式 */
-.el-carousel__indicators {
-  bottom: -40px;
-}
-
-.el-carousel__indicator {
-  padding: 8px;
-}
-
-.el-carousel__button {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background-color: #ccc;
-  transition: all 0.3s ease;
-}
-
-.el-carousel__indicator.is-active .el-carousel__button {
-  background-color: #4caf50;
-  width: 30px;
-  border-radius: 15px;
-}
-
-/* 添加悬停效果 */
-.el-carousel__arrow:hover {
-  background-color: rgba(76, 175, 80, 0.8);
-}
+@keyframes fadeInDown { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 </style>

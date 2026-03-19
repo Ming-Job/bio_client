@@ -66,17 +66,10 @@
           >
             <i class="el-icon-plus"></i> 继续添加
           </el-button>
-          <el-button
-            type="primary"
-            round
-            class="glass-btn-primary"
-            :loading="uploading"
-            :disabled="uploading"
-            @click="startUpload"
-          >
-            <i class="el-icon-upload2"></i>
-            {{ uploading ? "数据传输中..." : "发射至云端" }}
-          </el-button>
+         <el-button type="primary" round class="glass-btn-primary" :loading="uploading" :disabled="uploading" @click="startUpload">
+  <i class="el-icon-upload2"></i>
+  {{ uploading ? "正在上传..." : "开始上传" }}
+</el-button>
         </div>
       </div>
 
@@ -148,20 +141,13 @@
         </div>
       </div>
 
-      <div class="glass-stats-pill">
-        <div class="stat-group">
-          <i class="el-icon-files"></i> 总载荷:
-          <b>{{ formatFileSize(totalSize) }}</b>
-        </div>
-        <div class="stat-divider"></div>
-        <div class="stat-group success">
-          <i class="el-icon-success"></i> 挂载成功: <b>{{ successCount }}</b>
-        </div>
-        <div class="stat-divider"></div>
-        <div class="stat-group error">
-          <i class="el-icon-error"></i> 失败/拦截: <b>{{ errorCount }}</b>
-        </div>
-      </div>
+     <div class="glass-stats-pill">
+      <div class="stat-group"><i class="el-icon-files"></i> 总大小: <b>{{ formatFileSize(totalSize) }}</b></div>
+      <div class="stat-divider"></div>
+      <div class="stat-group success"><i class="el-icon-success"></i> 上传成功: <b>{{ successCount }}</b></div>
+      <div class="stat-divider"></div>
+      <div class="stat-group error"><i class="el-icon-error"></i> 上传失败: <b>{{ errorCount }}</b></div>
+    </div>
     </div>
   </div>
 </template>

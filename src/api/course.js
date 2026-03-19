@@ -89,3 +89,51 @@ export function recommendCoursesByAi(query) {
     data: { query }
   })
 }
+
+
+
+// ==================== 管理员专属接口 ====================
+
+// 管理员：获取分页课程列表
+export function getAdminCourseList(params) {
+  return request({
+    url: '/api/admin/courses',
+    method: 'get',
+    params
+  })
+}
+
+// 管理员：新增课程
+export function addCourse(data) {
+  return request({
+    url: '/api/admin/courses',
+    method: 'post',
+    data
+  })
+}
+
+// 管理员：更新课程
+export function updateCourse(id, data) {
+  return request({
+    url: `/api/admin/courses/${id}`,
+    method: 'put',
+    data
+  })
+}
+
+// 管理员：删除课程
+export function deleteCourse(id) {
+  return request({
+    url: `/api/admin/courses/${id}`,
+    method: 'delete'
+  })
+}
+
+// 管理员：更改课程状态
+export function updateCourseStatus(id, status) {
+  return request({
+    url: `/api/admin/courses/${id}/status`,
+    method: 'patch',
+    params: { status }
+  })
+}

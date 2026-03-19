@@ -126,21 +126,25 @@
           </div>
 
           <div class="card-stats">
-            <div class="stat-item" title="挂载文件数">
+            <div 
+              class="stat-item clickable-stat" 
+              title="点击查看项目文件详情"
+              @click="openFileListDialog(project)"
+            >
               <span class="stat-value">{{ project.fileCount || 0 }}</span>
-              <span class="stat-label">文件数</span>
+              <span class="stat-label">文件数 <i class="el-icon-search"></i></span>
             </div>
             <div class="stat-divider"></div>
             <div class="stat-item" title="占用云存储空间">
               <span class="stat-value">{{
-                project.formattedTotalFileSize || "0 B"
+                formatFileSize(project.totalFileSizeBytes)
               }}</span>
               <span class="stat-label">存储量</span>
             </div>
             <div class="stat-divider"></div>
             <div class="stat-item" title="已执行分析流">
               <span class="stat-value">{{
-                project.analysisTaskCount || 0
+                project.analysisTaskCount || 0  
               }}</span>
               <span class="stat-label">任务数</span>
             </div>
@@ -227,12 +231,60 @@
         </el-button>
       </div>
     </el-dialog>
+
+    <el-dialog
+      :title="currentViewProjectName + ' - 文件概览'"
+      :visible.sync="fileDialogVisible"
+      width="700px"
+      custom-class="file-list-dialog"
+    >
+      <div v-loading="fileLoading" style="min-height: 200px;">
+        <el-tabs v-model="activeFileTab">
+          <el-tab-pane label="原始上传文件 (Source)" name="uploaded">
+            <el-table :data="uploadedFiles" height="350" size="small" stripe empty-text="暂无上传数据">
+              <el-table-column prop="name" label="文件名称" show-overflow-tooltip>
+                <template slot-scope="scope">
+                  <i class="el-icon-document text-blue" style="margin-right: 5px;"></i>
+                  {{ scope.row.name }}
+                </template>
+              </el-table-column>
+              <el-table-column prop="size" label="文件大小" width="120">
+                <template slot-scope="scope">
+                  {{ formatFileSize(scope.row.size) }}
+                </template>
+              </el-table-column>
+              <el-table-column prop="createdAt" label="上传时间" width="160"></el-table-column>
+            </el-table>
+          </el-tab-pane>
+
+          <el-tab-pane label="引擎生成文件 (Generated)" name="generated">
+            <el-table :data="generatedFiles" height="350" size="small" stripe empty-text="暂无生成产物">
+              <el-table-column prop="name" label="文件名称" show-overflow-tooltip>
+                <template slot-scope="scope">
+                  <i class="el-icon-picture-outline text-green" style="margin-right: 5px;" v-if="isImage(scope.row.name)"></i>
+                  <i class="el-icon-document text-green" style="margin-right: 5px;" v-else></i>
+                  {{ scope.row.name }}
+                </template>
+              </el-table-column>
+              <el-table-column prop="size" label="文件大小" width="120">
+                <template slot-scope="scope">
+                  {{ formatFileSize(scope.row.size) }}
+                </template>
+              </el-table-column>
+              <el-table-column prop="createdAt" label="生成时间" width="160"></el-table-column>
+            </el-table>
+          </el-tab-pane>
+        </el-tabs>
+      </div>
+    </el-dialog>
+
   </div>
 </template>
 
 <script>
 import { mapState, mapGetters } from "vuex";
-import * as echarts from "echarts"; // 🌟 引入 ECharts
+import * as echarts from "echarts";
+import { getAllFileList } from "@/api/file";
 import {
   getUserProjects,
   createProject,
@@ -262,6 +314,13 @@ export default {
           { required: true, message: "科研课题名称不能为空", trigger: "blur" },
         ],
       },
+
+      // 🌟 新增：文件列表弹窗相关状态
+      fileDialogVisible: false,
+      fileLoading: false,
+      activeFileTab: 'uploaded',
+      currentViewProjectName: '',
+      projectFiles: [], // 当前选中项目的所有文件
     };
   },
   computed: {
@@ -276,6 +335,16 @@ export default {
           (p.description && p.description.toLowerCase().includes(q)),
       );
     },
+   // 筛选上传的文件
+    uploadedFiles() {
+      // 增加对小写 'upload' 的支持
+      return this.projectFiles.filter(f => f.sourceType === 'UPLOADED' || f.sourceType === 'upload');
+    },
+    // 筛选生成的文件
+    generatedFiles() {
+      // 增加对小写 'generate' 的支持 (假设后端生成的叫这个)
+      return this.projectFiles.filter(f => f.sourceType === 'GENERATE' || f.sourceType === 'generate');
+    }
   },
   mounted() {
     if (this.isLoggedIn && this.userId) {
@@ -284,7 +353,6 @@ export default {
       this.$message.warning("请先登录系统");
       this.$router.push("/home");
     }
-    // 🌟 监听窗口大小变化，让图表自动缩放
     window.addEventListener("resize", this.resizeCharts);
   },
   beforeDestroy() {
@@ -299,7 +367,6 @@ export default {
         const res = await getUserProjects(this.userId);
         if (res && res.data) {
           this.projectList = res.data;
-          // 🌟 数据拉取成功后，立刻渲染 ECharts 图表
           this.$nextTick(() => {
             if (this.projectList.length > 0) {
               this.initCharts();
@@ -313,7 +380,6 @@ export default {
       }
     },
 
-    // 🌟 核心：初始化并渲染 ECharts 数据看板
     initCharts() {
       // 1. 组装存储容量饼图数据
       const storageData = this.projectList
@@ -321,11 +387,10 @@ export default {
           name: p.name,
           value: p.totalFileSizeBytes
             ? (p.totalFileSizeBytes / (1024 * 1024)).toFixed(2)
-            : 0, // 转为 MB
+            : 0,
         }))
-        .filter((item) => item.value > 0); // 过滤掉 0 字节的空项目
+        .filter((item) => item.value > 0);
 
-      // 如果所有项目都是空的，给个占位数据避免饼图难看
       if (storageData.length === 0)
         storageData.push({ name: "暂无挂载数据", value: 1 });
 
@@ -359,7 +424,7 @@ export default {
 
       // 2. 组装分析任务柱状图数据
       const projectNames = this.projectList.map((p) => {
-        return p.name.length > 6 ? p.name.substring(0, 6) + "..." : p.name; // 名字太长截断
+        return p.name.length > 6 ? p.name.substring(0, 6) + "..." : p.name;
       });
       const taskCounts = this.projectList.map((p) => p.analysisTaskCount || 0);
 
@@ -368,24 +433,13 @@ export default {
         this.taskChartInstance = echarts.init(taskChartDom);
         this.taskChartInstance.setOption({
           tooltip: { trigger: "axis", axisPointer: { type: "shadow" } },
-          grid: {
-            left: "3%",
-            right: "4%",
-            bottom: "3%",
-            top: "10%",
-            containLabel: true,
-          },
+          grid: { left: "3%", right: "4%", bottom: "3%", top: "10%", containLabel: true },
           xAxis: [
             {
               type: "category",
               data: projectNames,
               axisTick: { alignWithLabel: true },
-              axisLabel: {
-                color: "#6b7280",
-                fontSize: 11,
-                interval: 0,
-                rotate: 30,
-              },
+              axisLabel: { color: "#6b7280", fontSize: 11, interval: 0, rotate: 30 },
             },
           ],
           yAxis: [
@@ -422,6 +476,73 @@ export default {
 
     formatTime(timeStr) {
       return !timeStr ? "未知时间" : timeStr.substring(0, 10);
+    },
+
+    // 🌟 新增：格式化文件大小
+    formatFileSize(bytes) {
+      if (!bytes || bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    },
+
+    // 🌟 新增：判断是否为图片类型（用于渲染图标）
+    isImage(filename) {
+      if (!filename) return false;
+      const ext = filename.split('.').pop().toLowerCase();
+      return ['png', 'jpg', 'jpeg', 'svg', 'gif'].includes(ext);
+    },
+
+// 🌟 对接真实后端的：打开文件列表弹窗并获取数据
+    async openFileListDialog(project) {
+      this.currentViewProjectName = project.name;
+      this.activeFileTab = 'uploaded';
+      this.fileDialogVisible = true;
+      this.fileLoading = true;
+      this.projectFiles = []; // 每次打开前先清空旧数据
+      
+      try {
+        // 🌟 核心：调用你在 @/api/file.js 中定义的接口
+        // 传入 projectId（必须）和 userId（如果有权限校验需求）
+        const res = await getAllFileList({ 
+          projectId: project.id,
+          userId: this.userId 
+        });
+
+        // 解析后端返回的数据结构 (具体取 res.data 还是 res.data.records 取决于你后端的包装格式)
+        const responseData = res.data || res;
+        let files = [];
+
+        console.log("后端返回的文件列表原始数据:", res);
+        
+        // 兼容普通数组格式或带分页的格式
+        if (Array.isArray(responseData)) {
+          files = responseData;
+        } else if (responseData && Array.isArray(responseData.records)) {
+          files = responseData.records;
+        } else if (responseData && Array.isArray(responseData.data)) {
+          files = responseData.data;
+        }
+
+        // 🌟 数据映射：确保后端字段与前端表格渲染所需字段对应
+        this.projectFiles = files.map(file => ({
+          id: file.id,
+          // 1. 文件名是在 originalName 里的
+          name: file.originalName, 
+          // 2. 文件大小是在 sizeBytes 里的
+          size: file.sizeBytes || 0, 
+          // 3. 时间是在 uploadTime 里的
+          createdAt: file.uploadTime || "未知时间", 
+          // 4. 来源是在 fileSource 里的 (值为 "upload")
+          sourceType: file.fileSource 
+        }));
+      } catch (error) {
+        console.error("文件列表获取报错:", error);
+        this.$message.error('拉取该课题的文件矩阵失败');
+      } finally {
+        this.fileLoading = false;
+      }
     },
 
     enterWorkspace(project) {
@@ -475,7 +596,7 @@ export default {
             this.$message.success("全新的科研工作空间已建立");
           }
           this.dialogVisible = false;
-          this.fetchProjects(); // 拉取完自动重绘 ECharts
+          this.fetchProjects(); 
         } catch (error) {
           this.$message.error(this.isEdit ? "更新失败" : "创建失败");
         } finally {
@@ -511,7 +632,7 @@ export default {
         this.$message.success("空间已彻底销毁");
         this.fetchProjects();
       } catch (error) {
-        // 用户取消或删除失败
+        // 
       }
     },
   },
@@ -577,7 +698,6 @@ export default {
   }
 }
 
-/* 🌟 新增：数据看板样式 */
 .dashboard-section {
   margin-bottom: 24px;
 
@@ -606,7 +726,7 @@ export default {
 
     .echarts-container {
       width: 100%;
-      height: 220px; /* 图表高度 */
+      height: 220px; 
     }
   }
 }
@@ -711,6 +831,25 @@ export default {
     padding: 12px 24px;
     border-top: 1px solid #f3f4f6;
     border-bottom: 1px solid #f3f4f6;
+    
+    /* 🌟 新增：可点击卡片交互样式 */
+    .clickable-stat {
+      cursor: pointer;
+      transition: background-color 0.2s ease, border-radius 0.2s ease;
+      padding: 4px 8px;
+      border-radius: 8px;
+      &:hover {
+        background-color: #e5e7eb;
+        .stat-value, .stat-label {
+          color: #3b82f6;
+        }
+      }
+      .stat-label i {
+        font-size: 12px;
+        margin-left: 2px;
+      }
+    }
+
     .stat-item {
       flex: 1;
       display: flex;
@@ -779,4 +918,6 @@ export default {
 .text-danger {
   color: #ef4444 !important;
 }
+.text-blue { color: #3b82f6; }
+.text-green { color: #10b981; }
 </style>

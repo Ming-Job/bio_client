@@ -4,7 +4,7 @@
       <header class="console-header">
         <div class="greeting">
           <h2 class="title">
-            <i class="el-icon-cpu"></i> 云端生信工作台 (Bio-OS)
+            <i class="el-icon-cpu"></i> 生信工作台 Bio-workplace
             <el-tag
               v-if="currentProjectId"
               type="warning"
@@ -19,12 +19,7 @@
               >{{ username }}，欢迎回来</span
             >
           </h2>
-          <p class="subtitle">
-            当前集群算力空闲，随时可挂载 Fastq/BAM 数据并发起 Pipeline 投递。
-            <span v-if="userId" class="text-blue">
-              (当前身份识别码: UID-{{ userId }})</span
-            >
-          </p>
+         
         </div>
 
         <div class="cluster-stats">
@@ -913,11 +908,6 @@ export default {
         font-weight: normal;
         margin-left: 8px;
       }
-    }
-    .subtitle {
-      margin: 0;
-      font-size: 14px;
-      color: #64748b;
     }
   }
   .cluster-stats {

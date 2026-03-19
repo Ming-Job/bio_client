@@ -21,11 +21,36 @@ export function getCaseDetail(id) {
   })
 }
 
-// 🌟 预留一个未来的管理端接口：发布新案例
-export function createCase(data) {
+// ==================== 管理员案例管理 API ====================
+
+export function getAdminCasePage(params) {
   return request({
-    url: '/api/cases/create',
-    method: 'post',
-    data: data
+    url: '/api/admin/cases',
+    method: 'get',
+    params
   })
 }
+
+export function addCase(data) {
+  return request({
+    url: '/api/admin/cases',
+    method: 'post',
+    data
+  })
+}
+
+export function updateCase(id, data) {
+  return request({
+    url: `/api/admin/cases/${id}`,
+    method: 'put',
+    data
+  })
+}
+
+export function deleteCase(id) {
+  return request({
+    url: `/api/admin/cases/${id}`,
+    method: 'delete'
+  })
+}
+

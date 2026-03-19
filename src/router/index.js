@@ -32,12 +32,10 @@ const AnalysisPage = () => import('@/views/analysis/AnalysisPage.vue')
 const AdminDashboard = () => import('@/views/admin/AdminDashboard.vue')
 const UserManagement = () => import('@/views/admin/UserManagement.vue')
 const CourseManagement = () => import('@/views/admin/CourseManagement.vue')
-const DatasetManagement = () => import('@/views/admin/DatasetManagement.vue')
+const CaseManagement = () => import('@/views/admin/CaseManagement.vue')
 
 // 普通用户后台模块
-const UserDashboard = () => import('@/views/user/UserDashboard.vue')
-const LearningCenter = () => import('@/views/user/LearningCenter.vue')
-const UserCourses = () => import('@/views/user/UserCourses.vue')
+
 
 // 公共设置模块
 const UserProfile = () => import('@/components/user/UserProfile.vue')
@@ -175,8 +173,8 @@ const routes = [
       // 开发者文档
       {
         path: "help",
-        name: "DevDocs",
-        component: { render: h => h('div', { style: 'padding: 100px; text-align: center; color: white;' }, '开发者文档模块开发中...') },
+        name: "DeveloperDoc",
+        component: () => import('@/views/help/DeveloperDoc.vue'),
         meta: { title: "开发者文档" }
       }
     ]
@@ -223,31 +221,15 @@ const routes = [
         meta: { title: '课程管理', roles: ['admin'] }
       },
       {
-        path: 'admin/datasets',
-        name: 'DatasetManagement',
-        component: DatasetManagement,
-        meta: { title: '数据集管理', roles: ['admin'] }
+        path: 'admin/cases',
+        name: 'CaseManagement',
+        component: CaseManagement,
+        meta: { title: '案例管理', roles: ['admin'] }
       },
+     
       
       // 普通用户后台路由
-      {
-        path: 'user/dashboard',
-        name: 'UserDashboard',
-        component: UserDashboard,
-        meta: { title: '用户仪表盘', roles: ['user'] }
-      },
-      {
-        path: 'user/learning-center',
-        name: 'LearningCenter',
-        component: LearningCenter,
-        meta: { title: '学习中心', roles: ['user'] }
-      },
-      {
-        path: 'user/courses',
-        name: 'UserCourses',
-        component: UserCourses,
-        meta: { title: '我的课程', roles: ['user'] }
-      },
+     
       
       // 默认重定向 (非常精妙的设计，保留原样)
       {

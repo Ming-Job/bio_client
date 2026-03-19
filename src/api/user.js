@@ -95,14 +95,6 @@ export function getUserPage(params) {
   })
 }
 
-// 用户统计
-export function getUserStatistics() {
-  return request({
-    url: '/api/user/statistics',
-    method: 'get'
-  })
-}
-
 // 更新用户状态（启用/禁用）根据ID
 export function updateUserStatus(data) {
   return request({
@@ -154,25 +146,35 @@ export function batchDeleteUsers(data) {
   });
 }
 
+// =================== 管理员仪表盘统计数据接口 ===================
 
+// 1. 获取仪表盘四大指标 (修改 url)
+export function getUserStatistics() {
+  return request({
+    // 🌟 原来可能是 /api/user/statistics，现在改成我们新的聚合接口
+    url: '/api/statistics/overview', 
+    method: 'get'
+  })
+}
 
-// 获取用户增长图表数据
+// 2. 获取用户增长图表数据 (修改 url)
 export function getUserGrowthChart(period = '30d') {
   return request({
+    // 🌟 这个保持不变，因为我们后端的路径就叫这个
     url: '/api/statistics/user-growth/chart',
     method: 'get',
     params: { period }
   })
 }
 
-// 获取用户增长原始数据
-export function getUserGrowthData(period = '30d') {
+// 获取课程难度分布饼图数据
+export function getCourseDistribution() {
   return request({
-    url: '/api/statistics/user-growth',
-    method: 'get',
-    params: { period }
+    url: '/api/statistics/course-distribution', // 🌟 指向新的课程分布接口
+    method: 'get'
   })
 }
+// ===================================================================
 
 // 根据ID查找用户名
 export function getUsername(id){
@@ -199,5 +201,7 @@ export function updateUserInfo(data) {
     data
   })
 }
+
+
 
 

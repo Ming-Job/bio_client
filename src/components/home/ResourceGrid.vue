@@ -1,14 +1,17 @@
 <template>
   <div class="resource-section">
     <div class="container">
-      <h2 class="section-title">教学资源库</h2>
+      <div class="section-header-center">
+        <h2 class="section-title">公共算力与数据矩阵</h2>
+        <p class="section-subtitle">Public Compute & Dataset Matrix</p>
+      </div>
 
       <div class="tabs">
         <el-tabs v-model="activeTab" @tab-click="handleTabClick">
-          <el-tab-pane label="课件资料" name="courseware"></el-tab-pane>
-          <el-tab-pane label="实验视频" name="videos"></el-tab-pane>
-          <el-tab-pane label="试题库" name="exams"></el-tab-pane>
-          <el-tab-pane label="电子图书" name="books"></el-tab-pane>
+          <el-tab-pane label="黄金数据集 (Datasets)" name="datasets"></el-tab-pane>
+          <el-tab-pane label="标准分析流 (Pipelines)" name="pipelines"></el-tab-pane>
+          <el-tab-pane label="容器镜像 (Images)" name="images"></el-tab-pane>
+          <el-tab-pane label="极客脚本 (Scripts)" name="scripts"></el-tab-pane>
         </el-tabs>
       </div>
 
@@ -25,26 +28,24 @@
             <h4>{{ resource.title }}</h4>
             <p>{{ resource.description }}</p>
             <div class="resource-meta">
-              <span
-                ><i class="el-icon-download"></i> {{ resource.downloads }}</span
-              >
-              <span><i class="el-icon-time"></i> {{ resource.time }}</span>
+              <span><i class="el-icon-download"></i> {{ resource.downloads }}</span>
+              <span><i class="el-icon-cpu"></i> {{ resource.time }}</span>
             </div>
-            <el-button type="primary" size="small" class="download-btn">
-              下载资源
+            <el-button type="primary" size="small" plain class="download-btn">
+              克隆至沙箱 (Fork)
             </el-button>
           </div>
         </div>
       </div>
 
       <div class="quick-links">
-        <h3>快速链接</h3>
+        <h3><i class="el-icon-position"></i> 系统快速入口</h3>
         <div class="links-grid">
           <el-button
             v-for="link in quickLinks"
             :key="link.text"
             type="text"
-            @click="handleQuickLink(link)"
+            @click="$router.push(link.url)"
           >
             <i :class="link.icon"></i> {{ link.text }}
           </el-button>
@@ -59,206 +60,88 @@ export default {
   name: "ResourceGrid",
   data() {
     return {
-      activeTab: "courseware",
+      activeTab: "datasets",
       resources: {
-        courseware: [
-          {
-            title: "细胞生物学PPT课件",
-            description: "包含细胞结构、功能等完整教学课件",
-            icon: "el-icon-files",
-            downloads: "1.2k",
-            time: "45分钟",
-          },
-          {
-            title: "遗传学基础教案",
-            description: "孟德尔遗传定律教学方案",
-            icon: "el-icon-document",
-            downloads: "890",
-            time: "60分钟",
-          },
-          {
-            title: "生态学课程包",
-            description: "生态系统与环境保护教学资源",
-            icon: "el-icon-folder",
-            downloads: "1.5k",
-            time: "90分钟",
-          },
+        datasets: [
+          { title: "TCGA 肺癌表达量矩阵", description: "包含 500+ 肿瘤/正常样本的标准化 TPM 表达量矩阵与临床表型数据。", icon: "el-icon-data-line", downloads: "3.2k 次克隆", time: "15.4 MB" },
+          { title: "16S 肠道微生物数据", description: "Mock 菌群群落原始 FASTQ 序列，用于流程性能基准测试。", icon: "el-icon-files", downloads: "1.8k 次克隆", time: "2.1 GB" },
+          { title: "GSE1234 单细胞测序集", description: "小鼠大脑皮层 10X Genomics 单细胞基因表达计数矩阵。", icon: "el-icon-document", downloads: "950 次克隆", time: "850 MB" }
         ],
-        videos: [
-          {
-            title: "DNA提取实验",
-            description: "完整的DNA提取实验视频教程",
-            icon: "el-icon-video-play",
-            downloads: "2.3k",
-            time: "15分钟",
-          },
+        pipelines: [
+          { title: "AutoDock Vina 虚拟筛选", description: "高通量分子对接流水线，自动处理 PDBQT 转换与结合能计算。", icon: "el-icon-set-up", downloads: "4.5k 次调用", time: "CPU/GPU 混合" },
+          { title: "CellRanger 定量分析流", description: "标准的 10X 单细胞上游比对与定量计算工作流。", icon: "el-icon-guide", downloads: "1.2k 次调用", time: "高内存集群" }
         ],
-        exams: [
-          {
-            title: "高中生物模拟试题",
-            description: "历年高考模拟试题及答案",
-            icon: "el-icon-edit-outline",
-            downloads: "3.4k",
-            time: "120分钟",
-          },
+        images: [
+          { title: "Rocker / R-Base (v4.3)", description: "预装 ggplot2, DESeq2, clusterProfiler 等核心包的沙箱镜像。", icon: "el-icon-box", downloads: "系统内置", time: "秒级启动" },
+          { title: "Python Data Science (3.9)", description: "包含 Pandas, SciPy, Scikit-learn 的全能数据科学环境。", icon: "el-icon-cpu", downloads: "系统内置", time: "秒级启动" }
         ],
-        books: [
-          {
-            title: "生物学原理电子书",
-            description: "经典生物学教材电子版",
-            icon: "el-icon-notebook-2",
-            downloads: "4.1k",
-            time: "免费",
-          },
+        scripts: [
+          { title: "Python 火山图渲染脚本", description: "使用 Matplotlib 动态绘制高颜值差异表达火山图的标准模板。", icon: "el-icon-document-copy", downloads: "9k+ 复制", time: "100 行代码" },
+          { title: "R 语言 GO/KEGG 富集分析", description: "标准的 clusterProfiler 富集分析与气泡图出图脚本。", icon: "el-icon-magic-stick", downloads: "5k+ 复制", time: "120 行代码" }
         ],
       },
       quickLinks: [
-        { text: "在线课程", icon: "el-icon-video-camera", url: "/courses" },
-        { text: "虚拟实验", icon: "el-icon-set-up", url: "/labs" },
-        { text: "知识测验", icon: "el-icon-question", url: "/quiz" },
-        { text: "科学论坛", icon: "el-icon-chat-line-square", url: "/forum" },
-        { text: "科普文章", icon: "el-icon-reading", url: "/articles" },
+        { text: "进入极客沙箱", icon: "el-icon-monitor", url: "/assistant" },
+        { text: "我的 Workspace", icon: "el-icon-folder", url: "/project" },
+        { text: "案例广场", icon: "el-icon-discover", url: "/case" },
+        { text: "API 开发者文档", icon: "el-icon-document", url: "/help" },
       ],
     };
   },
-  methods: {
-    handleTabClick(tab) {
-      console.log("切换到标签:", tab.name);
-    },
-    handleQuickLink(link) {
-      this.$message(`跳转到: ${link.text}`);
-    },
-  },
+  methods: { handleTabClick() {} }
 };
 </script>
 
 <style scoped>
-.resource-section {
-  padding: 60px 20px;
-  border-radius: 10px;
-  background-color: #f5f7fa;
-}
-
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.section-title {
-  text-align: center;
-  margin-bottom: 40px;
-  font-size: 2rem;
-  color: #333;
-}
-
-.tabs {
-  margin-bottom: 30px;
-}
+.resource-section { padding: 60px 20px; background-color: #ffffff; }
+.container { max-width: 1200px; margin: 0 auto; }
+.section-header-center { text-align: center; margin-bottom: 40px; }
+.section-title { font-size: 2.2rem; color: #111827; margin: 0 0 10px 0; font-weight: 700; }
+.section-subtitle { color: #6b7280; font-family: Consolas, monospace; margin: 0; text-transform: uppercase;}
+.tabs { margin-bottom: 30px; }
+::v-deep .el-tabs__item { font-size: 16px; font-weight: 500; height: 50px; line-height: 50px; }
 
 .resource-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 24px;
   margin-bottom: 50px;
 }
 
 .resource-item {
-  background: white;
-  border-radius: 10px;
-  padding: 20px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 24px;
   display: flex;
   align-items: flex-start;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-  transition: transform 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 .resource-item:hover {
   transform: translateY(-3px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+  border-color: #cbd5e1;
+  background: #ffffff;
 }
 
 .resource-icon {
-  width: 50px;
-  height: 50px;
-  background-color: #e8f4ff;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 15px;
-  flex-shrink: 0;
+  width: 54px; height: 54px;
+  background: #121314; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  margin-right: 16px; flex-shrink: 0;
 }
+.resource-icon i { font-size: 24px; color: #3b82f6; }
 
-.resource-icon i {
-  font-size: 24px;
-  color: #2196f3;
-}
+.resource-info { flex: 1; }
+.resource-info h4 { margin: 0 0 8px 0; color: #1f2937; font-size: 1.1rem; }
+.resource-info p { color: #64748b; font-size: 0.9rem; margin-bottom: 16px; line-height: 1.5; min-height: 40px;}
+.resource-meta { display: flex; gap: 20px; margin-bottom: 16px; color: #94a3b8; font-size: 0.85rem; font-family: Consolas, monospace;}
+.download-btn { border-radius: 6px; font-weight: bold; }
 
-.resource-info {
-  flex: 1;
-}
-
-.resource-info h4 {
-  margin: 0 0 10px 0;
-  color: #333;
-}
-
-.resource-info p {
-  color: #666;
-  font-size: 0.9rem;
-  margin-bottom: 15px;
-  line-height: 1.4;
-}
-
-.resource-meta {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 10px;
-  color: #888;
-  font-size: 0.9rem;
-}
-
-.resource-meta i {
-  margin-right: 5px;
-}
-
-.download-btn {
-  margin-top: 10px;
-}
-
-.quick-links {
-  background: white;
-  border-radius: 15px;
-  padding: 30px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-}
-
-.quick-links h3 {
-  text-align: center;
-  margin-bottom: 30px;
-  color: #333;
-}
-
-.links-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 15px;
-}
-
-.links-grid .el-button {
-  justify-content: flex-start;
-  padding: 12px 20px;
-  border-radius: 8px;
-  transition: all 0.3s ease;
-}
-
-.links-grid .el-button:hover {
-  background-color: #f0f7ff;
-  color: #2196f3;
-  transform: translateX(5px);
-}
-
-.links-grid i {
-  margin-right: 10px;
-  font-size: 18px;
-}
+.quick-links { background: #f8fafc; border-radius: 12px; padding: 30px; border: 1px dashed #cbd5e1; }
+.quick-links h3 { text-align: center; margin: 0 0 25px 0; color: #374151; font-size: 1.2rem;}
+.links-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; }
+.links-grid .el-button { justify-content: flex-start; padding: 12px 20px; border-radius: 8px; color: #4b5563; font-weight: 600; background: #fff; border: 1px solid #e2e8f0; }
+.links-grid .el-button:hover { color: #3b82f6; border-color: #3b82f6; background: #eff6ff; transform: translateY(-2px); }
 </style>
