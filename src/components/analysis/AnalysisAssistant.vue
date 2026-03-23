@@ -5,7 +5,7 @@
         <div class="area-header">
           <div class="header-title">
             <i class="el-icon-magic-stick"></i>
-            <h3>AI 极客副驾 (Code Copilot)</h3>
+            <h3>代码辅助生成区 (Code Generator)</h3>
             <div class="code-info" v-if="generatedCode">
               <el-tag size="small" effect="dark" :type="getLanguageTagType()">
                 {{ language.toUpperCase() }}
@@ -20,7 +20,7 @@
               @click="showTutorial"
               style="color: #10b981; margin-right: 15px"
             >
-              <i class="el-icon-monitor"></i> 系统指引
+              <i class="el-icon-monitor"></i> 使用说明
             </el-button>
             <el-tag
               size="small"
@@ -81,12 +81,12 @@
                   @close="handleRemoveFile"
                 >
                   <i :class="isCloudMounted ? 'el-icon-cloudy' : 'el-icon-document'"></i>
-                  {{ isCloudMounted ? '云端案例数据已就绪: ' : '已对接沙箱: ' }} {{ mountedFile }}
+                  {{ isCloudMounted ? '已关联云端文件: ' : '已挂载本地文件: ' }} {{ mountedFile }}
                 </el-tag>
               </div>
               
               <span v-if="isCloudMounted" style="font-size: 12px; color: #64748b;">
-                (系统已完成沙箱挂载预热)
+                (文件路径已同步至执行环境)
               </span>
             </div>
 
@@ -94,7 +94,7 @@
               v-model="userInput"
               type="textarea"
               :rows="3"
-              placeholder="输入你的数据处理需求，例如：提取 GAPDH 作为内参基因，计算其他基因相对表达量并画条形图..."
+              placeholder="输入您的数据处理需求，例如：提取 GAPDH 作为内参基因，计算其他基因相对表达量并画条形图..."
               resize="none"
               @keyup.enter.native="askAssistant"
               class="generation-input dark-textarea"
@@ -109,8 +109,8 @@
               <i class="el-icon-s-opportunity"></i>
               {{
                 mountedFile
-                  ? "🟢 数据舱已就绪，推荐分析指令 (Data-Driven Prompts)："
-                  : "极客提示词 (通用演示模板)："
+                  ? "🟢 文件已关联，推荐分析示例："
+                  : "常用分析指令示例："
               }}
             </span>
             <div class="examples-grid">
@@ -147,7 +147,7 @@
                 icon="el-icon-cpu"
                 class="generate-btn glow-btn"
               >
-                {{ loading ? "引擎推演中..." : "生成可执行代码" }}
+                {{ loading ? "代码生成中..." : "生成可执行代码" }}
               </el-button>
             </div>
           </div>
@@ -193,7 +193,7 @@
                 <div class="readonly-overlay">
                   <div class="overlay-content">
                     <i class="el-icon-lock"></i>
-                    <span>终端沙盒锁定 - 代码不可直接编辑</span>
+                    <span>代码只读区 - 不可直接编辑</span>
                     <el-tag size="mini" type="info" effect="dark"
                       >请复制到下方执行区</el-tag
                     >
@@ -205,7 +205,7 @@
             <div class="code-actions">
               <div class="action-hint">
                 <i class="el-icon-info"></i>
-                <span>检验代码无误后，可一键发送至下方算力节点</span>
+                <span>如需运行代码，请提取至下方执行区</span>
               </div>
               <el-button
                 size="small"
@@ -225,7 +225,7 @@
         <div class="area-header">
           <div class="header-title">
             <i class="el-icon-video-play"></i>
-            <h3>算力执行节点 (Compute Sandbox)</h3>
+            <h3>代码执行区 (Execution Sandbox)</h3>
             <div class="execution-status" v-if="executionStatus !== 'idle'">
               <el-tag
                 size="small"
@@ -244,7 +244,7 @@
                   executionStatus === 'pending'
                 "
               >
-                <i class="el-icon-loading"></i> 算力运转中
+                <i class="el-icon-loading"></i> 正在运行
               </el-tag>
               <el-tag
                 size="small"
@@ -258,7 +258,7 @@
                 effect="dark"
                 type="danger"
                 v-else-if="executionStatus === 'error'"
-                >进程崩溃</el-tag
+                >运行报错</el-tag
               >
             </div>
           </div>
@@ -286,7 +286,7 @@
           <div class="execution-input-section">
             <div class="input-header">
               <span class="input-label">
-                <i class="el-icon-edit"></i> 终端编辑器 (Vim-like)
+                <i class="el-icon-edit"></i> 脚本编辑器
               </span>
               <div class="input-info">
                 <el-select
@@ -318,7 +318,7 @@
               <textarea
                 v-model="executionCode"
                 class="execution-code-editor"
-                :placeholder="'在此挂载 ' + language.toUpperCase() + ' 脚本...'"
+                :placeholder="'在此键入或粘贴 ' + language.toUpperCase() + ' 脚本代码...'"
                 spellcheck="false"
                 @keydown.tab.prevent="insertTab"
                 rows="15"
@@ -329,37 +329,37 @@
           <div class="execution-controls">
             <div class="control-group">
               <div class="control-item">
-                <label class="control-label">调度模式：</label>
+                <label class="control-label">运行模式：</label>
                 <el-select
                   v-model="executionMode"
                   size="small"
                   class="dark-select"
                   style="width: 160px"
                 >
-                  <el-option label="集群异步排队" value="async">
+                  <el-option label="后台异步执行" value="async">
                     <span class="mode-option"
-                      ><i class="el-icon-time"></i> 集群异步排队</span
+                      ><i class="el-icon-time"></i> 后台异步执行</span
                     >
                   </el-option>
-                  <el-option label="节点阻塞直跑" value="sync">
+                  <el-option label="前台同步执行" value="sync">
                     <span class="mode-option"
-                      ><i class="el-icon-s-check"></i> 节点阻塞直跑</span
+                      ><i class="el-icon-s-check"></i> 前台同步执行</span
                     >
                   </el-option>
                 </el-select>
               </div>
               <div class="control-item">
-                <label class="control-label">内存剔除阈值：</label>
+                <label class="control-label">执行超时限制：</label>
                 <el-select
                   v-model="timeout"
                   size="small"
                   class="dark-select"
                   style="width: 120px"
                 >
-                  <el-option label="30秒 (Debug)" value="30"></el-option>
+                  <el-option label="30秒 (测试)" value="30"></el-option>
                   <el-option label="1分钟" value="60"></el-option>
                   <el-option label="5分钟" value="300"></el-option>
-                  <el-option label="10分钟 (Heavy)" value="600"></el-option>
+                  <el-option label="10分钟 (长任务)" value="600"></el-option>
                 </el-select>
               </div>
             </div>
@@ -368,10 +368,10 @@
               <div class="security-notice">
                 <div class="notice-content">
                   <i class="el-icon-lock" style="color: #3b82f6"></i>
-                  <span>Docker 容器隔离层已激活</span>
+                  <span>沙箱运行环境已就绪</span>
                 </div>
                 <div class="notice-detail">
-                  <span>算力上限：4 Cores | 内存：16GB | 不允许外网外联</span>
+                  <span>当前环境已隔离，限制网络访问以保证系统安全。</span>
                 </div>
               </div>
 
@@ -384,7 +384,7 @@
                   icon="el-icon-video-play"
                   class="execute-btn glow-btn-success"
                 >
-                  {{ executing ? "提交集群..." : "发射代码任务" }}
+                  {{ executing ? "准备运行..." : "运行代码" }}
                 </el-button>
                 <el-button
                   type="info"
@@ -394,7 +394,7 @@
                   icon="el-icon-refresh"
                   class="dark-plain-btn"
                   v-if="executionMode === 'async'"
-                  >探针检测</el-button
+                  >检查状态</el-button
                 >
                 <el-button
                   type="danger"
@@ -402,7 +402,7 @@
                   :disabled="!isExecuting"
                   icon="el-icon-switch-button"
                   class="dark-plain-btn-danger"
-                  >强行 Kill</el-button
+                  >强制停止</el-button
                 >
               </div>
             </div>
@@ -412,7 +412,7 @@
             <div class="output-header">
               <div class="output-title">
                 <i class="el-icon-monitor"></i>
-                <h4>终端 Stdout/Stderr</h4>
+                <h4>运行输出日志 (Console)</h4>
                 <span
                   class="execution-time"
                   v-if="executionResult?.executionTime"
@@ -486,7 +486,7 @@
                 class="no-output"
               >
                 <i class="el-icon-chat-dot-round"></i>
-                <p>脚本运行完毕，未捕捉到任何打印输出 (Stdout)</p>
+                <p>脚本运行完毕，未打印任何输出 (Stdout)</p>
               </div>
             </div>
           </div>
@@ -497,10 +497,10 @@
         <div class="area-header">
           <div class="header-title">
             <i class="el-icon-picture"></i>
-            <h3>可视化矩阵 (Visualization)</h3>
+            <h3>分析图表展示区 (Visualization)</h3>
             <div class="charts-info" v-if="hasCharts">
               <el-tag size="small" type="success" effect="dark">
-                截获 {{ executionResult.images.length }} 张流媒体图表
+                生成了 {{ executionResult.images.length }} 张分析图表
               </el-tag>
             </div>
           </div>
@@ -520,7 +520,7 @@
               icon="el-icon-download"
               type="primary"
               class="glow-btn"
-              >导出全套 PDF</el-button
+              >导出全部图表</el-button
             >
           </div>
         </div>
@@ -562,8 +562,8 @@
                     />
                   </div>
                   <div class="chart-footer">
-                    <span class="chart-index">High-Res Rendered</span>
-                    <span class="chart-size">PNG / Base64</span>
+                    <span class="chart-index">Chart Rendered</span>
+                    <span class="chart-size">PNG Format</span>
                   </div>
                 </div>
               </div>
@@ -576,10 +576,9 @@
           >
             <div class="no-charts-content">
               <i class="el-icon-picture-outline"></i>
-              <p>本次分析未触发绘图引擎</p>
+              <p>代码未生成图像输出</p>
               <span class="hint"
-                >如果需要出图，请在代码中显式调用
-                matplotlib.pyplot.savefig()</span
+                >如果需要图表，请在代码中使用相关的保存图像语句，例如：</span
               >
               <div class="hint-code">
                 <code>plt.savefig('output.png', dpi=300)</code>
@@ -590,8 +589,8 @@
           <div v-else class="waiting-execution">
             <div class="waiting-content">
               <i class="el-icon-loading"></i>
-              <p>监听进程中...</p>
-              <span class="hint">如果脚本生成了图像，这里将自动渲染</span>
+              <p>等待运行结果...</p>
+              <span class="hint">如果代码包含图像生成，运行完毕后将在此显示</span>
             </div>
           </div>
         </div>
@@ -600,13 +599,13 @@
       <div v-if="loading" class="loading-overlay">
         <div class="loading-content">
           <div class="loading-spinner"><i class="el-icon-loading"></i></div>
-          <p class="loading-text">Bio-OS AI Engine 正在极速推演逻辑...</p>
-          <p class="loading-subtext">正在扫描上下文并生成高鲁棒性代码框架</p>
+          <p class="loading-text">AI 正在生成代码逻辑...</p>
+          <p class="loading-subtext">正在分析您的需求并生成相应的代码</p>
         </div>
       </div>
 
       <el-dialog
-        title="High-Res Image Preview"
+        title="图像预览"
         :visible.sync="previewVisible"
         width="70%"
         append-to-body
@@ -646,34 +645,32 @@
           </div>
           <div class="terminal-body" v-if="showWelcomeModal">
             <p class="typewriter line-1">
-              > [SYSTEM] Bio-OS Kernel Initialization...
+              > [SYSTEM] Sandbox Environment Initialization...
             </p>
             <p class="typewriter line-2">
-              > [STATUS] Docker Sandbox environment: READY.
+              > [STATUS] Python/R Execution environment: READY.
             </p>
             <p class="typewriter line-3">
-              > [TUTORIAL] 欢迎接入生信实验台。请遵循以下指令标准流程：
+              > [TUTORIAL] 欢迎使用代码辅助区，推荐的使用流程如下：
             </p>
             <ul class="tutorial-list line-4">
               <li>
-                <i class="el-icon-paperclip"></i> <b>STEP 1: 挂载数据。</b> 点击
-                <span class="highlight">"挂载本地实验数据"</span> 上传您的
-                CSV/TXT 分析矩阵。
+                <i class="el-icon-paperclip"></i> <b>STEP 1: 关联数据。</b> 点击
+                <span class="highlight">"挂载本地实验数据"</span> 上传您需要处理的数据文件。
               </li>
               <li>
                 <i class="el-icon-chat-dot-square"></i>
-                <b>STEP 2: 下达指令。</b> 直接点击下方生成的实战推荐指令，让 AI
-                写代码。
+                <b>STEP 2: 提出需求。</b> 输入分析需求，或直接点击下方示例，由 AI 为您生成代码。
               </li>
               <li>
                 <i class="el-icon-video-play"></i>
-                <b>STEP 3: 引爆算力。</b> 提取代码并点击
-                <span class="highlight">"发射代码任务"</span
-                >，底层沙箱将为您渲染科研级图表。
+                <b>STEP 3: 运行代码。</b> 提取代码并点击
+                <span class="highlight">"运行代码"</span
+                >，系统将执行并返回结果图表。
               </li>
             </ul>
             <p class="typewriter line-5">
-              > [ACTION] 按下下方按钮唤醒系统进入主界面...
+              > [ACTION] 点击下方按钮进入工作区...
             </p>
           </div>
           <div class="terminal-footer line-6">
@@ -683,7 +680,7 @@
               class="glow-btn-success"
               @click="closeWelcomeModal"
             >
-              [ ACCESS GRANTED / 立即接入平台 ]
+              [ 开始使用工作台 ]
             </el-button>
           </div>
         </div>
@@ -713,9 +710,6 @@ export default {
       checkingStatus: false,
       fixing: false,
 
-      
-
-      // 🌟 核心升级 1：拆分通用提示词与数据就绪提示词
       defaultExamples: [
         "生成随机矩阵数据，做主成分分析(PCA)并绘制散点图 (全英文)",
         "使用内置的 mtcars 数据集，进行线性回归拟合并绘图 (全英文)",
@@ -734,14 +728,11 @@ export default {
       previewVisible: false,
       currentPreviewImage: "",
       mountedFile: null,
-      isCloudMounted: false, // 🌟 新增：标记是否为系统自动挂载的数据
+      isCloudMounted: false, 
       showWelcomeModal: false,
-
-      
     };
   },
   computed: {
-    // 🌟 核心升级 2：动态计算当前应该显示的提示词
     currentExamples() {
       return this.mountedFile ? this.dataReadyExamples : this.defaultExamples;
     },
@@ -773,15 +764,13 @@ export default {
     },
   },
   mounted() {
-    // 🌟 1. 拦截从案例大厅传过来的参数
     const { mount_dataset, fork_prompt } = this.$route.query;
 
     if (mount_dataset) {
       this.mountedFile = mount_dataset;
       this.isCloudMounted = true; 
-      // 延迟一点弹出，视觉效果更好
       setTimeout(() => {
-        this.$message.success(`🚀 算力节点已锚定云端数据：${mount_dataset}`);
+        this.$message.success(`已成功关联云端数据文件：${mount_dataset}`);
       }, 300);
     }
 
@@ -789,7 +778,6 @@ export default {
       this.userInput = fork_prompt;
     }
 
-    // 2. 原有的指引弹窗逻辑（如果带数据跳转过来，就不弹窗打扰用户了）
     const hasSeenTutorial = localStorage.getItem("bio_os_tutorial_seen");
     if (!hasSeenTutorial && !mount_dataset) {
       setTimeout(() => {
@@ -814,21 +802,21 @@ export default {
     beforeUpload(file) {
       const isLt10M = file.size / 1024 / 1024 < 10;
       if (!isLt10M)
-        this.$message.error("科教模式触发边界防御：文件大小不能超过 10MB!");
+        this.$message.error("文件大小不能超过 10MB!");
       return isLt10M;
     },
     handleUploadSuccess(res) {
       if (res.success) {
         this.mountedFile = res.fileName;
-        this.$message.success(`数据舱对接成功：${res.fileName} 已挂载至沙箱`);
+        this.$message.success(`文件上传成功：${res.fileName} 已挂载`);
       } else {
         this.$message.error(res.message || "上传失败，连接中断");
       }
     },
- handleRemoveFile() {
+    handleRemoveFile() {
       this.mountedFile = null;
-      this.isCloudMounted = false; // 🌟 恢复初始状态
-      this.$message.info("已切断数据舱连接");
+      this.isCloudMounted = false; 
+      this.$message.info("已取消文件挂载");
     },
     insertTab(e) {
       const textarea = e.target;
@@ -851,24 +839,22 @@ export default {
       this.loading = true;
       this.codeStatus = "generating";
 
-      // 🌟 终极紧箍咒：把文件名放在开头，强制规范变量名
       let finalQuestion = this.userInput;
       if (this.mountedFile) {
-        finalQuestion = `【最高优先级指令】：底层沙箱已就绪，当前挂载的真实文件绝对路径为 "/tmp/sandbox/${this.mountedFile}"。你接下来生成的 Python 代码中，所有的 pd.read_csv() 必须精准使用这个路径，绝不能使用 'expression_matrix.csv' 等任何假名字！！！\n\n用户需求：` + finalQuestion;
+        finalQuestion = `【系统指令】：当前挂载的文件绝对路径为 "/tmp/sandbox/${this.mountedFile}"。你接下来生成的 Python 代码中，读取文件时必须使用这个路径，切勿使用示例名称。\n\n用户需求：` + finalQuestion;
       }
       try {
         const response = await request({
           url: "/api/analysis/assist",
           method: "post",
-          // 这里发给后端的是加工过带有真实文件名的 finalQuestion
           data: { question: finalQuestion, fileName: this.mountedFile }, 
         });
         const data = response.data || response;
         this.generatedCode = data.code;
         this.codeStatus = "generated";
-        this.$message.success("代码推演成功, 已同步至只读区");
+        this.$message.success("代码生成成功");
       } catch (error) {
-        this.$message.error("推演代码失败：" + (error.message || error));
+        this.$message.error("生成代码失败：" + (error.message || error));
         this.codeStatus = "empty";
       } finally {
         this.loading = false;
@@ -914,7 +900,7 @@ export default {
     copyToExecution() {
       if (!this.generatedCode) return;
       this.executionCode = this.extractCodeFromMarkdown(this.generatedCode);
-      this.$message.success("代码已安全提取并挂载至执行器");
+      this.$message.success("代码已复制到执行区");
     },
     clearExecutionCode() {
       this.executionCode = "";
@@ -949,15 +935,15 @@ export default {
         if (this.executionMode === "async") {
           if (data.success || data.taskId) {
             this.executionId = data.taskId;
-            this.$message.success(`任务发射成功，监听 ID: ${data.taskId}`);
+            this.$message.success(`任务提交成功，任务 ID: ${data.taskId}`);
             this.startPolling();
-          } else throw new Error(data.error || "任务下发失败");
+          } else throw new Error(data.error || "任务提交失败");
         } else {
           this.handleExecutionResult(data);
         }
       } catch (error) {
         this.executionStatus = "error";
-        this.$message.error("节点拒绝执行：" + (error.message || error));
+        this.$message.error("执行失败：" + (error.message || error));
       } finally {
         if (this.executionMode !== "async") this.executing = false;
       }
@@ -971,7 +957,7 @@ export default {
           this.executionStatus === "executing" ||
           this.executionStatus === "pending"
         ) {
-          this.$message.warning("节点响应超时，前端已切断游离连接");
+          this.$message.warning("执行超时，已断开连接");
           this.executionStatus = "error";
           this.executing = false;
         }
@@ -987,7 +973,7 @@ export default {
           method: "get",
         });
         if (response.status === 404) {
-          this.$message.warning("探针丢失，句柄失效");
+          this.$message.warning("无法查询到该任务状态");
           this.clearPolling();
           this.executing = false;
           return;
@@ -1016,11 +1002,11 @@ export default {
         this.executing = false;
         if (result.status === "completed")
           this.$message.success(
-            `沙箱进程终结，算力耗时 ${result.executionTime} ms`,
+            `执行完毕，耗时 ${result.executionTime} ms`,
           );
         else
           this.$message.error(
-            "沙箱抛出致命异常：" + (result.error || "Unknown Error"),
+            "运行发生错误：" + (result.error || "Unknown Error"),
           );
       }
     },
@@ -1029,7 +1015,7 @@ export default {
       this.executing = false;
       this.clearPolling();
       this.executionResult = null;
-      this.$message.info("Kill -9 强行终结指令已下发");
+      this.$message.info("已发送停止执行指令");
     },
     clearPolling() {
       if (this.pollTimer) clearTimeout(this.pollTimer);
@@ -1041,7 +1027,7 @@ export default {
       if (this.executionResult?.output)
         navigator.clipboard
           .writeText(this.executionResult.output)
-          .then(() => this.$message.success("StdOut 已复制"));
+          .then(() => this.$message.success("日志已复制"));
     },
     clearOutput() {
       this.executionResult = null;
@@ -1052,7 +1038,7 @@ export default {
     },
     exportAllCharts() {
       if (!this.hasCharts) return;
-      this.$message.info("高分辨率 PDF 导出矩阵初始化中...");
+      this.$message.info("图表导出功能准备中...");
     },
     previewChart(imageUrl) {
       this.currentPreviewImage = imageUrl;
@@ -1061,7 +1047,7 @@ export default {
     downloadChart(imageUrl, index) {
       const link = document.createElement("a");
       link.href = imageUrl;
-      link.download = `bio_fig_${index + 1}_${Date.now()}.png`;
+      link.download = `figure_${index + 1}_${Date.now()}.png`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -1071,47 +1057,42 @@ export default {
         "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGQ9Ik03NSAyNUgyNUwyNSA3NUw3NSA3NUw3NSAyNVoiIGZpbGw9IiMzMzQxNTUiLz4KPHBhdGggZD0iTTQ1IDUwQzQ1IDQ3Ljc5MDkgNDYuNzkwOSA0NiA0OSA0NiA1MS4yMDkxIDQ2IDUzIDQ3Ljc5MDkgNTMgNTAgNTMgNTIuMjA5MSA1MS4yMDkxIDU0IDQ5IDU0IDQ2Ljc5MDkgNTQgNDUgNTIuMjA5MSA0NSA1MFoiIGZpbGw9IiM5NGEzYjgiLz4KPHBhdGggZD0iTTUwIDU3TDM5IDY4SDYxTDUwIDU3WiIgZmlsbD0iIzk0YTNiOCIvPgo8L3N2Zz4=";
     },
 
-    // 🌟 AI 自动纠错引擎
     async autoFixWithAI() {
       this.fixing = true;
-      this.$message.info("探针已介入：正在分析 Traceback 堆栈并重构代码...");
+      this.$message.info("AI 正在分析错误并重构代码...");
 
-      // 1. 构建专门针对 Debug 的“急救提示词”
       const debugPrompt = `
-        我刚才运行你生成的代码时遭遇了崩溃。
+        我刚才运行这段代码时遇到了报错。
         原始需求：${this.userInput}
-        抛出的致命异常：
+        错误信息如下：
         ${this.executionResult.error}
         
-        请你作为高级架构师，分析这个报错的原因，并直接输出修复后的完整、可执行代码（只输出代码，不要废话）。
+        请分析报错原因，并直接提供修复后的完整可执行代码（只提供代码即可）。
       `;
 
       try {
-        // 2. 复用现有的分析接口，把带有报错信息的 prompt 发给 AI
         const response = await request({
           url: "/api/analysis/assist",
           method: "post",
           data: {
             question: debugPrompt,
-            fileName: this.mountedFile, // 别忘了带上已挂载的文件名
+            fileName: this.mountedFile, 
           },
         });
 
         const data = response.data || response;
 
-        // 3. 把修复后的新代码直接覆盖到上方的生成区和下方的执行区
         this.generatedCode = data.code;
         this.executionCode = this.extractCodeFromMarkdown(data.code);
 
-        // 4. 清除旧的报错信息，准备迎接新生
         this.executionResult = null;
         this.executionStatus = "idle";
 
         this.$message.success(
-          "AI 诊断完毕！代码已完成自动打补丁与重构，请重新发射任务！",
+          "AI 修复完毕，新代码已更新，请重新执行。",
         );
       } catch (error) {
-        this.$message.error("修复引擎响应失败：" + (error.message || error));
+        this.$message.error("请求 AI 修复失败：" + (error.message || error));
       } finally {
         this.fixing = false;
       }
@@ -1278,7 +1259,6 @@ export default {
   }
 }
 
-/* 🌟 核心升级 3：动态提示词的专属高亮动画 */
 .highlight-label {
   color: #10b981 !important;
   font-weight: 600;
@@ -1855,7 +1835,7 @@ export default {
   }
 }
 
-/* ================= 🌟 极客风终端欢迎弹窗 (Terminal Welcome Modal) ================= */
+/* ================= 🌟 终端欢迎弹窗 ================= */
 ::v-deep .terminal-dialog {
   background: transparent !important;
   box-shadow: none !important;

@@ -319,11 +319,17 @@ export default {
   },
 
   mounted() {
-    this.initData();
+    this.initData().then(() => {
+      
+      const preSelectedId = this.$route.query.pipelineId;
+      if (preSelectedId) {
+        // 将路由里的字符串 ID 转换成数字
+        this.formData.pipelineId = Number(preSelectedId); 
+      }
+    });
   },
 
   methods: {
-    // 🌟 初始化，拉取真实的流模板、项目和文件 (无敌兼容版)
     async initData() {
       const currentUid = this.userId || 6;
       try {

@@ -1,285 +1,283 @@
 <template>
   <div class="user-management">
-    <h2>用户管理</h2>
-
-    <!-- 筛选工具栏 用户角色 用户状态 姓名 -->
-    <div class="filter-toolbar">
-      <el-form :inline="true" :model="filterForm" class="filter-form">
-        <el-form-item label="角色筛选">
-          <el-select
-            v-model="filterForm.role"
-            placeholder="请选择角色"
-            clearable
-            @change="handleFilterChange"
-          >
-            <el-option label="全部" value=""></el-option>
-            <el-option label="管理员" value="admin"></el-option>
-            <el-option label="普通用户" value="user"></el-option>
-          </el-select>
-        </el-form-item>
-
-        <el-form-item label="状态筛选">
-          <el-select
-            v-model="filterForm.status"
-            placeholder="请选择状态"
-            clearable
-            @change="handleFilterChange"
-          >
-            <el-option label="全部" value=""></el-option>
-            <el-option label="启用" value="1"></el-option>
-            <el-option label="禁用" value="0"></el-option>
-          </el-select>
-        </el-form-item>
-
-        <el-form-item label="用户名">
-          <el-input
-            v-model="filterForm.username"
-            placeholder="请输入用户名"
-            clearable
-            @keyup.enter.native="handleFilterChange"
-            @clear="handleFilterChange"
-          >
-            <el-button
-              slot="append"
-              icon="el-icon-search"
-              @click="handleFilterChange"
-            ></el-button>
-          </el-input>
-        </el-form-item>
-
-        <el-form-item>
-          <el-button @click="handleResetFilter">重置</el-button>
-        </el-form-item>
-
-        <el-form-item>
-          <el-button type="primary" @click="handleAdd"> 新增 </el-button>
-        </el-form-item>
-      </el-form>
+    <div class="page-header">
+      <h2>用户管理</h2>
     </div>
 
-    <!-- 批量操作工具栏 批量删除 批量启用 批量禁用 -->
+    <div class="filter-toolbar">
+      <div class="toolbar-left">
+        <el-select
+          v-model="filterForm.role"
+          placeholder="全部角色"
+          size="small"
+          clearable
+          @change="handleFilterChange"
+          class="filter-item"
+          style="width: 120px"
+        >
+          <el-option label="全部角色" value=""></el-option>
+          <el-option label="管理员" value="admin"></el-option>
+          <el-option label="普通用户" value="user"></el-option>
+        </el-select>
+
+        <el-select
+          v-model="filterForm.status"
+          placeholder="全部状态"
+          size="small"
+          clearable
+          @change="handleFilterChange"
+          class="filter-item"
+          style="width: 110px"
+        >
+          <el-option label="全部状态" value=""></el-option>
+          <el-option label="正常" value="1"></el-option>
+          <el-option label="封禁" value="0"></el-option>
+        </el-select>
+
+        <el-input
+          v-model="filterForm.username"
+          placeholder="搜索用户名..."
+          size="small"
+          clearable
+          @keyup.enter.native="handleFilterChange"
+          @clear="handleFilterChange"
+          class="filter-item search-input"
+          style="width: 260px"
+        >
+          <el-button
+            slot="append"
+            icon="el-icon-search"
+            @click="handleFilterChange"
+          ></el-button>
+        </el-input>
+
+        <el-button
+          size="small"
+          @click="handleResetFilter"
+          icon="el-icon-refresh-left"
+          class="filter-item"
+          >重置</el-button
+        >
+      </div>
+
+      <div class="toolbar-right">
+        <el-button
+          type="primary"
+          size="small"
+          @click="handleAdd"
+          icon="el-icon-plus"
+          >新增用户</el-button
+        >
+      </div>
+    </div>
+
     <div v-if="selectedUsers.length > 0" class="batch-toolbar">
       <div class="batch-content">
         <div class="batch-left">
-          <i class="el-icon-check batch-icon"></i>
+          <i class="el-icon-info batch-icon"></i>
           <span class="batch-info"
-            >已选择 <strong>{{ selectedUsers.length }}</strong> 个用户</span
+            >已选择 <strong>{{ selectedUsers.length }}</strong> 项非管理员账户</span
+          >
+          <el-button type="text" size="small" @click="clearSelection"
+            >取消选择</el-button
           >
         </div>
         <div class="batch-actions">
+          <el-button
+            size="small"
+            @click="handleBatchEnable"
+            :loading="batchLoading"
+            plain
+          >
+            批量解封
+          </el-button>
+          <el-button
+            size="small"
+            @click="handleBatchDisable"
+            :loading="batchLoading"
+            plain
+          >
+            批量封禁
+          </el-button>
           <el-button
             type="danger"
             size="small"
             @click="handleBatchDelete"
             :loading="batchLoading"
-            :disabled="batchLoading"
             plain
-            icon="el-icon-delete"
           >
             批量删除
-          </el-button>
-          <el-button
-            type="success"
-            size="small"
-            @click="handleBatchEnable"
-            :loading="batchLoading"
-            :disabled="batchLoading"
-            plain
-            icon="el-icon-check"
-          >
-            批量启用
-          </el-button>
-          <el-button
-            type="warning"
-            size="small"
-            @click="handleBatchDisable"
-            :loading="batchLoading"
-            :disabled="batchLoading"
-            plain
-            icon="el-icon-close"
-          >
-            批量禁用
-          </el-button>
-          <el-button
-            size="small"
-            @click="clearSelection"
-            :disabled="batchLoading"
-            plain
-            icon="el-icon-close"
-          >
-            取消选择
           </el-button>
         </div>
       </div>
     </div>
 
-    <!-- 用户表格 -->
     <el-table
       ref="userTable"
       :data="userList"
-      style="width: 100%; margin-top: 10px"
-      border
-      height="calc(100vh - 280px)"
+      style="width: 100%; margin-top: 16px"
       class="user-table"
       @selection-change="handleSelectionChange"
+      v-loading="loading"
     >
-      <!-- 添加选框列 -->
       <el-table-column
         type="selection"
-        width="55"
+        width="50"
         align="center"
         :selectable="isSelectable"
-      >
-      </el-table-column>
+      ></el-table-column>
 
       <el-table-column
         type="index"
         label="序号"
-        width="80"
+        width="60"
+        align="center"
         :index="calculateIndex"
-      >
-      </el-table-column>
+      ></el-table-column>
 
-      <el-table-column prop="avatar" label="头像" width="100" align="center">
+      <el-table-column prop="avatar" label="头像" width="70" align="center">
         <template slot-scope="scope">
-          <div style="display: flex; justify-content: center">
-            <el-avatar
-              :size="40"
-              :src="getRealAvatarUrl(scope.row.avatar)"
-              :alt="scope.row.username"
-            ></el-avatar>
-          </div>
+          <el-avatar
+            :size="28"
+            :src="getRealAvatarUrl(scope.row.avatar)"
+            :alt="scope.row.username"
+            style="border: 1px solid #ebeef5;"
+          ></el-avatar>
         </template>
       </el-table-column>
 
       <el-table-column
         prop="username"
         label="用户名"
-        min-width="150"
-      ></el-table-column>
-      <el-table-column prop="role" label="角色" width="120">
+        min-width="140"
+        show-overflow-tooltip
+      >
         <template slot-scope="scope">
-          <el-tag :type="getRoleTagType(scope.row.role)">
-            {{ getRoleDisplayName(scope.row.role) }}
-          </el-tag>
+          <span style="font-weight: 500; color: #303133;">
+            {{ scope.row.username }}
+            <i v-if="scope.row.role === 'admin'" class="el-icon-user-solid admin-flag" title="系统管理员"></i>
+          </span>
         </template>
       </el-table-column>
+
+      <el-table-column prop="status" label="状态" width="100">
+        <template slot-scope="scope">
+          <div
+            class="status-indicator"
+            :class="
+              scope.row.status === '1' || scope.row.status === 1
+                ? 'status-active'
+                : 'status-disabled'
+            "
+          >
+            <span class="dot"></span>
+            {{
+              scope.row.status === "1" || scope.row.status === 1
+                ? "正常"
+                : "已封禁"
+            }}
+          </div>
+        </template>
+      </el-table-column>
+
+      <el-table-column prop="role" label="角色" width="100">
+        <template slot-scope="scope">
+          <span :style="{ color: scope.row.role === 'admin' ? '#F56C6C' : '#606266' }">
+            {{ getRoleDisplayName(scope.row.role) }}
+          </span>
+        </template>
+      </el-table-column>
+
       <el-table-column
         prop="email"
         label="邮箱"
-        min-width="200"
+        min-width="180"
+        show-overflow-tooltip
       ></el-table-column>
+      
       <el-table-column
         prop="phone"
         label="手机号"
         width="120"
       ></el-table-column>
-      <el-table-column prop="status" label="状态" width="100">
+
+      <el-table-column prop="lastLoginTime" label="最后登录" width="160">
         <template slot-scope="scope">
-          <el-tag
-            :type="
-              scope.row.status === '1' || scope.row.status === 1
-                ? 'success'
-                : 'danger'
-            "
-          >
-            {{
-              scope.row.status === "1" || scope.row.status === 1
-                ? "启用"
-                : "禁用"
-            }}
-          </el-tag>
+          <span style="color: #909399; font-size: 13px;">
+            {{ scope.row.lastLoginTime || "-" }}
+          </span>
         </template>
       </el-table-column>
+
       <el-table-column
         prop="createTime"
-        label="创建时间"
-        width="180"
-      ></el-table-column>
-      <el-table-column prop="lastLoginTime" label="最后登录" width="180">
+        label="注册时间"
+        width="160"
+      >
         <template slot-scope="scope">
-          {{ scope.row.lastLoginTime || "从未登录" }}
+          <span style="color: #909399; font-size: 13px;">
+            {{ scope.row.createTime ? scope.row.createTime.substring(0, 16) : "-" }}
+          </span>
         </template>
       </el-table-column>
-      <el-table-column
-        prop="updateTime"
-        label="更新时间"
-        width="180"
-      ></el-table-column>
 
-      <!-- 操作列 - 这里包含编辑和删除按钮 -->
-      <el-table-column label="操作" width="150" fixed="right" align="center">
+      <el-table-column label="操作" width="160" fixed="right" align="center">
         <template slot-scope="scope">
-          <!-- 详情按钮 -->
-          <el-button
-            type="success"
-            size="mini"
-            icon="el-icon-view"
-            circle
-            @click="handleViewDetail(scope.row)"
-            title="详情"
-          >
+          <el-button type="text" size="small" @click="handleViewDetail(scope.row)">
+            详情
           </el-button>
+          
+          <el-divider direction="vertical"></el-divider>
 
-          <!-- 编辑按钮 -->
-          <el-button
-            type="primary"
-            size="mini"
-            icon="el-icon-edit"
-            circle
-            @click="handleEdit(scope.row)"
-            title="编辑"
-          >
-          </el-button>
+          <span v-if="scope.row.role === 'admin'" class="protected-flag" title="该账号受安全保护，不可在此封禁或删除">不可操作</span>
 
-          <!-- 删除按钮 -->
-          <el-button
-            type="danger"
-            size="mini"
-            icon="el-icon-delete"
-            circle
-            @click="handleDelete(scope.row)"
-            title="删除"
+          <el-dropdown
+            v-else
+            @command="cmd => handleRowCommand(cmd, scope.row)"
+            trigger="click"
+            placement="bottom-end"
           >
-          </el-button>
+            <span class="el-dropdown-link" style="color: #409EFF; cursor: pointer; font-size: 12px; user-select: none;">
+              管理<i class="el-icon-arrow-down el-icon--right"></i>
+            </span>
+            <el-dropdown-menu slot="dropdown">
+              <el-dropdown-item command="edit">编辑资料</el-dropdown-item>
+              <el-dropdown-item command="toggleStatus">
+                {{ (scope.row.status === '1' || scope.row.status === 1) ? '封禁账号' : '解封账号' }}
+              </el-dropdown-item>
+              <el-dropdown-item command="delete" divided style="color: #F56C6C;">
+                删除账号
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </el-dropdown>
         </template>
       </el-table-column>
     </el-table>
 
-    <!-- 分页组件 -->
-    <div style="margin-top: 20px; display: flex; justify-content: flex-end">
+    <div class="pagination-container">
       <el-pagination
-        layout="total, sizes, prev, pager, next, jumper"
-        :current-page="pagination.current"
-        :page-size="pagination.size"
-        :page-sizes="[10, 20, 30, 50]"
-        :total="pagination.total"
-        @size-change="handleSizeChange"
+        background
+        layout="total, prev, pager, next, jumper" :current-page="pagination.current"
+        :page-size="6" :total="pagination.total"
         @current-change="handleCurrentChange"
       />
     </div>
 
-    <!-- 新增/编辑对话框 -->
     <el-dialog
       :title="dialogTitle"
       :visible.sync="dialogVisible"
-      width="600px"
+      width="550px"
       @close="resetForm"
+      custom-class="clean-dialog"
+      :close-on-click-modal="false"
     >
       <el-form
         :model="formData"
         :rules="formRules"
         ref="userForm"
-        label-width="100px"
+        label-width="90px"
+        label-position="right"
       >
-        <el-form-item label="用户名" prop="username">
-          <el-input
-            v-model="formData.username"
-            placeholder="请输入用户名"
-          ></el-input>
-        </el-form-item>
-
-        <!-- ========== 只在编辑模式下显示头像上传 ========== -->
         <el-form-item label="用户头像" prop="avatar" v-if="!isAddMode">
           <el-upload
             class="avatar-uploader"
@@ -289,94 +287,68 @@
             :http-request="handleAvatarUpload"
             :disabled="submitting || uploadingAvatar"
           >
-            <!-- 头像容器（新增提示层） -->
             <div class="avatar-container">
               <img v-if="avatarUrl" :src="avatarUrl" class="avatar" />
               <i v-else class="el-icon-plus avatar-uploader-icon"></i>
-              <!-- 鼠标hover时显示的+提示 -->
               <div class="avatar-tip" v-if="!submitting && !uploadingAvatar">
-                <i class="el-icon-plus"></i>
+                <i class="el-icon-camera"></i>
               </div>
             </div>
             <div slot="tip" class="el-upload__tip">
-              只能上传jpg/png文件，且不超过2MB
+              支持 JPG/PNG，限 2MB
             </div>
           </el-upload>
         </el-form-item>
 
-        <!-- 密码字段 - 新增模式显示 -->
-        <el-form-item label="密码" prop="password" v-if="isAddMode">
-          <el-input
-            v-model="formData.password"
-            type="password"
-            placeholder="请输入密码"
-            show-password
-          ></el-input>
-        </el-form-item>
-
-        <!-- 确认密码字段 - 只在新增模式显示 -->
-        <el-form-item label="确认密码" prop="confirmPassword" v-if="isAddMode">
-          <el-input
-            v-model="formData.confirmPassword"
-            type="password"
-            placeholder="请确认密码"
-            show-password
-          ></el-input>
-        </el-form-item>
-
-        <!-- 密码字段 - 编辑模式显示（可选修改） -->
-        <el-form-item label="密码" prop="editPassword" v-if="!isAddMode">
-          <el-input
-            v-model="formData.editPassword"
-            type="password"
-            placeholder="如不修改密码请留空"
-            show-password
-          ></el-input>
+        <el-form-item label="用户名" prop="username">
+          <el-input v-model="formData.username" placeholder="请输入系统登录名"></el-input>
         </el-form-item>
 
         <el-form-item label="角色" prop="role">
-          <el-select
-            v-model="formData.role"
-            placeholder="请选择角色"
-            style="width: 100%"
-          >
-            <el-option label="管理员" value="admin"></el-option>
-            <el-option label="教师" value="teacher"></el-option>
-            <el-option label="学生" value="student"></el-option>
+          <el-select v-model="formData.role" placeholder="选择系统角色" style="width: 100%">
+            <el-option label="系统管理员" value="admin"></el-option>
+            <el-option label="普通研究员" value="user"></el-option>
           </el-select>
         </el-form-item>
 
         <el-form-item label="邮箱" prop="email">
-          <el-input
-            v-model="formData.email"
-            placeholder="请输入邮箱"
-          ></el-input>
+          <el-input v-model="formData.email" placeholder="example@domain.com"></el-input>
         </el-form-item>
 
         <el-form-item label="手机号" prop="phone">
-          <el-input
-            v-model="formData.phone"
-            placeholder="请输入手机号"
-          ></el-input>
+          <el-input v-model="formData.phone" placeholder="11位手机号"></el-input>
         </el-form-item>
 
-        <el-form-item label="状态" prop="status">
-          <el-radio-group v-model="formData.status">
-            <el-radio label="1">启用</el-radio>
-            <el-radio label="0">禁用</el-radio>
-          </el-radio-group>
+        <div class="password-zone" v-if="isAddMode">
+          <el-form-item label="初始密码" prop="password">
+            <el-input v-model="formData.password" type="password" placeholder="至少6个字符" show-password></el-input>
+          </el-form-item>
+          <el-form-item label="确认密码" prop="confirmPassword">
+            <el-input v-model="formData.confirmPassword" type="password" placeholder="请再次输入密码确认" show-password></el-input>
+          </el-form-item>
+        </div>
+
+        <el-form-item label="账户状态" prop="status">
+          <el-switch
+            v-model="formData.status"
+            active-value="1"
+            inactive-value="0"
+            active-color="#13ce66"
+            inactive-color="#ff4949"
+            active-text="正常"
+            inactive-text="封禁">
+          </el-switch>
         </el-form-item>
       </el-form>
 
       <span slot="footer" class="dialog-footer">
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit" :loading="submitting">
-          确定
+        <el-button @click="dialogVisible = false" size="small">取消</el-button>
+        <el-button type="primary" @click="handleSubmit" :loading="submitting" size="small">
+          确定保存
         </el-button>
       </span>
     </el-dialog>
 
-    <!-- 用户详情对话框 -->
     <UserDetailDialog
       :visible.sync="detailDialogVisible"
       :user="currentDetailUser"
@@ -393,12 +365,9 @@ import {
   deleteUser,
   batchDeleteUsers,
   batchUpdateUserStatus,
+  updateUserAvatar
 } from "@/api/user";
-// 导入头像上传接口
-import { updateUserAvatar } from "@/api/user";
-// 导入认证工具
-import { getAvatarUrl, getUserInfo, getUserId, clearAuth } from "@/utils/auth";
-// 导入用户详情组件
+import { getAvatarUrl, getUserInfo, clearAuth } from "@/utils/auth";
 import UserDetailDialog from "@/components/user/UserDetailDialog.vue";
 
 export default {
@@ -407,9 +376,7 @@ export default {
     UserDetailDialog,
   },
   data() {
-    // 密码验证规则
     const passwordValidator = (rule, value, callback) => {
-      // 新增模式下，密码必须填写且至少6位
       if (this.isAddMode) {
         if (!value || value.trim() === "") {
           callback(new Error("请输入密码"));
@@ -419,16 +386,10 @@ export default {
           callback();
         }
       } else {
-        // 编辑模式下，密码可以为空，但如果填写了则必须至少6位
-        if (value && value.trim() !== "" && value.length < 6) {
-          callback(new Error("密码长度至少6个字符"));
-        } else {
-          callback();
-        }
+        callback();
       }
     };
 
-    // 确认密码验证规则
     const confirmPasswordValidator = (rule, value, callback) => {
       if (this.isAddMode) {
         if (!value || value.trim() === "") {
@@ -444,161 +405,109 @@ export default {
     };
 
     return {
+      loading: false, 
       userList: [],
       dialogVisible: false,
       detailDialogVisible: false,
       dialogTitle: "新增用户",
       isAddMode: true,
       submitting: false,
-      selectedUsers: [], // 多选用户列表
-      batchLoading: false, // 批量操作加载状态
-      currentDetailUser: null, // 当前查看详情的用户
-      // 筛选相关
+      selectedUsers: [], 
+      batchLoading: false, 
+      currentDetailUser: null, 
+      
       filterForm: {
         role: "",
         status: "",
         username: "",
         email: "",
         phone: "",
-        createTimeRange: [],
       },
-      isAdvancedFilter: false,
       pagination: {
         current: 1,
-        size: 10,
+        size: 6,
         total: 0,
       },
       formData: {
         id: null,
         username: "",
-        password: "", // 新增模式密码
-        confirmPassword: "", // 新增模式确认密码
-        editPassword: "", // 编辑模式密码（可选修改）
+        password: "", 
+        confirmPassword: "", 
         role: "",
         email: "",
         phone: "",
         status: "1",
-        avatar: "", // 头像路径
+        avatar: "", 
       },
       formRules: {
         username: [
           { required: true, message: "请输入用户名", trigger: "blur" },
-          {
-            min: 3,
-            max: 20,
-            message: "用户名长度在3到20个字符之间",
-            trigger: "blur",
-          },
+          { min: 3, max: 20, message: "长度在3到20个字符", trigger: "blur" },
         ],
         password: [
-          {
-            required: true,
-            message: "请输入密码",
-            trigger: "blur",
-            validator: passwordValidator,
-          },
+          { required: true, validator: passwordValidator, trigger: "blur" },
         ],
         confirmPassword: [
-          {
-            required: true,
-            message: "请确认密码",
-            trigger: "blur",
-            validator: confirmPasswordValidator,
-          },
-        ],
-        editPassword: [
-          {
-            required: false,
-            trigger: "blur",
-            validator: passwordValidator,
-          },
+          { required: true, validator: confirmPasswordValidator, trigger: "blur" },
         ],
         role: [{ required: true, message: "请选择角色", trigger: "change" }],
         email: [
-          { required: true, message: "请输入邮箱地址", trigger: "blur" },
-          { type: "email", message: "请输入正确的邮箱地址", trigger: "blur" },
+          { required: true, message: "请输入邮箱", trigger: "blur" },
+          { type: "email", message: "邮箱格式不正确", trigger: "blur" },
         ],
         phone: [
           { required: true, message: "请输入手机号", trigger: "blur" },
-          {
-            pattern: /^1[3-9]\d{9}$/,
-            message: "请输入正确的手机号",
-            trigger: "blur",
-          },
+          { pattern: /^1[3-9]\d{9}$/, message: "手机号格式不正确", trigger: "blur" },
         ],
-        avatar: [{ required: false }],
       },
       currentUser: null,
-      // 头像相关变量（只在编辑模式使用）
-      avatarUrl: "", // 头像预览URL
-      uploadingAvatar: false, // 头像上传加载状态
+      avatarUrl: "", 
+      uploadingAvatar: false, 
     };
   },
+  watch: {
+    'formData.password': function() {
+      if (this.isAddMode && this.formData.confirmPassword) {
+        this.$refs.userForm.validateField('confirmPassword');
+      }
+    }
+  },
   mounted() {
-    console.log("开始加载...");
-    this.fetchUsers();
     this.localCurrentUserInfo();
+    this.fetchUsers();
   },
   methods: {
-    // 当前登录的用户信息
     localCurrentUserInfo() {
       this.currentUser = getUserInfo();
-      console.log("当前登录的用户: ", this.currentUser);
     },
 
-    // 获取用户数据（带筛选）
     fetchUsers() {
+      this.loading = true;
       const params = {
         pageNum: this.pagination.current,
         pageSize: this.pagination.size,
-        ...this.buildFilterParams(),
+        ...this.filterForm,
       };
-
-      console.log("请求参数:", params);
 
       getUserPage(params)
         .then((response) => {
-          console.log("API返回数据:", response);
           this.userList = response.records || [];
           this.pagination.total = response.total || 0;
         })
         .catch((error) => {
-          console.error("获取用户列表失败:", error);
-          this.$message.error("获取用户列表失败");
+          console.error("获取数据失败:", error);
+          this.$message.error("系统数据获取中断，请刷新");
+        })
+        .finally(() => {
+          this.loading = false;
         });
     },
 
-    // 构建筛选参数
-    buildFilterParams() {
-      const params = {};
-
-      // 角色筛选
-      if (this.filterForm.role) {
-        params.role = this.filterForm.role;
-      }
-
-      // 状态筛选
-      if (this.filterForm.status !== "") {
-        params.status = this.filterForm.status;
-      }
-
-      // 用户名筛选
-      if (this.filterForm.username) {
-        params.username = this.filterForm.username;
-      }
-
-      return params;
-    },
-
-    // 筛选条件变化处理
     handleFilterChange() {
-      // 重置到第一页
       this.pagination.current = 1;
-      // 重新加载数据
       this.fetchUsers();
     },
 
-    // 重置筛选条件
     handleResetFilter() {
       this.filterForm = {
         role: "",
@@ -606,401 +515,266 @@ export default {
         username: "",
         email: "",
         phone: "",
-        createTimeRange: [],
       };
-      this.isAdvancedFilter = false;
-      // 重置到第一页并重新加载
       this.pagination.current = 1;
       this.fetchUsers();
     },
 
-    // 计算序号
     calculateIndex(index) {
       return (this.pagination.current - 1) * this.pagination.size + index + 1;
     },
 
-    // 获取头像完整URL
+    // 🌟 修复：提供 Element UI 默认占位图防破图
     getRealAvatarUrl(avatar) {
+      if (!avatar) {
+        return 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'; 
+      }
       return getAvatarUrl(avatar);
     },
 
-    // 获取角色显示名称
     getRoleDisplayName(role) {
-      const roleMap = {
-        admin: "管理员",
-        user: "普通用户",
-      };
+      const roleMap = { admin: "管理员", user: "普通用户" };
       return roleMap[role] || role;
     },
 
-    // 获取角色标签类型
-    getRoleTagType(role) {
-      const typeMap = {
-        admin: "danger",
-        user: "success",
-      };
-      return typeMap[role] || "info";
-    },
-
-    // 分页事件处理
     handleSizeChange(size) {
       this.pagination.size = size;
       this.pagination.current = 1;
       this.fetchUsers();
     },
 
-    // 页码变化处理
     handleCurrentChange(current) {
       this.pagination.current = current;
       this.fetchUsers();
     },
 
-    // 查看用户详情
     handleViewDetail(row) {
-      console.log("查看用户详情:", row);
-      this.currentDetailUser = { ...row }; // 创建副本避免数据污染
+      this.currentDetailUser = { ...row }; 
       this.detailDialogVisible = true;
     },
 
-    // 新增用户
     handleAdd() {
-      this.dialogTitle = "新增用户";
+      this.dialogTitle = "新增系统用户";
       this.isAddMode = true;
       this.dialogVisible = true;
       this.resetForm();
-
-      // 清除验证状态
       this.$nextTick(() => {
-        if (this.$refs.userForm) {
-          this.$refs.userForm.clearValidate();
-        }
+        if (this.$refs.userForm) this.$refs.userForm.clearValidate();
       });
     },
 
-    // 编辑用户
+    // 🌟 核心修改：处理行内“管理”下拉菜单事件
+    handleRowCommand(command, row) {
+      if (command === 'edit') {
+        this.handleEdit(row); // 把编辑移到这里
+      } else if (command === 'delete') {
+        this.handleDelete(row);
+      } else if (command === 'toggleStatus') {
+        this.toggleSingleStatus(row);
+      }
+    },
+
+    // 🌟 核心：为防止越权，这里也加一层 role !== 'admin' 的判定
     handleEdit(row) {
-      this.dialogTitle = "编辑用户";
+      if (row.role === 'admin') {
+         this.$message.warning("为了系统安全，高级管理员账户不可在此编辑资料。");
+         return;
+      }
+
+      this.dialogTitle = "编辑资料";
       this.isAddMode = false;
       this.dialogVisible = true;
 
-      console.log("编辑行数据：", row);
-
-      // 确保正确映射后端返回的字段
       this.formData = {
         id: row.id || null,
         username: row.username || "",
-        password: "", // 新增模式字段，编辑模式不需要
-        confirmPassword: "", // 新增模式字段，编辑模式不需要
-        editPassword: "", // 编辑模式密码字段，默认为空
+        confirmPassword: "", 
         role: row.role || "",
         email: row.email || "",
         phone: row.phone || "",
         status: row.status != null ? `${row.status}` : "1",
-        avatar: row.avatar || "", // 加载用户现有头像
+        avatar: row.avatar || "", 
       };
 
-      // 加载头像预览（只在编辑模式）
       this.avatarUrl = this.getRealAvatarUrl(row.avatar);
 
-      console.log("表单数据: ", this.formData);
-
-      // 清除表单验证状态
       this.$nextTick(() => {
-        if (this.$refs.userForm) {
-          this.$refs.userForm.clearValidate();
-        }
+        if (this.$refs.userForm) this.$refs.userForm.clearValidate();
       });
     },
 
-    // 删除用户
-    handleDelete(row) {
-      console.log("删除用户:", row);
-
-      // 检查是否删除当前登录用户
-      const currentUserId = getUserId();
-      const isSelf = row.id === currentUserId;
-
-      let message = "确定要删除该用户吗？";
-      if (isSelf) {
-        message =
-          "警告：您正在删除自己的账户！删除后将无法登录，确定要继续吗？";
+    // 快捷封禁/解封单个普通用户
+    toggleSingleStatus(row) {
+      // 🌟 方案 B：拦截对管理员的封禁
+      if (row.role === 'admin') {
+         this.$message.warning("金钟罩系统保护中：管理员账户不可被直接封禁。");
+         return;
       }
+      
+      const newStatus = (row.status === '1' || row.status === 1) ? '0' : '1';
+      const actionText = newStatus === '1' ? '解封' : '封禁';
 
-      this.$confirm(message, "提示", {
-        confirmButtonText: "确定",
-        cancelButtonText: "取消",
-        type: isSelf ? "error" : "warning",
-        confirmButtonClass: isSelf ? "delete-self-confirm" : "",
-        cancelButtonClass: isSelf ? "delete-self-cancel" : "",
-      })
-        .then(() => {
-          // 调用删除API
-          deleteUser(row.id)
-            .then((response) => {
-              console.log("删除成功:", response);
-              this.$message.success("删除成功");
-
-              // 删除成功后的处理
-              if (isSelf) {
-                // 如果删除的是当前用户自己，强制退出登录
-                this.$alert("您的账户已被删除，系统将退出登录", "账户已删除", {
-                  confirmButtonText: "确定",
-                  showCancelButton: false,
-                  closeOnClickModal: false,
-                  closeOnPressEscape: false,
-                  type: "warning",
-                  callback: () => {
-                    this.forceLogout();
-                  },
-                });
-              } else {
-                // 重新加载用户列表
-                this.fetchUsers();
-              }
-            })
-            .catch((error) => {
-              console.error("删除失败:", error);
-
-              // 显示详细的错误信息
-              let errorMessage = "删除失败";
-              if (
-                error.response &&
-                error.response.data &&
-                error.response.data.message
-              ) {
-                errorMessage = error.response.data.message;
-              } else if (error.message) {
-                errorMessage = error.message;
-              }
-
-              this.$message.error(errorMessage);
-            });
-        })
-        .catch(() => {
-          // 用户取消删除
-          this.$message.info("已取消删除");
-        });
+      this.$confirm(`确定要${actionText}账户 [${row.username}] 的访问权限吗？`, "操作确认", {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        batchUpdateUserStatus({ ids: [row.id], status: newStatus })
+          .then(() => {
+            this.$message.success(`账户已${actionText}`);
+            this.fetchUsers();
+          })
+          .catch(() => this.$message.error(`${actionText}失败`));
+      }).catch(() => {});
     },
 
-    // 头像上传前置校验
+    handleDelete(row) {
+      // 🌟 方案 B：金钟罩绝对保护管理员
+      if (row.role === 'admin') {
+        this.$message.error("拒绝操作：您无权在当前列表中销毁管理员账号！");
+        return;
+      }
+
+      const message = `确定要永久删除账户 [${row.username}] 吗？此操作不可逆！`;
+
+      this.$confirm(message, "彻底删除确认", {
+        confirmButtonText: "确定删除",
+        cancelButtonText: "取消",
+        type: "error",
+      }).then(() => {
+          deleteUser(row.id)
+            .then(() => {
+              this.$message.success("账号已永久删除");
+              this.fetchUsers();
+            })
+            .catch((error) => {
+              this.$message.error(error.response?.data?.message || "系统拒绝了删除请求");
+            });
+        }).catch(() => {});
+    },
+
     beforeAvatarUpload(file) {
       const isJPG = file.type === "image/jpeg" || file.type === "image/png";
       const isLt2M = file.size / 1024 / 1024 < 2;
 
       if (!isJPG) {
-        this.$message.error("头像图片只能是 JPG/PNG 格式!");
+        this.$message.error("仅支持 JPG/PNG 格式");
         return false;
       }
       if (!isLt2M) {
-        this.$message.error("头像图片大小不能超过 2MB!");
+        this.$message.error("图片限 2MB 以内");
         return false;
       }
-
       return true;
     },
 
-    // 处理头像上传（只在编辑模式使用）
     handleAvatarUpload(options) {
       const file = options.file;
       this.uploadingAvatar = true;
 
-      // 构建FormData
       const formData = new FormData();
       formData.append("avatar", file);
-      formData.append("userId", this.formData.id); // 使用当前编辑的用户ID
+      formData.append("userId", this.formData.id); 
 
       updateUserAvatar(formData)
         .then((response) => {
           if (response.code === 200) {
             this.avatarUrl = this.getRealAvatarUrl(response.data);
             this.formData.avatar = response.data;
-            this.$message.success("头像上传成功！");
+            this.$message.success("新头像已同步");
           } else {
-            this.$message.error(response.message || "头像上传失败");
+            this.$message.error(response.message || "同步失败");
           }
         })
-        .catch((error) => {
-          console.error("头像上传失败:", error);
-          this.$message.error("头像上传失败，请重试");
-        })
+        .catch(() => this.$message.error("网络卡顿，上传中断"))
         .finally(() => {
           this.uploadingAvatar = false;
         });
     },
 
-    // 提交表单（新增/编辑）
     handleSubmit() {
       this.$refs.userForm.validate((valid) => {
-        if (valid) {
-          this.submitting = true;
+        if (!valid) return false;
+        
+        this.submitting = true;
+        const submitData = {
+          username: this.formData.username,
+          role: this.formData.role,
+          email: this.formData.email,
+          phone: this.formData.phone,
+          status: this.formData.status,
+        };
 
-          // 准备提交数据
-          const submitData = {
-            username: this.formData.username,
-            role: this.formData.role,
-            email: this.formData.email,
-            phone: this.formData.phone,
-            status: this.formData.status,
-          };
-
-          let isCurrentUserPasswordChange = false;
-
-          if (this.isAddMode) {
-            // 新增模式：添加密码
-            submitData.password = this.formData.password;
-            // 新增模式不需要上传头像
-          } else {
-            // 编辑模式：添加ID和头像
-            submitData.id = this.formData.id;
-            submitData.avatar = this.formData.avatar; // 包含头像路径
-
-            // 如果有填写新密码，则添加
-            if (
-              this.formData.editPassword &&
-              this.formData.editPassword.trim() !== ""
-            ) {
-              submitData.password = this.formData.editPassword;
-
-              //判断是否为当前登录的账户
-              const currentUserId = getUserId();
-              if (currentUserId && this.formData.id === currentUserId) {
-                isCurrentUserPasswordChange = true;
-              }
-            }
-          }
-
-          console.log("准备提交的数据:", submitData);
-
-          // 根据模式调用不同的API
-          const apiCall = this.isAddMode
-            ? addUser(submitData)
-            : updateUser(submitData);
-
-          apiCall
-            .then((response) => {
-              console.log("API响应的数据：", response);
-
-              this.$message.success(this.isAddMode ? "新增成功" : "更新成功");
-              this.dialogVisible = false;
-
-              // 如果是新增，重置到第一页显示最新的数据
-              if (this.isAddMode) {
-                this.pagination.current = 1;
-              }
-
-              // 重新加载用户列表
-              this.fetchUsers();
-
-              // 如果是当前用户修改了密码，强制重新登录
-              if (isCurrentUserPasswordChange) {
-                this.$alert(
-                  "您的密码已修改，为了账户安全，请重新登录！",
-                  "密码已修改",
-                  {
-                    confirmButtonText: "重新登录",
-                    showCancelButton: false,
-                    closeOnClickModal: false,
-                    closeOnPressEscape: false,
-                    callback: () => {
-                      this.forceLogout();
-                    },
-                  }
-                );
-              }
-            })
-            .catch((error) => {
-              console.error("操作失败:", error);
-              // 显示更详细的错误信息
-              if (
-                error.response &&
-                error.response.data &&
-                error.response.data.message
-              ) {
-                this.$message.error(error.response.data.message);
-              } else if (error.message) {
-                this.$message.error(error.message);
-              } else {
-                this.$message.error("操作失败");
-              }
-            })
-            .finally(() => {
-              this.submitting = false;
-            });
+        if (this.isAddMode) {
+          submitData.password = this.formData.password;
         } else {
-          console.log("表单验证失败");
-          return false;
+          submitData.id = this.formData.id;
+          submitData.avatar = this.formData.avatar; 
         }
+
+        const apiCall = this.isAddMode ? addUser(submitData) : updateUser(submitData);
+
+        apiCall
+          .then(() => {
+            this.$message.success(this.isAddMode ? "系统新账户创建成功" : "资料保存成功");
+            this.dialogVisible = false;
+            
+            if (this.isAddMode) this.pagination.current = 1;
+            this.fetchUsers();
+          })
+          .catch((error) => {
+            console.error("操作失败:", error);
+            this.$message.error(error.response?.data?.message || "系统内部错误，保存中断");
+          })
+          .finally(() => {
+            this.submitting = false;
+          });
       });
     },
 
-    // 强制退出登录
     forceLogout() {
-      // 清除所有认证信息
       clearAuth();
-
-      // 如果使用Vuex，清除用户状态
       if (this.$store && this.$store.commit) {
         this.$store.commit("user/SET_TOKEN", "");
         this.$store.commit("user/SET_USER_INFO", null);
       }
-
-      // 跳转到登录页面
       this.$router.push("/login");
-
-      // 显示提示信息
-      this.$message({
-        type: "info",
-        message: "请使用新密码重新登录",
-      });
     },
 
-    // 重置表单
     resetForm() {
-      if (this.$refs.userForm) {
-        this.$refs.userForm.resetFields();
-      }
+      if (this.$refs.userForm) this.$refs.userForm.resetFields();
       this.formData = {
         id: null,
         username: "",
-        password: "", // 新增模式密码
-        confirmPassword: "", // 新增模式确认密码
-        editPassword: "", // 编辑模式密码（可选修改）
+        password: "", 
+        confirmPassword: "", 
         role: "",
         email: "",
         phone: "",
         status: "1",
-        avatar: "", // 重置头像路径
+        avatar: "", 
       };
-
-      // 重置头像相关变量
       this.avatarUrl = "";
       this.uploadingAvatar = false;
     },
 
-    // 多选框选择变化事件
     handleSelectionChange(selection) {
       this.selectedUsers = selection;
-      console.log("选中的用户：", this.selectedUsers);
     },
 
-    // 检查用户是否可选（防止选择当前登录用户）
+    // 🌟 核心实现：拦截管理员的批量复选
     isSelectable(row) {
-      const currentUserId = getUserId();
-      // 如果用户是当前登录用户，则不可选（防止删除，禁用自己）
-      return row.id !== currentUserId;
+      // 拒绝选中任何管理员账户，防止批量越权误操作
+      return row.role !== 'admin';
     },
 
-    // 批量启用
     handleBatchEnable() {
-      this.batchUpdateStatus("1", "启用");
+      this.batchUpdateStatus("1", "解封");
     },
-
-    // 批量禁用
     handleBatchDisable() {
-      this.batchUpdateStatus("0", "禁用");
+      this.batchUpdateStatus("0", "封禁");
     },
 
-    // 清空选择方法优化
     clearSelection() {
       if (this.$refs.userTable) {
         this.$refs.userTable.clearSelection();
@@ -1008,164 +782,86 @@ export default {
       this.selectedUsers = [];
     },
 
-    // 批量更新用户状态
     batchUpdateStatus(status, statusText) {
-      if (this.selectedUsers.length === 0) {
-        this.$message.warning("请先选择用户");
-        return;
-      }
-
-      // 检查是否包含当前用户
-      const currentUserId = getUserId();
-      const containsSelf = this.selectedUsers.some(
-        (user) => user.id === currentUserId
-      );
-
-      if (containsSelf && status === "0") {
-        this.$message.warning("不能禁用当前登录的用户，请先取消选择");
-        return;
-      }
+      if (this.selectedUsers.length === 0) return;
 
       const userIds = this.selectedUsers.map((user) => user.id);
+      
+      // 🌟 XSS 防护
+      const escapeHtml = (str) => (str || '').replace(/[&<"'>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[m]);
+      
       const usernames = this.selectedUsers
-        .map((user) => user.username)
-        .join("、");
-
-      const dialogType = status === "1" ? "success" : "warning";
-      const icon = status === "1" ? "el-icon-success" : "el-icon-warning";
-
-      this.$confirm(
-        `<div>
-      <p style="font-size: 16px; margin-bottom: 8px; color: ${
-        status === "1" ? "#67c23a" : "#e6a23c"
-      };">
-        <el-icon><${icon} /></el-icon>
-        确定要${statusText}选中的 ${this.selectedUsers.length} 个用户吗？
-      </p>
-      <p style="color: #606266; margin-bottom: 10px;">${statusText}以下用户：</p>
-      <div style="background: #f5f7fa; padding: 10px; border-radius: 4px; max-height: 150px; overflow-y: auto;">
-        ${usernames}
-      </div>
-    </div>`,
-        `批量${statusText}确认`,
-        {
-          confirmButtonText: `确定${statusText}`,
-          cancelButtonText: "取消",
-          type: dialogType,
-          dangerouslyUseHTMLString: true,
-          customClass: `batch-${statusText}-dialog`,
-          confirmButtonClass: `batch-${statusText}-confirm`,
-        }
-      )
-        .then(() => {
-          this.batchLoading = true;
-
-          // 调用批量更新API - 注意这里传递的是 params 而不是 data
-          batchUpdateUserStatus({
-            ids: userIds, // 数组形式
-            status: status, // 注意：后端接收的是 Integer，这里传数字类型
-          })
-            .then((response) => {
-              // 根据后端返回的数据结构调整
-              const successMessage =
-                response.data?.message || `批量${statusText}成功`;
-              this.$message.success({
-                message: successMessage,
-                duration: 2000,
-              });
-              this.fetchUsers();
-              this.clearSelection();
-            })
-            .catch((error) => {
-              console.error(`批量${statusText}失败:`, error);
-              let errorMessage = `批量${statusText}失败`;
-              if (error.response?.data?.message) {
-                errorMessage = error.response.data.message;
-              }
-              this.$message.error(errorMessage);
-            })
-            .finally(() => {
-              this.batchLoading = false;
-            });
-        })
-        .catch(() => {
-          this.$message.info(`已取消批量${statusText}`);
-        });
-    },
-
-    // 批量删除用户
-    handleBatchDelete() {
-      if (this.selectedUsers.length === 0) {
-        this.$message.warning("请选择用户");
-        return;
-      }
-
-      // 检查是否包含当前用户
-      const currentUserId = getUserId();
-      const containsSelf = this.selectedUsers.some(
-        (user) => user.id === currentUserId
-      );
-
-      if (containsSelf) {
-        this.$message.warning("不能删除当前登录的用户，请先取消选择");
-        return;
-      }
-
-      const userIds = this.selectedUsers.map((user) => user.id);
-      const usernames = this.selectedUsers
-        .map((user) => user.username)
+        .map((user) => escapeHtml(user.username))
         .join("、");
 
       this.$confirm(
         `<div>
-          <p style="font-size: 16px; margin-bottom: 8px; color: #f56c6c;">
-            <el-icon><el-icon-warning /></el-icon>
-            确定要删除选中的 ${this.selectedUsers.length} 个用户吗？
+          <p style="font-size: 15px; margin-bottom: 8px;">
+            系统将对以下 <b>${this.selectedUsers.length}</b> 个非管理员账户执行批量${statusText}：
           </p>
-          <p style="color: #606266; margin-bottom: 10px;">这将永久删除以下用户：</p>
-          <div style="background: #f5f7fa; padding: 10px; border-radius: 4px; max-height: 150px; overflow-y: auto;">
+          <div style="background: #f4f4f5; padding: 10px; border-radius: 4px; font-size: 13px; max-height: 100px; overflow-y: auto; color: #606266;">
             ${usernames}
           </div>
         </div>`,
-        "批量删除确认",
+        `批量${statusText}指令发出`,
         {
-          confirmButtonText: "确定删除",
+          confirmButtonText: `确定`,
           cancelButtonText: "取消",
-          type: "warning",
+          type: status === '1' ? 'success' : 'warning',
           dangerouslyUseHTMLString: true,
-          customClass: "batch-delete-dialog",
-          confirmButtonClass: "batch-delete-confirm",
-          cancelButtonClass: "batch-delete-cancel",
         }
-      )
-        .then(() => {
+      ).then(() => {
           this.batchLoading = true;
-
-          // 调用批量删除API
-          batchDeleteUsers({ ids: userIds })
+          batchUpdateUserStatus({ ids: userIds, status: status })
             .then(() => {
-              this.$message.success({
-                message: `成功删除 ${this.selectedUsers.length} 个用户`,
-                duration: 2000,
-              });
+              this.$message.success(`批量${statusText}完成`);
               this.fetchUsers();
               this.clearSelection();
             })
-            .catch((error) => {
-              console.error("批量删除失败:", error);
-              let errorMessage = "批量删除失败";
-              if (error.response?.data?.message) {
-                errorMessage = error.response.data.message;
-              }
-              this.$message.error(errorMessage);
+            .catch((error) => this.$message.error(error.response?.data?.message || "指令执行中断"))
+            .finally(() => { this.batchLoading = false; });
+        }).catch(() => {});
+    },
+
+    handleBatchDelete() {
+      if (this.selectedUsers.length === 0) return;
+
+      const userIds = this.selectedUsers.map((user) => user.id);
+      
+      // 🌟 XSS 防护
+      const escapeHtml = (str) => (str || '').replace(/[&<"'>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[m]);
+      
+      const usernames = this.selectedUsers
+        .map((user) => escapeHtml(user.username))
+        .join("、");
+
+      this.$confirm(
+        `<div>
+          <p style="font-size: 15px; margin-bottom: 8px; color: #F56C6C; font-weight: bold;">
+            ⚠️ 拒绝误误误操作！将永久彻底销毁以下 ${this.selectedUsers.length} 个非管理员账户：
+          </p>
+          <div style="background: #fef0f0; padding: 10px; border-radius: 4px; font-size: 13px; max-height: 100px; overflow-y: auto; color: #F56C6C;">
+            ${usernames}
+          </div>
+        </div>`,
+        "危险！彻底删除确认",
+        {
+          confirmButtonText: "强制销毁",
+          cancelButtonText: "取消",
+          type: "error",
+          dangerouslyUseHTMLString: true,
+        }
+      ).then(() => {
+          this.batchLoading = true;
+          batchDeleteUsers({ ids: userIds })
+            .then(() => {
+              this.$message.success(`成功强制销毁 ${this.selectedUsers.length} 个账户`);
+              this.fetchUsers();
+              this.clearSelection();
             })
-            .finally(() => {
-              this.batchLoading = false;
-            });
-        })
-        .catch(() => {
-          this.$message.info("已取消批量删除");
-        });
+            .catch((error) => this.$message.error(error.response?.data?.message || "销毁中断"))
+            .finally(() => { this.batchLoading = false; });
+        }).catch(() => {});
     },
   },
 };
@@ -1173,562 +869,210 @@ export default {
 
 <style lang="scss" scoped>
 .user-management {
-  padding: 20px 20px 5px 20px;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
+  padding: 24px;
+  background-color: #f4f6f8;
+  min-height: calc(100vh - 100px);
 
-  h2 {
-    margin: 0 0 16px 0;
-    padding: 0;
-    font-size: 24px;
-    font-weight: 600;
-    color: #303133;
-    position: relative;
-
-    &::after {
-      content: "";
-      position: absolute;
-      bottom: -8px;
-      left: 0;
-      width: 47px;
-      height: 4px;
-      background: linear-gradient(135deg, #409eff 0%, #1890ff 100%);
-      border-radius: 2px;
+  .page-header {
+    margin-bottom: 20px;
+    h2 {
+      margin: 0 0 8px 0;
+      font-size: 22px;
+      color: #1f2937;
+      font-weight: 600;
     }
   }
 }
 
-/* 筛选工具栏样式 */
 .filter-toolbar {
-  margin-top: 20px;
-  padding: 16px;
+  background: #ffffff;
+  padding: 16px 20px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #f6f9ff 0%, #f0f7ff 100%);
-  border: 1px solid #e1e9ff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #e5e7eb;
 
-  .filter-form {
+  .toolbar-left {
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
     gap: 12px;
-
-    .el-form-item {
-      margin-bottom: 0;
-
-      .el-input,
-      .el-select {
-        width: 200px;
-
-        .el-input__inner {
-          border-radius: 6px;
-          border: 1px solid #dcdfe6;
-          transition: all 0.3s;
-
-          &:hover {
-            border-color: #c0c4cc;
-          }
-
-          &:focus {
-            border-color: #409eff;
-            box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.1);
-          }
-        }
-      }
-
-      .el-button {
-        border-radius: 6px;
-        font-weight: 500;
-        transition: all 0.3s;
-        padding: 10px 16px;
-
-        &:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        }
-
-        &:active {
-          transform: translateY(0);
-        }
-
-        &[type="primary"] {
-          background: linear-gradient(135deg, #409eff 0%, #1890ff 100%);
-          border: none;
-
-          &:hover {
-            background: linear-gradient(135deg, #66b1ff 0%, #409eff 100%);
-            box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
-          }
-        }
-      }
-    }
   }
 }
 
-/* 批量操作工具栏样式 */
 .batch-toolbar {
-  margin: 15px 0 10px 0;
-  padding: 12px 16px;
-  background: linear-gradient(135deg, #f0f4ff 0%, #e8f4ff 100%);
-  border: 1px solid #d0e3ff;
+  margin-top: 16px;
+  padding: 12px 20px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.1);
-  animation: slideDown 0.3s ease-out;
-
+  
   .batch-content {
     display: flex;
     justify-content: space-between;
     align-items: center;
 
     .batch-left {
+      font-size: 14px;
+      color: #1d4ed8;
       display: flex;
       align-items: center;
-      gap: 10px;
-
+      gap: 12px;
       .batch-icon {
-        color: #409eff;
-        font-size: 18px;
-        background: white;
-        padding: 4px;
-        border-radius: 50%;
-        box-shadow: 0 2px 4px rgba(64, 158, 255, 0.2);
+        color: #3b82f6;
       }
-
-      .batch-info {
-        font-size: 14px;
-        color: #409eff;
-
-        strong {
-          color: #1890ff;
-          font-weight: 600;
-          margin: 0 3px;
-        }
+      strong {
+        font-weight: 600;
+        margin: 0 4px;
       }
     }
 
     .batch-actions {
       display: flex;
-      gap: 8px;
-
-      .el-button {
-        border-radius: 6px;
-        font-weight: 500;
-        transition: all 0.3s;
-
-        &:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-
-        &:active {
-          transform: translateY(0);
-        }
-
-        .el-icon {
-          margin-right: 4px;
-        }
-      }
+      gap: 10px;
     }
   }
 }
 
-/* 确保表格滚动正常工作 */
-.user-table {
-  margin-top: 16px;
-}
-
-/* 表格样式 - 修复 :deep() 语法错误 */
-::v-deep .user-table .el-table {
-  flex: 1;
+::v-deep .user-table {
   border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  
+  th.el-table__cell {
+    background-color: #f9fafb !important;
+    color: #4b5563;
+    font-weight: 600;
+    height: 48px;
+  }
+  td.el-table__cell {
+    border-bottom: 1px solid #f3f4f6;
+  }
+  .el-table__row:hover > td.el-table__cell {
+    background-color: #f0fdf4 !important;
+  }
 }
 
-::v-deep .user-table .el-table__header-wrapper {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: linear-gradient(135deg, #f8faff 0%, #f0f7ff 100%);
+/* 🌟 管理员标识小图标 */
+.admin-flag {
+  color: #F56C6C;
+  font-size: 12px;
+  margin-left: 5px;
+  position: relative;
+  bottom: 1px;
 }
 
-::v-deep .user-table .el-table__header-wrapper th {
-  background: transparent;
-  font-weight: 600;
-  color: #2c3e50;
-  border-bottom: 2px solid #409eff;
+/* 圆点 */
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  
+  &.status-active {
+    color: #10b981;
+    .dot {
+      background-color: #10b981;
+      box-shadow: 0 0 6px rgba(16, 185, 129, 0.4);
+    }
+  }
+  &.status-disabled {
+    color: #ef4444;
+    .dot {
+      background-color: #ef4444;
+    }
+  }
+  .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
 }
 
-::v-deep .user-table .el-table__header-wrapper .cell {
-  color: #2c3e50;
-  font-weight: 600;
-}
-
-::v-deep .user-table .el-table__body-wrapper {
-  overflow-y: auto;
-  overflow-x: auto;
-}
-
-::v-deep .user-table .el-table__body-wrapper::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::v-deep .user-table .el-table__body-wrapper::-webkit-scrollbar-track {
-  background: #f1f1f1;
+/* 🌟 方案 B：操作列保护盾样式 */
+.protected-flag {
+  font-size: 12px;
+  color: #c0c4cc;
+  background-color: #f4f4f5;
+  padding: 4px 10px;
   border-radius: 4px;
+  user-select: none;
 }
 
-::v-deep .user-table .el-table__body-wrapper::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 4px;
-}
-
-::v-deep .user-table .el-table__body-wrapper::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
-}
-
-::v-deep .user-table .el-table__body {
-  min-width: 100%;
-}
-
-::v-deep .user-table .el-table__body tr {
-  transition: background-color 0.2s;
-}
-
-::v-deep .user-table .el-table__body tr:hover {
-  background-color: #f5f9ff !important;
-}
-
-::v-deep .user-table .el-table__body tr.current-row {
-  background-color: #e8f4ff !important;
-}
-
-::v-deep .user-table .el-table__body td .cell {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* 操作按钮样式 */
-::v-deep .el-button--mini.is-circle {
-  width: 28px;
-  height: 28px;
-  transition: all 0.3s;
-}
-
-::v-deep .el-button--mini.is-circle:hover {
-  transform: scale(1.1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-/* 角色标签样式 */
-::v-deep .el-tag {
-  margin: 2px;
-  border-radius: 4px;
-}
-
-/* 分页组件样式 */
-.el-pagination-container {
+.pagination-container {
   margin-top: 20px;
   display: flex;
   justify-content: flex-end;
-}
-
-::v-deep .el-pagination {
-  padding: 16px 0;
-}
-
-::v-deep .el-pagination .el-pager li {
-  border-radius: 4px;
-  margin: 0 4px;
-}
-
-::v-deep .el-pagination .el-pager li.active {
-  background: linear-gradient(135deg, #409eff 0%, #1890ff 100%);
-  color: white;
-}
-
-::v-deep .el-pagination .el-pager li:not(.active):hover {
-  color: #409eff;
-}
-
-::v-deep .el-pagination .el-pagination__jump .el-input__inner {
-  border-radius: 4px;
-}
-
-::v-deep .el-pagination .el-pagination__jump .el-input__inner:focus {
-  border-color: #409eff;
-}
-
-/* 对话框样式 */
-::v-deep .el-dialog {
+  background: #fff;
+  padding: 12px 20px;
   border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  border: 1px solid #e5e7eb;
 }
 
-::v-deep .el-dialog .el-dialog__header {
-  padding: 20px 20px 10px;
-  border-bottom: 1px solid #e8eaec;
-}
-
-::v-deep .el-dialog .el-dialog__header .el-dialog__title {
-  font-weight: 600;
-  color: #303133;
-}
-
-::v-deep .el-dialog .el-dialog__body {
-  padding: 20px;
-}
-
-::v-deep .el-dialog .el-dialog__footer {
-  padding: 10px 20px 20px;
-  border-top: 1px solid #e8eaec;
-}
-
-/* 添加删除确认对话框的样式 */
-::v-deep .delete-self-confirm {
-  background-color: #f56c6c;
-  border-color: #f56c6c;
-  color: white;
-}
-
-::v-deep .delete-self-confirm:hover {
-  background-color: #e64c4c;
-  border-color: #e64c4c;
-}
-
-::v-deep .delete-self-cancel {
-  color: #f56c6c;
-  border-color: #f56c6c;
-}
-
-::v-deep .delete-self-cancel:hover {
-  background-color: #fef0f0;
-  color: #e64c4c;
-}
-
-/* 批量操作对话框样式 */
-::v-deep .batch-delete-dialog .el-message-box__title {
-  color: #f56c6c;
-  font-weight: 600;
-}
-
-::v-deep .batch-delete-dialog .batch-delete-confirm {
-  background: linear-gradient(135deg, #f56c6c 0%, #e64c4c 100%);
-  border: none;
-  color: white;
-}
-
-::v-deep .batch-delete-dialog .batch-delete-confirm:hover {
-  background: linear-gradient(135deg, #e64c4c 0%, #d43838 100%);
-}
-
-::v-deep .batch-delete-dialog .batch-delete-cancel:hover {
-  color: #f56c6c;
-  border-color: #f56c6c;
-  background-color: #fef0f0;
-}
-
-::v-deep .batch-启用-dialog .batch-启用-confirm {
-  background: linear-gradient(135deg, #67c23a 0%, #5daf34 100%);
-  border: none;
-  color: white;
-}
-
-::v-deep .batch-启用-dialog .batch-启用-confirm:hover {
-  background: linear-gradient(135deg, #5daf34 0%, #529b2e 100%);
-}
-
-::v-deep .batch-禁用-dialog .batch-禁用-confirm {
-  background: linear-gradient(135deg, #e6a23c 0%, #d9902b 100%);
-  border: none;
-  color: white;
-}
-
-::v-deep .batch-禁用-dialog .batch-禁用-confirm:hover {
-  background: linear-gradient(135deg, #d9902b 0%, #c87f22 100%);
-}
-
-/* 动画效果 */
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
+::v-deep .clean-dialog {
+  border-radius: 12px;
+  .el-dialog__header {
+    border-bottom: 1px solid #f3f4f6;
+    padding: 20px 24px;
+    .el-dialog__title {
+      font-weight: 600;
+      color: #1f2937;
+    }
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+  .el-dialog__body {
+    padding: 30px 40px 10px 20px;
+  }
+  .el-dialog__footer {
+    border-top: 1px solid #f3f4f6;
+    padding: 15px 24px;
   }
 }
 
-/* ========== 头像上传样式 ========== */
 .avatar-uploader {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-top: 5px;
-}
-
-/* 头像容器（用于包裹头像和提示层） */
-.avatar-container {
-  position: relative;
-  cursor: pointer;
-  height: 100px;
-}
-
-.avatar {
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid #e8eaec;
-  transition: all 0.3s;
-}
-
-/* 鼠标hover时头像效果 */
-.avatar-container:hover .avatar {
-  border-color: #409eff;
-  box-shadow: 0 0 12px rgba(64, 158, 255, 0.3);
-  opacity: 0.8; /* 头像轻微透明，突出提示 */
-}
-
-.avatar-uploader-icon {
-  font-size: 28px;
-  color: #8c939d;
-  width: 100px;
-  height: 100px;
-  line-height: 100px;
-  text-align: center;
-  border: 1px dashed #d9d9d9;
-  border-radius: 50%;
-  cursor: pointer;
-  background-color: #fbfbfb;
-  transition: all 0.3s;
-}
-
-.avatar-container:hover .avatar-uploader-icon {
-  color: #409eff;
-  border-color: #409eff;
-  background-color: #f5f7fa;
-}
-
-/* 头像hover提示（+号） */
-.avatar-tip {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0; /* 默认隐藏 */
-  transition: opacity 0.3s;
-  pointer-events: none; /* 不影响点击事件 */
-}
-
-.avatar-tip i {
-  font-size: 24px;
-  color: white;
-  background: rgba(64, 158, 255, 0.8);
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
-
-/* 鼠标hover时显示提示 */
-.avatar-container:hover .avatar-tip {
-  opacity: 1;
-}
-
-/* 禁用状态下隐藏提示 */
-.el-upload.is-disabled .avatar-tip {
-  display: none;
-}
-
-.el-upload__tip {
-  margin-top: 10px;
-  font-size: 12px;
-  color: #909399;
-}
-
-/* 响应式调整 */
-@media screen and (max-width: 1200px) {
-  .filter-toolbar {
-    padding: 12px;
-
-    .filter-form {
-      .el-form-item {
-        .el-input,
-        .el-select {
-          width: 180px;
-        }
-      }
+  .avatar-container {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    position: relative;
+    cursor: pointer;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+    
+    .avatar {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
     }
-  }
-
-  .batch-toolbar {
-    .batch-content {
-      flex-direction: column;
-      gap: 12px;
-      align-items: flex-start;
-
-      .batch-actions {
-        width: 100%;
-        overflow-x: auto;
-        padding-bottom: 4px;
-
-        .el-button {
-          flex-shrink: 0;
-        }
-      }
+    
+    .avatar-uploader-icon {
+      font-size: 24px;
+      color: #9ca3af;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f9fafb;
     }
-  }
-}
-
-@media screen and (max-width: 768px) {
-  .user-management {
-    padding: 15px;
-
-    h2 {
-      font-size: 20px;
+    
+    .avatar-tip {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      opacity: 0;
+      transition: 0.2s;
+      i { font-size: 20px; }
     }
-  }
-
-  .filter-toolbar {
-    .filter-form {
-      flex-direction: column;
-      align-items: flex-start;
-
-      .el-form-item {
-        width: 100%;
-        margin-right: 0;
-
-        .el-input,
-        .el-select {
-          width: 100%;
-        }
-
-        .el-form-item__content {
-          width: 100%;
-        }
-      }
+    
+    &:hover .avatar-tip {
+      opacity: 1;
     }
-  }
-
-  ::v-deep .el-table {
-    font-size: 12px;
-  }
-
-  ::v-deep .el-table__header-wrapper .cell {
-    font-size: 12px;
   }
 }
 </style>

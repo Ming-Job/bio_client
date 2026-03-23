@@ -4,7 +4,7 @@
       <header class="console-header">
         <div class="greeting">
           <h2 class="title">
-            <i class="el-icon-cpu"></i> 生信工作台 Bio-workplace
+            <i class="el-icon-cpu"></i> 生信分析工作台 (Bio-Workbench)
             <el-tag
               v-if="currentProjectId"
               type="warning"
@@ -19,24 +19,23 @@
               >{{ username }}，欢迎回来</span
             >
           </h2>
-         
         </div>
 
         <div class="cluster-stats">
           <div class="stat-card">
-            <span class="label">累计 Pipeline</span>
+            <span class="label">累计运行次数</span>
             <span class="value text-blue"
               >{{ stats.totalTasks }} <small>次</small></span
             >
           </div>
           <div class="stat-card">
-            <span class="label">解析成功率</span>
+            <span class="label">执行成功率</span>
             <span class="value text-emerald">{{ stats.successRate }}%</span>
           </div>
           <div class="stat-card">
-            <span class="label">在线计算节点</span>
+            <span class="label">系统活跃任务</span>
             <span class="value text-purple"
-              >{{ stats.activeNodes }} <small>Nodes</small></span
+              >{{ stats.activeTasks || 0 }} <small>个</small></span
             >
           </div>
         </div>
@@ -46,7 +45,7 @@
         <div class="bento-left">
           <div class="bento-panel action-panel">
             <div class="panel-header">
-              <h3><i class="el-icon-s-promotion"></i> 核心指令舱</h3>
+              <h3><i class="el-icon-s-promotion"></i> 快捷操作区</h3>
               <el-tag size="mini" effect="dark" type="success" class="live-tag"
                 >LIVE</el-tag
               >
@@ -57,13 +56,13 @@
                 <div class="icon-wrapper upload">
                   <i class="el-icon-upload"></i>
                 </div>
-                <span>序列挂载</span>
+                <span>上传数据</span>
               </div>
               <div class="action-btn active-glow" @click="handleNewAnalysis">
                 <div class="icon-wrapper launch">
                   <i class="el-icon-video-play"></i>
                 </div>
-                <span>启动 Pipeline</span>
+                <span>启动流程</span>
               </div>
               <div
                 class="action-btn"
@@ -72,13 +71,13 @@
                 <div class="icon-wrapper template">
                   <i class="el-icon-magic-stick"></i>
                 </div>
-                <span>分析流库</span>
+                <span>分析流模板库</span>
               </div>
               <div class="action-btn" @click="$router.push('/analysis/data')">
                 <div class="icon-wrapper data">
                   <i class="el-icon-coin"></i>
                 </div>
-                <span>云端数据舱</span>
+                <span>数据资源中心</span>
               </div>
               <div class="action-btn" @click="handleAIAssistant">
                 <div class="icon-wrapper ai"><i class="el-icon-cpu"></i></div>
@@ -91,7 +90,7 @@
                 >
                   <i class="el-icon-discover"></i>
                 </div>
-                <span>三维结构洞察</span>
+                <span>三维结构预览</span>
               </div>
             </div>
           </div>
@@ -145,7 +144,7 @@
                   font-size: 13px;
                 "
               >
-                暂无分析任务，点击上方「启动 Pipeline」发射
+                暂无分析任务，点击上方「启动流程」开始
               </div>
             </div>
           </div>
@@ -161,7 +160,7 @@
         <div class="bento-right">
           <div class="bento-panel monitor-panel">
             <div class="panel-header">
-              <h3><i class="el-icon-odometer"></i> 算力集群监控</h3>
+              <h3><i class="el-icon-odometer"></i> 系统资源监控</h3>
               <el-tooltip content="连接正常" placement="top">
                 <div class="status-dot"></div>
               </el-tooltip>
@@ -170,7 +169,7 @@
             <div class="hardware-stats">
               <div class="hw-item">
                 <div class="hw-info">
-                  <span class="hw-name">CPU 负载 (128 Cores)</span>
+                  <span class="hw-name">CPU 负载</span>
                   <span class="hw-val">{{ hardware.cpu }}%</span>
                 </div>
                 <el-progress
@@ -182,7 +181,7 @@
               </div>
               <div class="hw-item">
                 <div class="hw-info">
-                  <span class="hw-name">内存分配 (512 GB)</span>
+                  <span class="hw-name">内存使用率</span>
                   <span class="hw-val">{{ hardware.memory }}%</span>
                 </div>
                 <el-progress
@@ -194,7 +193,7 @@
               </div>
               <div class="hw-item">
                 <div class="hw-info">
-                  <span class="hw-name">OSS 存储 (可用 5TB)</span>
+                  <span class="hw-name">本地存储占用</span>
                   <span class="hw-val" style="color: #eab308"
                     >{{ hardware.storage }}%</span
                   >
@@ -217,108 +216,14 @@
       </div>
     </div>
 
-    <el-drawer
-      title="配置并启动分析任务"
-      :visible.sync="drawerVisible"
-      direction="rtl"
-      size="450px"
-      custom-class="bio-dark-drawer"
-      :wrapperClosable="false"
-    >
-      <div class="drawer-content" v-if="selectedPipeline">
-        <div class="pipeline-summary">
-          <div class="pl-icon"><i class="el-icon-cpu"></i></div>
-          <div class="pl-info">
-            <h4>{{ selectedPipeline.name || "未命名流程" }}</h4>
-            <p>ID: {{ selectedPipeline.id }} | 请确认分析参数与挂载数据</p>
-          </div>
-          <el-tag size="mini" effect="dark" type="success" class="live-tag"
-            >READY</el-tag
-          >
-        </div>
-
-        <el-form :model="taskForm" label-position="top" class="bio-dark-form">
-          <el-form-item label="归属科研空间 (Workspace)" prop="projectId">
-            <el-select
-              v-model="taskForm.projectId"
-              placeholder="请选择本次任务归属的课题"
-              style="width: 100%"
-              popper-class="bio-dark-select-dropdown"
-              @change="handleProjectChange"
-            >
-              <el-option
-                v-for="proj in projectList"
-                :key="proj.id"
-                :label="proj.name"
-                :value="proj.id"
-              >
-                <span style="float: left"
-                  ><i class="el-icon-folder"></i> {{ proj.name }}</span
-                >
-              </el-option>
-            </el-select>
-          </el-form-item>
-
-          <el-form-item
-            label="挂载输入数据 (Fastq/BAM/FASTA/SDF)"
-            prop="fileIds"
-          >
-            <el-select
-              v-model="taskForm.fileIds"
-              multiple
-              :disabled="!taskForm.projectId"
-              :placeholder="
-                taskForm.projectId
-                  ? '请选择该空间下的数据文件'
-                  : '请先在上方选择归属空间'
-              "
-              style="width: 100%"
-              popper-class="bio-dark-select-dropdown"
-            >
-              <el-option
-                v-for="file in filteredProjectFiles"
-                :key="file.id"
-                :label="file.originalName || file.name"
-                :value="file.id"
-              >
-                <span style="float: left"
-                  ><i class="el-icon-document"></i>
-                  {{ file.originalName || file.name }}</span
-                >
-              </el-option>
-            </el-select>
-          </el-form-item>
-
-          <el-form-item label="分析参数设定 (JSON格式)">
-            <el-input
-              type="textarea"
-              :rows="8"
-              placeholder="请输入 JSON 格式的参数"
-              v-model="taskForm.params"
-              class="code-textarea"
-            ></el-input>
-          </el-form-item>
-        </el-form>
-
-        <div class="drawer-footer">
-          <el-button
-            plain
-            @click="drawerVisible = false"
-            class="dark-btn-cancel"
-            >取消中止</el-button
-          >
-          <el-button
-            type="primary"
-            @click="submitTask"
-            :loading="submitting"
-            class="dark-btn-submit"
-          >
-            <i class="el-icon-video-play"></i>
-            {{ submitting ? "发射中..." : "确认发射 (Launch)" }}
-          </el-button>
-        </div>
-      </div>
-    </el-drawer>
+    <TaskSubmitDrawer 
+      :visible.sync="drawerVisible" 
+      :pipeline="selectedPipeline" 
+      :userId="userId"
+      :projects="projectList"
+      :files="availableFiles"
+      @submit-success="fetchDashboardData"
+    />
 
     <TaskTerminalDrawer ref="terminalDrawer" />
 
@@ -336,7 +241,7 @@
     </el-dialog>
 
     <el-dialog
-      title="三维分子构象洞察 (3D Structure Viewer)"
+      title="三维分子结构预览 (3D Structure Viewer)"
       :visible.sync="show3DViewer"
       width="800px"
       custom-class="bio-dark-dialog"
@@ -352,7 +257,7 @@
         <div class="viewer-controls">
           <el-select
             v-model="selectedStructure"
-            placeholder="从云端数据舱选择结构文件 (PDB/SDF)"
+            placeholder="选择系统内的结构文件 (PDB/SDF)"
             size="small"
             class="dark-select"
             style="width: 350px"
@@ -389,7 +294,7 @@
         <div class="viewer-stage" id="3d-stage">
           <div v-if="!selectedStructure" class="empty-stage">
             <i class="el-icon-discover empty-icon"></i>
-            <p>请挂载结构文件以启动全息渲染引擎</p>
+            <p>请选择结构文件以启动预览</p>
             <span class="support-text">支持格式：.pdb, .sdf, .mol2</span>
           </div>
           <div v-else class="stage-overlay">
@@ -430,7 +335,6 @@ import {
   getPipelines,
   getDashboard,
   getRecentFiles,
-  submitAnalysisTask,
 } from "@/api/analysis";
 
 export default {
@@ -447,39 +351,16 @@ export default {
       pipelineList: [],
       pollingTimer: null,
 
-      stats: { totalTasks: 0, successRate: 0, activeNodes: 0 },
+      stats: { totalTasks: 0, successRate: 0, activeTasks: 0 },
       hardware: { cpu: 0, memory: 0, storage: 0 },
       recentTasks: [],
 
-      // --- 发射任务抽屉状态 ---
+      // 控制抽屉所需的基础数据
       drawerVisible: false,
-      submitting: false,
       selectedPipeline: null,
       availableFiles: [],
       projectList: [],
-      taskForm: {
-        projectId: null,
-        fileIds: [],
-        params: '{\n  "genome": "hg38",\n  "pvalue": 0.05,\n  "threads": 8\n}',
-      },
-      rules: {
-        projectId: [
-          {
-            required: true,
-            message: "为了保证数据溯源，必须选择归属的科研空间",
-            trigger: "change",
-          },
-        ],
-        fileIds: [
-          {
-            required: true,
-            message: "请至少挂载一个输入数据文件",
-            trigger: "change",
-          },
-        ],
-      },
 
-      // --- 3D 渲染舱专属状态 ---
       show3DViewer: false,
       loading3D: false,
       selectedStructure: "",
@@ -504,15 +385,6 @@ export default {
           fileName.endsWith(".mol")
         );
       });
-    },
-
-    filteredProjectFiles() {
-      if (!this.taskForm.projectId) {
-        return [];
-      }
-      return this.availableFiles.filter(
-        (file) => file.projectId === this.taskForm.projectId,
-      );
     },
   },
   watch: {
@@ -550,13 +422,13 @@ export default {
           this.pipelineList = res.data;
         }
       } catch (error) {
-        this.$message.error("无法连接到云端拉取模板数据");
+        this.$message.error("无法拉取模板数据，请检查网络");
       }
     },
 
     handleUploadData() {
       if (!this.isLoggedIn) {
-        this.$message.warning("请先验证研究员身份 (登录) 后再挂载数据");
+        this.$message.warning("提示：请先登录后再操作数据");
         return;
       }
       this.showUploadDialog = true;
@@ -581,7 +453,6 @@ export default {
         if (dashData) {
           if (dashData.stats) this.stats = dashData.stats;
           if (dashData.recentTasks && Array.isArray(dashData.recentTasks)) {
-            // 🌟 核心修改：在映射数据时，把后端传的 projectName 也接过来
             this.recentTasks = dashData.recentTasks.map((task) => {
               const statusInfo = this.parseTaskStatus(task.status);
               return {
@@ -594,14 +465,14 @@ export default {
                 status: statusInfo.text,
                 statusType: statusInfo.type,
                 progress: task.progress,
-                projectName: task.projectName || "未绑定课题", // 接收项目名
+                projectName: task.projectName || "未绑定课题",
               };
             });
           }
           this.hardware = dashData.hardware;
         }
       } catch (error) {
-        console.error("大盘数据轮询失败:", error);
+        console.error("大盘数据拉取失败:", error);
       }
     },
 
@@ -635,17 +506,17 @@ export default {
       }
     },
 
+ // 🌟 路由跳转
     handleUseTemplate(template) {
       if (!this.isLoggedIn) {
-        this.$message.warning("请先验证研究员身份 (登录)");
+        this.$message.warning("提示：请先登录");
         return;
       }
-      this.selectedPipeline = template;
-      this.taskForm.fileIds = [];
-      this.taskForm.params =
-        '{\n  "genome": "hg38",\n  "pvalue": 0.05,\n  "threads": 8\n}';
-      this.drawerVisible = true;
-      this.fetchAvailableFiles();
+      // 带着 ID 跳向你的分步向导页面！
+      this.$router.push({
+        path: "/analysis/new",
+        query: { pipelineId: template.id },
+      });
     },
 
     async fetchAvailableFiles() {
@@ -660,59 +531,9 @@ export default {
       }
     },
 
-    async submitTask() {
-      if (this.taskForm.fileIds.length === 0) {
-        this.$message.warning("指令错误：请至少挂载一个输入数据文件！");
-        return;
-      }
-      if (!this.taskForm.projectId) {
-        this.$message.warning("发射失败：请先选择任务归属的科研空间！");
-        return;
-      }
-
-      let validJsonString = "{}";
-      if (this.taskForm.params && this.taskForm.params.trim() !== "") {
-        try {
-          JSON.parse(this.taskForm.params);
-          validJsonString = this.taskForm.params;
-        } catch (err) {
-          this.$message.error(
-            "参数校验失败：请输入合法的 JSON 格式（注意引号和逗号）！",
-          );
-          return;
-        }
-      }
-
-      this.submitting = true;
-      try {
-        const dto = {
-          projectId: this.taskForm.projectId,
-          pipelineId: this.selectedPipeline.id,
-          fileIds: this.taskForm.fileIds,
-          params: validJsonString,
-        };
-
-        const res = await submitAnalysisTask(dto, this.userId);
-
-        if (res && res.code === 200) {
-          this.$message.success(
-            `任务发射成功！计算节点已接管 (TaskID: ${res.data.taskId})`,
-          );
-          this.drawerVisible = false;
-          this.fetchDashboardData();
-        } else {
-          this.$message.error(res.message || "任务发射失败，被拦截");
-        }
-      } catch (error) {
-        this.$message.error("无法连接到调度引擎");
-      } finally {
-        this.submitting = false;
-      }
-    },
-
     handleNewAnalysis() {
       if (!this.isLoggedIn) {
-        this.$message.warning("请先验证研究员身份 (登录)");
+        this.$message.warning("提示：请先登录");
         return;
       }
       this.$router.push("/analysis/new");
@@ -759,15 +580,10 @@ export default {
       }
     },
 
-    handleProjectChange() {
-      this.taskForm.fileIds = [];
-      this.$message.info("已切换空间，请重新挂载对应的数据文件");
-    },
-
     exitWorkspace() {
       this.currentProjectId = null;
       this.$router.replace({ query: {} }).catch(() => {});
-      this.$message.info("已退出专属空间，恢复全局视角");
+      this.$message.info("已退出专属课题，恢复全局视角");
 
       this.fetchAvailableFiles();
       this.fetchDashboardData();
@@ -775,7 +591,7 @@ export default {
 
     async openStructureViewer() {
       if (!this.isLoggedIn) {
-        this.$message.warning("请先验证研究员身份 (登录)");
+        this.$message.warning("提示：请先登录");
         return;
       }
       this.show3DViewer = true;
@@ -797,7 +613,7 @@ export default {
         const response = await fetch(fileUrl);
 
         if (!response.ok) {
-          throw new Error("文件流获取失败");
+          throw new Error("文件获取失败");
         }
 
         this.currentMolData = await response.text();
@@ -807,7 +623,7 @@ export default {
           this.currentMolData.includes("<!DOCTYPE html>")
         ) {
           this.$message.warning(
-            "渲染拦截：当前选中的是云端模拟数据，真实的物理 PDB/SDF 文件尚未落盘。",
+            "提示：当前选中的文件不是合法的结构文件，无法预览。"
           );
           this.loading3D = false;
           return;
@@ -837,11 +653,11 @@ export default {
           this.updateRenderStyle();
           this.viewer3D.zoomTo();
 
-          this.$message.success("结构拓扑解析完毕，WebGL 渲染引擎已就绪");
+          this.$message.success("结构解析完毕，预览已就绪");
         });
       } catch (error) {
-        console.error("3D 渲染失败:", error);
-        this.$message.error("无法读取结构文件流，渲染引擎启动失败");
+        console.error("3D 预览失败:", error);
+        this.$message.error("无法读取结构文件，预览失败");
       } finally {
         this.loading3D = false;
       }
@@ -862,9 +678,6 @@ export default {
       }
 
       this.viewer3D.render();
-      this.$message.info(
-        `底层渲染模式已切换至: ${this.renderStyle.toUpperCase()}`,
-      );
     },
   },
 };
@@ -1062,7 +875,7 @@ export default {
   }
 }
 
-/* ================= 4. 动态任务列表样式 (核心修改) ================= */
+/* ================= 4. 动态任务列表样式 ================= */
 .static-list {
   display: flex;
   flex-direction: column;
@@ -1082,10 +895,9 @@ export default {
     background: #262f3f;
     cursor: pointer;
   }
-  /* 🌟 这里是改过的 CSS 样式，包含超出隐藏和标签美化 */
   .item-info {
     flex: 1;
-    overflow: hidden; /* 防止溢出 */
+    overflow: hidden;
     .item-title {
       display: flex;
       align-items: center;
@@ -1098,9 +910,8 @@ export default {
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        max-width: 140px; /* 给右边的项目标签留出空间 */
+        max-width: 140px; 
       }
-      /* 专属暗黑标签样式 */
       .dark-project-tag {
         background: transparent;
         border-color: #374151;
@@ -1118,7 +929,7 @@ export default {
   }
 }
 
-/* ================= 5. 算力监控面板 ================= */
+/* ================= 5. 系统资源监控面板 ================= */
 .monitor-panel {
   background: linear-gradient(180deg, #111827 0%, #0f172a 100%);
   position: relative;
@@ -1206,117 +1017,7 @@ export default {
   }
 }
 
-/* ================= 7. 极客暗黑抽屉样式 ================= */
-::v-deep .bio-dark-drawer {
-  background-color: #0f172a !important;
-  border-left: 1px solid #1e293b;
-  .el-drawer__header {
-    color: #f8fafc;
-    font-weight: 600;
-    font-size: 18px;
-    padding: 20px 24px;
-    margin-bottom: 0;
-    border-bottom: 1px solid #1e293b;
-  }
-  .el-drawer__body {
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-  }
-}
-.drawer-content {
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  .pipeline-summary {
-    display: flex;
-    align-items: center;
-    background: #1e293b;
-    padding: 16px;
-    border-radius: 12px;
-    margin-bottom: 24px;
-    border: 1px solid #334155;
-    .pl-icon {
-      width: 40px;
-      height: 40px;
-      background: rgba(59, 130, 246, 0.2);
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-right: 16px;
-      i {
-        color: #3b82f6;
-        font-size: 20px;
-      }
-    }
-    .pl-info {
-      flex: 1;
-      h4 {
-        margin: 0 0 4px 0;
-        color: #f8fafc;
-        font-size: 15px;
-      }
-      p {
-        margin: 0;
-        color: #64748b;
-        font-size: 12px;
-        font-family: Consolas, monospace;
-      }
-    }
-  }
-  ::v-deep .bio-dark-form {
-    .el-form-item__label {
-      color: #94a3b8;
-      padding-bottom: 8px;
-      font-weight: 500;
-    }
-    .el-input__inner,
-    .el-textarea__inner {
-      background-color: #1e293b;
-      border: 1px solid #334155;
-      color: #f8fafc;
-      font-family: Consolas, monospace;
-      &:focus {
-        border-color: #3b82f6;
-      }
-    }
-    .el-select .el-tag {
-      background-color: rgba(59, 130, 246, 0.2);
-      border: 1px solid rgba(59, 130, 246, 0.3);
-      color: #60a5fa;
-    }
-  }
-  .drawer-footer {
-    margin-top: auto;
-    padding-top: 24px;
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-    border-top: 1px solid #1e293b;
-    .dark-btn-cancel {
-      background: transparent;
-      border: 1px solid #475569;
-      color: #94a3b8;
-      &:hover {
-        border-color: #f8fafc;
-        color: #f8fafc;
-      }
-    }
-    .dark-btn-submit {
-      background: linear-gradient(135deg, #3b82f6, #2563eb);
-      border: none;
-      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-      &:hover {
-        transform: translateY(-1px);
-      }
-    }
-  }
-}
-
-/* ================= 8. 🌟 3D 渲染舱专属样式 ================= */
+/* ================= 7. 3D 渲染舱专属样式 ================= */
 .structure-viewer-container {
   display: flex;
   flex-direction: column;

@@ -13,7 +13,7 @@
             size="small"
             icon="el-icon-back"
             @click="$router.back()"
-          >返回矩阵</el-button>
+          >返回案例大厅</el-button>
           
           <div class="banner-content">
             <div class="tags">
@@ -28,7 +28,7 @@
             <h1 class="title">{{ caseData.title }}</h1>
             <div class="meta">
               <span><i class="el-icon-time"></i> {{ formatDate(caseData.createTime) }}</span>
-              <span><i class="el-icon-download"></i> {{ caseData.forks }} 次克隆</span>
+              <span><i class="el-icon-view"></i> {{ caseData.forks || 0 }} 次学习</span>
               <span class="difficulty" :class="caseData.difficulty">
                 <i class="el-icon-medal"></i> {{ (caseData.difficulty || "medium").toUpperCase() }}
               </span>
@@ -42,7 +42,7 @@
           <el-col :span="16">
             <div class="content-panel panel-glass">
               <h3 class="panel-title">
-                <i class="el-icon-reading"></i> 案例解析 <span>(Analysis Protocol)</span>
+                <i class="el-icon-reading"></i> 案例解析
               </h3>
               <div
                 class="markdown-body custom-scroll"
@@ -54,25 +54,25 @@
           <el-col :span="8">
             <div class="action-panel panel-glass sticky-panel">
               <h3 class="panel-title">
-                <i class="el-icon-cpu"></i> 算力执行 <span>(Execution Meta)</span>
+                <i class="el-icon-cpu"></i> 实验执行配置
               </h3>
 
               <div class="info-block">
-                <label>目标算力引擎</label>
+                <label>目标分析模块</label>
                 <div class="engine-badge glow-text">
                   <i class="el-icon-connection"></i> {{ getEngineName(caseData.category) }}
                 </div>
               </div>
 
               <div class="info-block">
-                <label>依赖数据舱 (Dataset)</label>
+                <label>关联数据集 (Dataset)</label>
                 <div class="dataset-box terminal-style">
-                  <span class="prompt-arrow">❯</span> {{ caseData.dataset || "无需依赖外部数据" }}
+                  <span class="prompt-arrow">❯</span> {{ caseData.dataset || "无需外部数据" }}
                 </div>
               </div>
 
               <div class="info-block" v-if="caseData.prompt">
-                <label>预设极客提示词 (System Prompt)</label>
+                <label>预设分析指令 (System Prompt)</label>
                 <div class="prompt-box terminal-style">
                   <span class="prompt-arrow">#</span> {{ caseData.prompt }}
                 </div>
@@ -85,9 +85,9 @@
                   icon="el-icon-video-play"
                   @click="forkCase"
                 >
-                  一键克隆并载入引擎
+                  载入案例并开始实验
                 </el-button>
-                <p class="action-hint"><i class="el-icon-info"></i> 系统将自动分配隔离沙箱环境</p>
+                <p class="action-hint"><i class="el-icon-info"></i> 系统将自动配置实验运行环境</p>
               </div>
             </div>
           </el-col>
@@ -97,12 +97,12 @@
 
     <div v-else-if="loading" class="loading-state">
       <div class="loader-core"></div>
-      <p>正在解密 Bio-OS 算子矩阵...</p>
+      <p>正在加载案例详细信息...</p>
     </div>
 
     <div v-else class="loading-state">
       <i class="el-icon-document-delete" style="font-size: 40px; color: #f87171;"></i>
-      <p>未找到该案例节点</p>
+      <p>未找到该案例</p>
       <el-button type="text" @click="$router.back()">点击返回</el-button>
     </div>
   </div>
@@ -111,10 +111,9 @@
 <script>
 import { getCaseDetail } from "@/api/case";
 import { getImageUrl } from "@/utils/image";
-// 🌟 引入 Markdown 解析器
 import MarkdownIt from 'markdown-it';
 import mdKatex from 'markdown-it-katex';
-import 'katex/dist/katex.min.css'; // 这行极其重要，否则公式样式会乱
+import 'katex/dist/katex.min.css';
 
 export default {
   name: "CaseDetail",
@@ -122,7 +121,6 @@ export default {
     return {
       caseData: null,
       loading: true,
-      // 初始化 Markdown 渲染引擎
       md: new MarkdownIt({
         html: true,
         linkify: true,
@@ -131,7 +129,6 @@ export default {
     };
   },
   computed: {
-    // 自动监听 caseData.content 并翻译成 HTML
     renderedContent() {
       if (this.caseData && this.caseData.content) {
         return this.md.render(this.caseData.content);
@@ -144,7 +141,7 @@ export default {
     if (id) {
       this.fetchCaseDetail(id);
     } else {
-      this.$message.error("致命错误：未获取到案例节点坐标 (ID)！");
+      this.$message.error("未获取到案例 ID");
       this.$router.back();
     }
   },
@@ -164,7 +161,7 @@ export default {
         }
       } catch (e) {
         console.error("详情获取失败", e);
-        this.$message.error("网络链路中断，无法连接核心服务器");
+        this.$message.error("网络连接失败，请检查服务器状态");
       } finally {
         this.loading = false;
       }
@@ -179,22 +176,21 @@ export default {
     },
     getEngineName(cat) {
       const map = {
-        pipeline: "Bio-Pipeline 智能流",
-        structure: "3D-Mol 空间引擎",
-        template: "No-Code 零代码模板",
-        copilot: "AI 极客副驾 (沙箱模式)",
+        pipeline: "分析流水线 (Pipelines)",
+        structure: "分子结构展示 (3D-Viewer)",
+        template: "交互式分析模板",
+        copilot: "代码辅助生成 (Sandbox)",
       };
-      return map[cat] || "未知算力引擎";
+      return map[cat] || "未知分析模块";
     },
     forkCase() {
-      this.$message.success(`克隆协议启动！正在前往算力中心...`);
+      this.$message.success(`案例载入中，正在前往实验区...`);
       switch (this.caseData.category) {
         case "copilot":
           this.$router.push({ 
             path: "/assistant", 
             query: { 
               fork_prompt: this.caseData.prompt, 
-              // 🌟 核心：确保这里传过去的是 mount_dataset
               mount_dataset: this.caseData.dataset 
             }
           });
@@ -209,7 +205,7 @@ export default {
           this.$router.push({ path: "/analysis/data", query: { use_template_id: this.caseData.id }});
           break;
         default:
-          this.$message.warning("未知引擎类别，无法自动路由！");
+          this.$message.warning("未知分析类别，无法自动跳转！");
       }
     },
   },
@@ -217,7 +213,6 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-/* 基础容器 */
 .detail-wrapper {
   width: 100%;
   min-height: calc(100vh - 60px);
@@ -232,7 +227,6 @@ export default {
   margin: 0 auto;
 }
 
-/* 🌟 全息 Banner */
 .case-banner {
   height: 340px;
   background-size: cover;
@@ -314,7 +308,6 @@ export default {
   }
 }
 
-/* 主体内容区 */
 .main-content {
   margin-top: -30px; 
   padding: 0 30px;
@@ -322,7 +315,6 @@ export default {
   z-index: 10;
 }
 
-/* 🌟 拟态玻璃面板 */
 .panel-glass {
   background: rgba(17, 24, 39, 0.7);
   backdrop-filter: blur(16px);
@@ -345,21 +337,18 @@ export default {
   }
 }
 
-/* 吸顶属性：右侧跟随滚动 */
 .sticky-panel {
   position: sticky;
   top: 30px; 
 }
 
-/* 🌟 左侧 Markdown 排版深度美化 */
 .markdown-body {
   font-size: 15px;
   line-height: 1.8;
   color: #cbd5e1;
   min-height: 400px;
-  text-align: left; /* 修正文本居中问题 */
+  text-align: left;
 
-  /* 穿透修改子元素样式 */
   ::v-deep {
     h1, h2, h3 { 
       color: #fff; 
@@ -370,14 +359,10 @@ export default {
     }
     h1 { font-size: 2em; border-bottom: 1px solid #30363d; padding-bottom: 0.3em; }
     h2 { font-size: 1.5em; border-bottom: 1px solid #30363d; padding-bottom: 0.3em; }
-    
     p { margin-top: 0; margin-bottom: 16px; line-height: 1.6; }
-    
     ul, ol { padding-left: 2em; margin-bottom: 16px; }
     li { margin: 0.25em 0; }
-
     strong { color: #60a5fa; font-weight: 600; } 
-    
     code { 
       background: rgba(255, 255, 255, 0.1); 
       padding: 2px 6px; 
@@ -385,16 +370,13 @@ export default {
       font-family: Consolas, monospace; 
       font-size: 0.9em;
     }
-
-    /* 数学公式渲染修复 */
     .katex-display {
       margin: 20px 0;
       overflow-x: auto;
       overflow-y: hidden;
       padding: 10px 0;
-      color: #34d399; /* 赛博绿 */
+      color: #34d399;
     }
-    
     blockquote {
       padding: 0 1em;
       color: #8b949e;
@@ -412,7 +394,6 @@ export default {
   }
 }
 
-/* 右侧控制台 */
 .action-panel {
   .info-block {
     margin-bottom: 25px;
@@ -437,7 +418,6 @@ export default {
       font-size: 14px;
     }
 
-    /* 终端命令行风格 */
     .terminal-style {
       background: #000;
       border: 1px solid #334155;
@@ -492,7 +472,6 @@ export default {
   }
 }
 
-/* 科幻风 Loading */
 .loading-state {
   display: flex;
   flex-direction: column;
@@ -516,7 +495,6 @@ export default {
 }
 @keyframes spin { 100% { transform: rotate(360deg); } }
 
-/* 按钮通用 */
 ::v-deep .dark-plain-btn {
   background: rgba(15, 23, 42, 0.6) !important;
   border: 1px solid rgba(255, 255, 255, 0.2) !important;

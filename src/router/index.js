@@ -169,14 +169,6 @@ const routes = [
         component: () => import('@/views/case/CaseDetail.vue'),
         meta: { title: '案例详情' }
       },
-
-      // 开发者文档
-      {
-        path: "help",
-        name: "DeveloperDoc",
-        component: () => import('@/views/help/DeveloperDoc.vue'),
-        meta: { title: "开发者文档" }
-      }
     ]
   },
 

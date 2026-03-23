@@ -3,12 +3,9 @@
     <div class="matrix-layout">
       <div class="page-header">
         <div class="header-content">
-          <h1 class="glitch-title" data-text="Bio-OS 算子矩阵">
-            Bio-OS 案例矩阵 (Case Matrix)
+          <h1 class="glitch-title" data-text="系统案例大厅">
+            系统案例大厅 (Case Center)
           </h1>
-          <p class="subtitle">
-            Explore & Execute. 探索标准生信工作流，一键克隆至对应计算引擎。
-          </p>
         </div>
         <div class="header-search">
           <el-input
@@ -37,7 +34,7 @@
             ><i class="el-icon-document-copy"></i> 分析模板</el-radio-button
           >
           <el-radio-button label="copilot"
-            ><i class="el-icon-cpu"></i> 极客副驾</el-radio-button
+            ><i class="el-icon-cpu"></i> 代码辅助</el-radio-button
           >
         </el-radio-group>
       </div>
@@ -65,24 +62,12 @@
              <p class="case-desc">{{ caseItem.description }}</p>
              </div>
 
-          <!-- <div class="card-footer">
-            <el-button
-              :type="getButtonType(caseItem.category)"
-              size="small"
-              class="fork-btn"
-              :class="getButtonGlowClass(caseItem.category)"
-              @click.stop="dispatchToEngine(caseItem)" 
-              :icon="getButtonIcon(caseItem.category)"
-            >
-              {{ getButtonText(caseItem.category) }}
-            </el-button>
-          </div> -->
         </div>
       </div>
 
       <div v-if="filteredCases.length === 0" class="empty-state">
         <i class="el-icon-cpu"></i>
-        <p>未检索到匹配的算子矩阵</p>
+        <p>未检索到匹配的案例</p>
       </div>
     </div>
   </div>
@@ -139,7 +124,7 @@ export default {
         }
       } catch (e) {
         console.error("加载案例失败", e);
-        this.$message.error("网络异常，无法连接到 Bio-OS 核心节点");
+        this.$message.error("网络异常，无法连接到服务器");
       }
     },
     getCategoryName(cat) {
@@ -147,18 +132,18 @@ export default {
         pipeline: "智能分析流",
         structure: "三维洞察",
         template: "分析模板",
-        copilot: "极客副驾",
+        copilot: "代码辅助",
       };
       return map[cat] || "未知组件";
     },
     getButtonText(cat) {
       const map = {
         pipeline: "载入分析流 (Load)",
-        structure: "开启 3D 引擎 (View)",
+        structure: "开启预览 (View)",
         template: "应用此模板 (Use)",
-        copilot: "提取至沙箱 (Fork)",
+        copilot: "提取至工作区 (Fork)",
       };
-      return map[cat] || "启动";
+      return map[cat] || "查看";
     },
     getButtonIcon(cat) {
       const map = {
@@ -200,7 +185,7 @@ export default {
       });
     },
     dispatchToEngine(caseItem) {
-      this.$message.success(`算子 [${caseItem.title}] 提取成功...`);
+      this.$message.success(`案例 [${caseItem.title}] 提取成功...`);
       switch (caseItem.category) {
         case "copilot":
           this.$router.push({
@@ -264,12 +249,6 @@ export default {
       font-weight: 800;
       color: #f8fafc;
       letter-spacing: 1px;
-    }
-    .subtitle {
-      margin: 0;
-      color: #64748b;
-      font-size: 15px;
-      font-family: Consolas, monospace;
     }
   }
   .header-search {

@@ -4,7 +4,7 @@
       <div class="header-left">
         <el-page-header
           @back="$router.push('/analysis')"
-          content="云端数据舱 (Data Cabin)"
+          content="数据资源中心 (Data Center)"
           class="dark-page-header"
         ></el-page-header>
       </div>
@@ -30,20 +30,14 @@
     <div class="storage-bar">
       <div class="storage-info">
         <span
-          ><i class="el-icon-odometer"></i> OSS 存储空间分配 ({{
+          ><i class="el-icon-odometer"></i> 数据资源统计 (共 {{
             files.length
-          }}
-          个文件)</span
+          }} 个文件)</span
         >
-        <span class="storage-usage">{{ totalUsedStorage }} / 100 GB</span>
+        <span class="storage-usage">
+          已占用物理存储: {{ totalUsedStorage }}
+        </span>
       </div>
-      <el-progress
-        :percentage="storagePercentage"
-        :stroke-width="8"
-        :color="storagePercentage > 80 ? '#ef4444' : '#3b82f6'"
-        :show-text="false"
-      >
-      </el-progress>
     </div>
 
     <div class="cabin-main">
@@ -197,7 +191,7 @@
 
           <template slot="empty">
             <el-empty
-              description="数据舱内空空如也"
+              description="暂无文件数据"
               :image-size="80"
             ></el-empty>
           </template>
@@ -259,7 +253,6 @@
 </template>
 
 <script>
-// 🌟 使用新的全局无限制接口 getAllFileList
 import { getAllFileList, deleteFile, previewFile } from "@/api/file";
 import FileUploader from "@/components/analysis/FileUploader.vue";
 import { mapGetters } from "vuex";
@@ -281,7 +274,6 @@ export default {
       previewContent: "",
       previewFileName: "",
 
-      // 🌟 新增：分页状态控制
       currentPage: 1,
       pageSize: 10,
     };
@@ -289,7 +281,6 @@ export default {
   computed: {
     ...mapGetters("user", ["userId"]),
 
-    // 🌟 1. 获取满足当前过滤条件的【总数据】
     filteredFilesAll() {
       return this.files.filter((f) => {
         const matchSearch = f.name
@@ -319,7 +310,6 @@ export default {
       });
     },
 
-    // 🌟 2. 纯前端内存切片，渲染【当前页】的数据
     paginatedFiles() {
       const start = (this.currentPage - 1) * this.pageSize;
       const end = start + this.pageSize;
@@ -330,14 +320,9 @@ export default {
       const totalBytes = this.files.reduce((sum, f) => sum + (f.size || 0), 0);
       return this.formatFileSize(totalBytes);
     },
-    storagePercentage() {
-      const totalBytes = this.files.reduce((sum, f) => sum + (f.size || 0), 0);
-      const maxBytes = 100 * 1024 * 1024 * 1024;
-      return Math.min(100, Math.round((totalBytes / maxBytes) * 100));
-    },
+
   },
 
-  // 🌟 监听过滤条件，一变化就自动回到第一页
   watch: {
     searchQuery() {
       this.currentPage = 1;
@@ -357,12 +342,10 @@ export default {
     async fetchFiles() {
       this.loading = true;
       try {
-        // 🌟 核心：请求无任何限制的 all 接口，把文件和分析产出物一网打尽
         const res = await getAllFileList({ userId: this.userId || 6 });
         const dataList = res.data || res;
         if (Array.isArray(dataList)) {
           this.files = dataList.map((file) => {
-            // 兼容性识别产出物标记
             let sourceFlag = "upload";
             if (file.fileSource) {
               sourceFlag = file.fileSource.toLowerCase();
@@ -386,13 +369,12 @@ export default {
           });
         }
       } catch (error) {
-        this.$message.error("无法连接到数据舱集群");
+        this.$message.error("无法连接到服务器，请检查网络");
       } finally {
         this.loading = false;
       }
     },
 
-    // 🌟 分页控制方法
     handleSizeChange(val) {
       this.pageSize = val;
       this.currentPage = 1;
@@ -425,7 +407,7 @@ export default {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      this.$message.success(`已下发传输指令: ${file.name}`);
+      this.$message.success(`开始下载: ${file.name}`);
     },
 
     async handlePreview(file) {
@@ -451,20 +433,20 @@ export default {
     async handleDelete(file) {
       try {
         await this.$confirm(
-          `警告：确定要从存储池中永久抹除 [${file.name}] 吗？`,
-          "高危操作",
+          `警告：确定要彻底删除文件 [${file.name}] 吗？删除后将无法恢复。`,
+          "高危操作确认",
           {
-            confirmButtonText: "确定抹除",
+            confirmButtonText: "确定删除",
             cancelButtonText: "取消",
             type: "warning",
             customClass: "bio-dark-message-box",
           },
         );
         await deleteFile(file.id, this.userId || 6);
-        this.$message.success("数据已销毁");
+        this.$message.success("文件已成功删除");
         this.fetchFiles();
       } catch (err) {
-        if (err !== "cancel") this.$message.error("删除失败");
+        if (err !== "cancel") this.$message.error("文件删除失败");
       }
     },
 
@@ -566,7 +548,6 @@ export default {
   .storage-info {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 12px;
     font-size: 14px;
     color: #94a3b8;
     i {
@@ -707,7 +688,7 @@ export default {
   }
 }
 
-/* 🌟 分页器彻底扒皮黑化 */
+/* 分页器样式 */
 .pagination-container {
   margin-top: 16px;
   display: flex;

@@ -5,12 +5,11 @@
         <div class="header-content">
           <div class="title-section">
             <h2>科研工作空间 (Workspace)</h2>
-            <p class="subtitle">管理多组学课题，监控云存储资源与算力调度状态</p>
           </div>
           <div class="action-section">
             <el-input
               v-model="searchQuery"
-              placeholder="搜索项目名称或描述..."
+              placeholder="搜索课题名称或描述..."
               prefix-icon="el-icon-search"
               class="search-input"
               clearable
@@ -35,7 +34,7 @@
             <div class="chart-card">
               <div class="chart-header">
                 <span class="chart-title"
-                  ><i class="el-icon-pie-chart"></i> 各课题云存储资源占比</span
+                  ><i class="el-icon-pie-chart"></i> 各课题文件存储占比</span
                 >
               </div>
               <div ref="storageChart" class="echarts-container"></div>
@@ -46,7 +45,7 @@
               <div class="chart-header">
                 <span class="chart-title"
                   ><i class="el-icon-data-analysis"></i>
-                  累计执行分析任务分布</span
+                  累计分析任务分布</span
                 >
               </div>
               <div ref="taskChart" class="echarts-container"></div>
@@ -112,7 +111,7 @@
                     divided
                     class="text-danger"
                   >
-                    销毁空间
+                    删除课题
                   </el-dropdown-item>
                 </el-dropdown-menu>
               </el-dropdown>
@@ -135,14 +134,14 @@
               <span class="stat-label">文件数 <i class="el-icon-search"></i></span>
             </div>
             <div class="stat-divider"></div>
-            <div class="stat-item" title="占用云存储空间">
+            <div class="stat-item" title="占用存储空间">
               <span class="stat-value">{{
                 formatFileSize(project.totalFileSizeBytes)
               }}</span>
               <span class="stat-label">存储量</span>
             </div>
             <div class="stat-divider"></div>
-            <div class="stat-item" title="已执行分析流">
+            <div class="stat-item" title="已执行分析次数">
               <span class="stat-value">{{
                 project.analysisTaskCount || 0  
               }}</span>
@@ -153,7 +152,7 @@
           <div class="card-footer">
             <el-tooltip
               effect="dark"
-              :content="'项目立项时间: ' + formatTime(project.createdAt)"
+              :content="'课题立项时间: ' + formatTime(project.createdAt)"
               placement="top"
             >
               <span class="time" style="cursor: help">
@@ -169,7 +168,7 @@
               class="enter-btn"
               @click="enterWorkspace(project)"
             >
-              载入大盘 <i class="el-icon-right"></i>
+              进入工作台 <i class="el-icon-right"></i>
             </el-button>
           </div>
         </div>
@@ -182,7 +181,7 @@
           class="empty-img"
         />
         <h3>尚未创建科研课题</h3>
-        <p>创建一个工作空间，开始隔离管理您的多组学数据与分析管线。</p>
+        <p>创建一个科研空间，开始管理您的分析数据与任务。</p>
         <el-button
           type="primary"
           @click="openCreateDialog"
@@ -257,8 +256,8 @@
             </el-table>
           </el-tab-pane>
 
-          <el-tab-pane label="引擎生成文件 (Generated)" name="generated">
-            <el-table :data="generatedFiles" height="350" size="small" stripe empty-text="暂无生成产物">
+          <el-tab-pane label="分析产出文件 (Generated)" name="generated">
+            <el-table :data="generatedFiles" height="350" size="small" stripe empty-text="暂无分析结果">
               <el-table-column prop="name" label="文件名称" show-overflow-tooltip>
                 <template slot-scope="scope">
                   <i class="el-icon-picture-outline text-green" style="margin-right: 5px;" v-if="isImage(scope.row.name)"></i>
@@ -301,7 +300,6 @@ export default {
       searchQuery: "",
       projectList: [],
 
-      // 图表实例
       storageChartInstance: null,
       taskChartInstance: null,
 
@@ -315,12 +313,11 @@ export default {
         ],
       },
 
-      // 🌟 新增：文件列表弹窗相关状态
       fileDialogVisible: false,
       fileLoading: false,
       activeFileTab: 'uploaded',
       currentViewProjectName: '',
-      projectFiles: [], // 当前选中项目的所有文件
+      projectFiles: [], 
     };
   },
   computed: {
@@ -335,14 +332,10 @@ export default {
           (p.description && p.description.toLowerCase().includes(q)),
       );
     },
-   // 筛选上传的文件
     uploadedFiles() {
-      // 增加对小写 'upload' 的支持
       return this.projectFiles.filter(f => f.sourceType === 'UPLOADED' || f.sourceType === 'upload');
     },
-    // 筛选生成的文件
     generatedFiles() {
-      // 增加对小写 'generate' 的支持 (假设后端生成的叫这个)
       return this.projectFiles.filter(f => f.sourceType === 'GENERATE' || f.sourceType === 'generate');
     }
   },
@@ -381,7 +374,6 @@ export default {
     },
 
     initCharts() {
-      // 1. 组装存储容量饼图数据
       const storageData = this.projectList
         .map((p) => ({
           name: p.name,
@@ -392,7 +384,7 @@ export default {
         .filter((item) => item.value > 0);
 
       if (storageData.length === 0)
-        storageData.push({ name: "暂无挂载数据", value: 1 });
+        storageData.push({ name: "暂无数据", value: 1 });
 
       const storageChartDom = this.$refs.storageChart;
       if (storageChartDom) {
@@ -422,7 +414,6 @@ export default {
         });
       }
 
-      // 2. 组装分析任务柱状图数据
       const projectNames = this.projectList.map((p) => {
         return p.name.length > 6 ? p.name.substring(0, 6) + "..." : p.name;
       });
@@ -452,7 +443,7 @@ export default {
           ],
           series: [
             {
-              name: "执行分析次数",
+              name: "执行次数",
               type: "bar",
               barWidth: "40%",
               itemStyle: {
@@ -478,7 +469,6 @@ export default {
       return !timeStr ? "未知时间" : timeStr.substring(0, 10);
     },
 
-    // 🌟 新增：格式化文件大小
     formatFileSize(bytes) {
       if (!bytes || bytes === 0) return '0 B';
       const k = 1024;
@@ -487,36 +477,28 @@ export default {
       return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     },
 
-    // 🌟 新增：判断是否为图片类型（用于渲染图标）
     isImage(filename) {
       if (!filename) return false;
       const ext = filename.split('.').pop().toLowerCase();
       return ['png', 'jpg', 'jpeg', 'svg', 'gif'].includes(ext);
     },
 
-// 🌟 对接真实后端的：打开文件列表弹窗并获取数据
     async openFileListDialog(project) {
       this.currentViewProjectName = project.name;
       this.activeFileTab = 'uploaded';
       this.fileDialogVisible = true;
       this.fileLoading = true;
-      this.projectFiles = []; // 每次打开前先清空旧数据
+      this.projectFiles = []; 
       
       try {
-        // 🌟 核心：调用你在 @/api/file.js 中定义的接口
-        // 传入 projectId（必须）和 userId（如果有权限校验需求）
         const res = await getAllFileList({ 
           projectId: project.id,
           userId: this.userId 
         });
 
-        // 解析后端返回的数据结构 (具体取 res.data 还是 res.data.records 取决于你后端的包装格式)
         const responseData = res.data || res;
         let files = [];
 
-        console.log("后端返回的文件列表原始数据:", res);
-        
-        // 兼容普通数组格式或带分页的格式
         if (Array.isArray(responseData)) {
           files = responseData;
         } else if (responseData && Array.isArray(responseData.records)) {
@@ -525,21 +507,15 @@ export default {
           files = responseData.data;
         }
 
-        // 🌟 数据映射：确保后端字段与前端表格渲染所需字段对应
         this.projectFiles = files.map(file => ({
           id: file.id,
-          // 1. 文件名是在 originalName 里的
           name: file.originalName, 
-          // 2. 文件大小是在 sizeBytes 里的
           size: file.sizeBytes || 0, 
-          // 3. 时间是在 uploadTime 里的
           createdAt: file.uploadTime || "未知时间", 
-          // 4. 来源是在 fileSource 里的 (值为 "upload")
           sourceType: file.fileSource 
         }));
       } catch (error) {
-        console.error("文件列表获取报错:", error);
-        this.$message.error('拉取该课题的文件矩阵失败');
+        this.$message.error('拉取课题文件失败');
       } finally {
         this.fileLoading = false;
       }
@@ -593,7 +569,7 @@ export default {
             this.$message.success("课题信息更新成功");
           } else {
             await createProject(payload);
-            this.$message.success("全新的科研工作空间已建立");
+            this.$message.success("科研工作空间已建立");
           }
           this.dialogVisible = false;
           this.fetchProjects(); 
@@ -609,7 +585,7 @@ export default {
       try {
         await toggleArchiveProject(project.id, !project.isArchived);
         this.$message.success(
-          `课题已${project.isArchived ? "取消归档" : "冻结归档"}`,
+          `课题已${project.isArchived ? "取消归档" : "归档"}`,
         );
         this.fetchProjects();
       } catch (error) {
@@ -620,19 +596,19 @@ export default {
     async handleDelete(project) {
       try {
         await this.$confirm(
-          `警告：销毁空间 "${project.name}" 将会导致数据失去关联。是否继续？`,
-          "销毁警告",
+          `警告：删除课题 "${project.name}" 会移除关联数据。是否继续？`,
+          "删除警告",
           {
-            confirmButtonText: "强制销毁",
+            confirmButtonText: "确定删除",
             cancelButtonText: "取消",
             type: "error",
           },
         );
         await deleteProject(project.id);
-        this.$message.success("空间已彻底销毁");
+        this.$message.success("课题已删除");
         this.fetchProjects();
       } catch (error) {
-        // 
+        // 取消删除
       }
     },
   },
@@ -672,11 +648,6 @@ export default {
       font-size: 24px;
       font-weight: 600;
       color: #1f2937;
-    }
-    .subtitle {
-      margin: 0;
-      font-size: 14px;
-      color: #6b7280;
     }
   }
   .action-section {
@@ -832,7 +803,6 @@ export default {
     border-top: 1px solid #f3f4f6;
     border-bottom: 1px solid #f3f4f6;
     
-    /* 🌟 新增：可点击卡片交互样式 */
     .clickable-stat {
       cursor: pointer;
       transition: background-color 0.2s ease, border-radius 0.2s ease;

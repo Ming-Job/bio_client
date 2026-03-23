@@ -1,6 +1,7 @@
 <template>
   <header class="header">
     <div class="header-container">
+      
       <div class="brand-section" @click="$router.push('/')">
         <img src="@/assets/images/logo.png" alt="Logo" class="logo" />
         <span class="brand-title">生物信息科教平台</span>
@@ -19,26 +20,11 @@
           <el-menu-item index="/course">课程中心</el-menu-item>
           <el-menu-item index="/analysis">云端分析</el-menu-item>
           <el-menu-item index="/case">案例广场</el-menu-item>
-
-          <el-menu-item index="/project" v-if="isLoggedIn"
-            >我的项目</el-menu-item
-          >
-
-          <el-menu-item index="/help">开发者文档</el-menu-item>
+          <el-menu-item index="/project" v-if="isLoggedIn">我的项目</el-menu-item>
         </el-menu>
       </div>
 
       <div class="action-section">
-        <el-input
-          v-model="searchKeyword"
-          size="small"
-          placeholder="搜索知识..."
-          prefix-icon="el-icon-search"
-          class="header-search"
-          @keyup.enter.native="handleSearch"
-          aria-label="搜索知识"
-        />
-
         <el-dropdown
           v-if="isLoggedIn"
           @command="handleUserCommand"
@@ -67,18 +53,9 @@
           </div>
 
           <el-dropdown-menu slot="dropdown" class="header-dropdown-menu">
-            <el-dropdown-item command="profile" icon="el-icon-user"
-              >个人中心</el-dropdown-item
-            >
-            <el-dropdown-item command="settings" icon="el-icon-setting"
-              >账号设置</el-dropdown-item
-            >
-            <el-dropdown-item
-              command="logout"
-              icon="el-icon-switch-button"
-              divided
-              >退出登录</el-dropdown-item
-            >
+            <el-dropdown-item command="profile" icon="el-icon-user">个人中心</el-dropdown-item>
+            <el-dropdown-item command="settings" icon="el-icon-setting">账号设置</el-dropdown-item>
+            <el-dropdown-item command="logout" icon="el-icon-switch-button" divided>退出登录</el-dropdown-item>
           </el-dropdown-menu>
         </el-dropdown>
 
@@ -93,6 +70,7 @@
           登录 / 注册
         </el-button>
       </div>
+
     </div>
   </header>
 </template>
@@ -106,7 +84,6 @@ export default {
   name: "HeaderPage",
   data() {
     return {
-      searchKeyword: "",
       avatarLoadError: false,
     };
   },
@@ -118,17 +95,10 @@ export default {
 
     activePath() {
       const path = this.$route.path;
-
-      // 1. 如果是纯根路径，默认高亮首页
       if (!path || path === "/" || path === "") {
         return "/home";
       }
-
-      // 2. 魔法正则：截取第一级路径
-      // 例如：把 "/analysis/tasks/123" 截取为 "/analysis"
       const match = path.match(/^\/[^/]+/);
-
-      // 3. 返回截取结果，匹配 <el-menu-item> 的 index
       return match ? match[0] : "/home";
     },
 
@@ -142,9 +112,7 @@ export default {
         : "U";
     },
 
-    // 🌟 终极优化：头像 URL 计算
     avatarFullUrl() {
-      // 如果发生错误或者原本就没头像，直接返回空字符串
       if (this.avatarLoadError || !this.userInfo.avatar) {
         return "";
       }
@@ -156,17 +124,6 @@ export default {
   },
   methods: {
     ...mapActions("user", ["checkLoginStatus", "logout"]),
-
-    handleSearch() {
-      if (this.searchKeyword.trim()) {
-        this.$router.push({
-          name: "SearchResult",
-          query: { q: this.searchKeyword.trim() },
-        });
-      } else {
-        this.$message.info("请输入搜索关键词");
-      }
-    },
 
     handleLogin() {
       this.$router.push({ name: "LoginPage" });
@@ -197,7 +154,7 @@ export default {
         this.$message.success("退出登录成功!");
         this.$router.push("/");
       } catch (error) {
-        // 用户取消
+        // 用户取消退出
       }
     },
 
@@ -225,10 +182,10 @@ export default {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 32px; /* 针对 PC 端放大两侧边距 */
+    padding: 0 32px; 
   }
 
-  /* 品牌区 */
+  /* 左侧：品牌区 */
   .brand-section {
     display: flex;
     align-items: center;
@@ -250,11 +207,11 @@ export default {
     }
 
     &:hover .logo {
-      transform: scale(1.08) rotate(-5deg); /* 加一点极客俏皮感 */
+      transform: scale(1.08) rotate(-5deg); 
     }
   }
 
-  /* 导航区 */
+  /* 中间：导航区（设置 Flex 1 和居中对齐） */
   .nav-section {
     flex: 1;
     display: flex;
@@ -262,6 +219,7 @@ export default {
 
     ::v-deep .el-menu {
       border: none;
+      background-color: transparent;
 
       .el-menu-item {
         height: 64px;
@@ -271,7 +229,8 @@ export default {
         padding: 0 20px;
         transition: color 0.3s, background-color 0.3s;
 
-        &:hover {
+        &:hover,
+        &.is-active {
           color: #42b983 !important;
           background-color: rgba(255, 255, 255, 0.05) !important;
         }
@@ -279,40 +238,12 @@ export default {
     }
   }
 
-  /* 操作区 */
+  /* 右侧：操作区 */
   .action-section {
     display: flex;
     align-items: center;
-    gap: 24px;
-    min-width: 280px;
     justify-content: flex-end;
-
-    .header-search {
-      width: 200px;
-      transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-      ::v-deep .el-input__inner {
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid transparent;
-        color: #fff;
-        border-radius: 20px;
-        transition: all 0.3s;
-
-        &::placeholder {
-          color: rgba(255, 255, 255, 0.5);
-        }
-
-        &:focus {
-          background: rgba(255, 255, 255, 0.15);
-          border-color: #42b983;
-          box-shadow: 0 0 8px rgba(66, 185, 131, 0.2);
-        }
-      }
-
-      &:focus-within {
-        width: 260px; /* PC端搜索框展开更长，体验更好 */
-      }
-    }
+    min-width: 220px; /* 与左侧保持大致等宽，确保中间导航绝对居中 */
 
     .user-trigger {
       display: flex;
@@ -329,7 +260,7 @@ export default {
 
       .avatar-ring {
         border: 2px solid #42b983;
-        background-color: #3b82f6; /* 头像加载失败时的文字背景底色 */
+        background-color: #3b82f6; 
         font-weight: bold;
         color: #fff;
         box-shadow: 0 0 8px rgba(66, 185, 131, 0.4);
@@ -353,7 +284,7 @@ export default {
           margin-top: 2px;
           width: fit-content;
           opacity: 0.9;
-          font-family: Consolas, monospace; /* 角色标签用等宽字体更专业 */
+          font-family: Consolas, monospace; 
 
           &--admin {
             background: #e6a23c;
@@ -367,7 +298,8 @@ export default {
             background: #3b82f6;
             color: #fff;
           }
-          background: #42b983;
+          /* 默认样式防错 */
+          background: #42b983; 
         }
       }
 
@@ -377,7 +309,6 @@ export default {
         transition: transform 0.3s;
       }
 
-      /* 下拉框展开时箭头翻转 */
       &[aria-expanded="true"] i {
         transform: rotate(180deg);
       }

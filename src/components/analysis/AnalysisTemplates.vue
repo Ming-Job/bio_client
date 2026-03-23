@@ -7,6 +7,7 @@
       <el-button
         type="text"
         size="mini"
+        class="more-btn"
         @click="$router.push('/analysis/pipelines')"
       >
         更多 <i class="el-icon-more"></i>
@@ -14,73 +15,51 @@
     </div>
 
     <div class="template-grid">
-      <el-card
-        v-for="template in templates"
+      <div
+        v-for="template in templates.slice(0, 4)" 
         :key="template.id"
         class="template-card"
-        shadow="hover"
-        @click.native="$emit('use', template)"
+        @click="$emit('use', template)"
       >
-        <div slot="header" class="template-card-header">
-          <div
-            class="template-icon-wrapper"
-            :style="{ background: template.color }"
+        <div class="card-header">
+          <h4 class="template-name text-ellipsis" :title="template.name">
+            {{ template.name }}
+          </h4>
+          <el-tag
+            size="mini"
+            effect="dark"
+            :type="template.isActive ? 'success' : 'info'"
+            class="status-tag"
           >
-            <i :class="template.icon"></i>
-          </div>
-          <div class="template-title">
-            <h4>{{ template.name }}</h4>
-            <el-rate
-              v-model="template.rating"
-              disabled
-              show-score
-              text-color="#ff9900"
-              score-template="{value}分"
-              class="template-rating"
-            />
-          </div>
+            {{ template.isActive ? "可用" : "维护" }}
+          </el-tag>
         </div>
-        <div class="template-content">
-          <p class="template-description">{{ template.description }}</p>
-          <div class="template-tags">
-            <el-tag
-              v-for="tag in template.tags"
-              :key="tag"
-              size="mini"
-              :type="getTagType(tag)"
-            >
-              {{ tag }}
-            </el-tag>
-          </div>
-          <div class="template-meta">
-            <span>
-              <i class="el-icon-time"></i>
-              {{ template.duration }}分钟
-            </span>
-            <span>
-              <i class="el-icon-user"></i>
-              {{ template.usedCount }}次使用
-            </span>
-          </div>
+
+        <div class="card-body">
+          <p class="template-description">
+            {{ template.description || "系统预置标准生信分析流程，暂无详细描述。" }}
+          </p>
         </div>
-        <div class="template-footer">
-          <el-button
+
+        <div class="card-footer">
+          <el-tag size="mini" type="info" effect="plain" v-if="template.category" class="category-tag">
+            {{ formatCategory(template.category) }}
+          </el-tag>
+          <span v-else></span> <el-button
             type="primary"
             size="small"
-            plain
+            class="use-btn"
+            :disabled="!template.isActive"
             @click.stop="$emit('use', template)"
           >
-            使用模板
-          </el-button>
-          <el-button
-            type="text"
-            size="small"
-            @click.stop="$emit('preview', template)"
-          >
-            预览
+            启动 <i class="el-icon-right"></i>
           </el-button>
         </div>
-      </el-card>
+      </div>
+
+      <div v-if="templates.length === 0" class="empty-state">
+        <span style="color: #64748b; font-size: 13px;">暂无可用模板</span>
+      </div>
     </div>
   </div>
 </template>
@@ -96,33 +75,25 @@ export default {
     },
   },
   methods: {
-    getTagType(tag) {
-      const tagMap = {
-        基础: "success",
-        中级: "warning",
-        高级: "danger",
-        教学: "info",
-        科研: "",
-        临床: "danger",
-        自动化: "success",
-        可视化: "warning",
-        表观遗传: "info",
-        转录调控: "",
+    // 简单翻译一下英文标识为中文展示
+    formatCategory(category) {
+      const map = {
+        genomics: "基因组学",
+        transcriptomics: "转录组学",
+        proteomics: "蛋白质组学",
       };
-      return tagMap[tag] || "info";
-    },
-  },
+      return map[category] || category;
+    }
+  }
 };
 </script>
 
 <style lang="scss" scoped>
 .analysis-templates {
-  /* 适配主页面的暗黑背景和边框 */
   background: #111827;
   border: 1px solid #1f2937;
   border-radius: 16px;
   padding: 24px;
-  margin-top: 24px; /* 与上方的便当盒拉开间距 */
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
 
   .templates-header {
@@ -130,112 +101,130 @@ export default {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
+    
     .section-title {
-      font-size: 18px;
-      color: #f8fafc; /* 白色标题 */
+      font-size: 16px;
+      color: #f8fafc;
       margin: 0;
       display: flex;
       align-items: center;
       gap: 8px;
       font-weight: 600;
-      i {
-        color: #3b82f6;
-      }
+      i { color: #3b82f6; }
+    }
+    .more-btn {
+      color: #94a3b8;
+      &:hover { color: #3b82f6; }
     }
   }
 
   .template-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 20px;
+    /* 调整卡片最小宽度，适应工作台左侧便当盒的空间 */
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
 
     .template-card {
-      /* 卡片底色调整 */
       background: #1f2937;
       border: 1px solid #374151;
-      color: #e2e8f0;
-      transition: all 0.3s ease;
+      border-radius: 12px;
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       cursor: pointer;
 
       &:hover {
         transform: translateY(-4px);
-        background: #262f3f; /* 悬浮时稍微提亮 */
+        background: #262f3f;
         border-color: #4b5563;
+        box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.4);
       }
 
-      /* 去除 element-ui 默认的白色背景 */
-      ::v-deep .el-card__header {
-        border-bottom: none;
-        padding-bottom: 0;
-      }
-      ::v-deep .el-card__body {
-        background: transparent;
-      }
-
-      .template-card-header {
+      .card-header {
         display: flex;
-        align-items: center;
-        gap: 16px;
-        .template-icon-wrapper {
-          width: 48px;
-          height: 48px;
-          border-radius: 12px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          i {
-            font-size: 24px;
-            color: white;
-          }
-        }
-        .template-title {
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 12px;
+
+        .template-name {
+          margin: 0;
+          font-size: 15px;
+          color: #f8fafc;
+          font-weight: 600;
           flex: 1;
-          h4 {
-            margin: 0 0 8px 0;
-            font-size: 16px;
-            color: #f8fafc; /* 标题变白 */
-          }
+          padding-right: 12px;
+        }
+        .status-tag {
+          border: none;
+          transform: scale(0.9);
+          transform-origin: right center;
         }
       }
 
-      .template-content {
+      .card-body {
+        flex: 1;
         .template-description {
-          font-size: 14px;
-          color: #94a3b8; /* 描述文字变灰蓝 */
-          line-height: 1.5;
-          margin-bottom: 16px;
-          height: 42px;
-          overflow: hidden;
+          color: #94a3b8;
+          font-size: 13px;
+          line-height: 1.6;
+          margin: 0;
           display: -webkit-box;
-          -webkit-line-clamp: 2;
+          -webkit-line-clamp: 2; /* 紧凑一点，只展示2行 */
           -webkit-box-orient: vertical;
-        }
-        .template-tags {
-          display: flex;
-          gap: 8px;
-          margin-bottom: 16px;
-          flex-wrap: wrap;
-        }
-        .template-meta {
-          display: flex;
-          justify-content: space-between;
-          font-size: 12px;
-          color: #64748b; /* meta信息 */
-          span {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-          }
+          overflow: hidden;
         }
       }
-      .template-footer {
+
+      .card-footer {
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid #374151;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding-top: 16px;
-        border-top: 1px solid #374151; /* 边框线融入暗黑环境 */
+
+        .category-tag {
+          background: #111827;
+          border: 1px solid #334155;
+          color: #94a3b8;
+        }
+
+        .use-btn {
+          background: transparent;
+          border: 1px solid #3b82f6;
+          color: #3b82f6;
+          border-radius: 6px;
+          font-weight: 500;
+          padding: 6px 12px;
+          transition: 0.3s;
+
+          &:hover:not(:disabled) {
+            background: #3b82f6;
+            color: white;
+          }
+          &:disabled {
+            border-color: #334155;
+            color: #475569;
+          }
+        }
       }
     }
+
+    .empty-state {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 40px 0;
+      background: #1f2937;
+      border-radius: 12px;
+      border: 1px dashed #374151;
+    }
   }
+}
+
+.text-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>

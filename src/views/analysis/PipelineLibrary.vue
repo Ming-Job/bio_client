@@ -3,14 +3,14 @@
     <div class="library-header">
       <el-page-header
         @back="goBack"
-        content="云端分析流模板库 (Pipeline Library)"
+        content="分析流模板库 (Pipeline Library)"
         class="dark-page-header"
       ></el-page-header>
 
       <div class="header-actions">
         <el-input
           v-model="searchQuery"
-          placeholder="搜索 Pipeline 名称或关键字..."
+          placeholder="搜索流程名称或关键字..."
           prefix-icon="el-icon-search"
           clearable
           class="dark-search-input"
@@ -34,9 +34,7 @@
       >
         <el-radio-button label="all">全部领域</el-radio-button>
         <el-radio-button label="genomics">基因组学 (Genomics)</el-radio-button>
-        <el-radio-button label="transcriptomics"
-          >转录组学 (Transcriptomics)</el-radio-button
-        >
+        <el-radio-button label="transcriptomics">转录组学 (Transcriptomics)</el-radio-button>
         <el-radio-button label="proteomics">蛋白质组/分子对接</el-radio-button>
       </el-radio-group>
     </div>
@@ -58,64 +56,40 @@
 
     <div v-else class="pipeline-grid">
       <div v-for="tpl in filteredPipelines" :key="tpl.id" class="pipeline-card">
+        
         <div class="card-header">
-          <div class="icon-box" :style="{ background: tpl.color || '#3b82f6' }">
-            <i :class="tpl.icon || 'el-icon-data-analysis'"></i>
-          </div>
+          <h3 class="pipeline-name text-ellipsis" :title="tpl.name">{{ tpl.name }}</h3>
+          <el-dropdown trigger="click" @command="handleCommand($event, tpl)">
+            <span class="el-dropdown-link">
+              <i class="el-icon-more el-icon--right action-icon"></i>
+            </span>
+            <el-dropdown-menu slot="dropdown" class="bio-dark-dropdown">
+              <el-dropdown-item command="edit" icon="el-icon-edit">编辑配置</el-dropdown-item>
+              <el-dropdown-item command="delete" icon="el-icon-delete" class="text-danger">删除模板</el-dropdown-item>
+            </el-dropdown-menu>
+          </el-dropdown>
+        </div>
 
-          <div class="header-right-actions">
+        <div class="card-body">
+          <p class="pipeline-desc">
+            {{ tpl.description || "系统预置的标准生信分析流程，暂无详细描述。" }}
+          </p>
+        </div>
+
+        <div class="card-footer">
+          <div class="pipeline-tags">
             <el-tag
               size="mini"
               effect="dark"
               :type="tpl.isActive ? 'success' : 'info'"
             >
-              {{ tpl.isActive ? "v2.1.0 稳定" : "维护中" }}
+              {{ tpl.isActive ? "可用" : "维护中" }}
             </el-tag>
-
-            <el-dropdown trigger="click" @command="handleCommand($event, tpl)">
-              <span class="el-dropdown-link">
-                <i
-                  class="el-icon-more el-icon--right"
-                  style="cursor: pointer; color: #94a3b8"
-                ></i>
-              </span>
-              <el-dropdown-menu slot="dropdown" class="bio-dark-dropdown">
-                <el-dropdown-item command="edit" icon="el-icon-edit"
-                  >编辑配置</el-dropdown-item
-                >
-                <el-dropdown-item
-                  command="delete"
-                  icon="el-icon-delete"
-                  class="text-danger"
-                  >删除模板</el-dropdown-item
-                >
-              </el-dropdown-menu>
-            </el-dropdown>
+            <el-tag size="mini" type="info" effect="plain" v-if="tpl.category">
+              {{ tpl.category }}
+            </el-tag>
           </div>
-        </div>
-
-        <div class="card-body">
-          <h3 class="pipeline-name">{{ tpl.name }}</h3>
-          <p class="pipeline-desc">
-            {{
-              tpl.description || "官方预置的标准生信分析流程，支持分布式加速。"
-            }}
-          </p>
-
-          <div class="pipeline-tags">
-            <el-tag size="mini" type="info" effect="plain" v-if="tpl.category"
-              ># {{ tpl.category }}</el-tag
-            >
-            <el-tag size="mini" type="info" effect="plain"
-              ><i class="el-icon-time"></i> ~45 Min</el-tag
-            >
-          </div>
-        </div>
-
-        <div class="card-footer">
-          <div class="author-info">
-            <i class="el-icon-user-solid"></i> Bio-OS 官方
-          </div>
+          
           <el-button
             type="primary"
             size="small"
@@ -123,7 +97,7 @@
             :disabled="!tpl.isActive"
             @click="usePipeline(tpl)"
           >
-            去工作台使用 <i class="el-icon-right"></i>
+            使用流程 <i class="el-icon-right"></i>
           </el-button>
         </div>
       </div>
@@ -194,43 +168,15 @@
           ></el-input>
         </el-form-item>
 
-        <div style="display: flex; gap: 16px">
-          <el-form-item label="展示图标 (Icon)">
-            <el-select
-              v-model="form.icon"
-              style="width: 100%"
-              popper-class="bio-dark-select-dropdown"
-            >
-              <el-option label="数据曲线 (Data Line)" value="el-icon-data-line"
-                ><i class="el-icon-data-line"></i> 数据曲线</el-option
-              >
-              <el-option label="算力芯片 (CPU)" value="el-icon-cpu"
-                ><i class="el-icon-cpu"></i> 算力芯片</el-option
-              >
-              <el-option label="分析图表 (Pie Chart)" value="el-icon-pie-chart"
-                ><i class="el-icon-pie-chart"></i> 分析图表</el-option
-              >
-              <el-option
-                label="连接拓扑 (Connection)"
-                value="el-icon-connection"
-                ><i class="el-icon-connection"></i> 连接拓扑</el-option
-              >
-            </el-select>
-          </el-form-item>
-          <el-form-item label="卡片主色调 (Color)">
-            <el-color-picker v-model="form.color" show-alpha></el-color-picker>
-          </el-form-item>
-        </div>
-
-        <el-form-item label="上线状态">
+        <el-form-item label="启用状态">
           <el-switch
             v-model="form.isActive"
             active-color="#10b981"
             inactive-color="#475569"
             :active-value="1"
             :inactive-value="0"
-            active-text="上线运行"
-            inactive-text="维护下线"
+            active-text="可用"
+            inactive-text="维护中"
           ></el-switch>
         </el-form-item>
       </el-form>
@@ -251,7 +197,6 @@
 </template>
 
 <script>
-// 🌟 引入增删改查接口 (如果你的 api 文件还没有写 create/update/delete，记得补上)
 import {
   getPipelines,
   createPipeline,
@@ -269,17 +214,14 @@ export default {
       activeCategory: "all",
       pipelines: [],
 
-      // 🌟 表单弹窗控制
       dialogVisible: false,
-      dialogType: "add", // 'add' 或 'edit'
+      dialogType: "add", 
       form: {
         id: null,
         pipelineCode: "",
         name: "",
         description: "",
         category: "genomics",
-        icon: "el-icon-data-line",
-        color: "#3b82f6",
         isActive: 1,
       },
       rules: {
@@ -322,7 +264,6 @@ export default {
       try {
         const res = await getPipelines();
         if (res && res.data) {
-          // 兼容 axios 的多层数据结构
           let pList = [];
           if (Array.isArray(res.data)) pList = res.data;
           else if (res.data.data && Array.isArray(res.data.data))
@@ -332,7 +273,7 @@ export default {
             ...p,
             id: p.id,
             pipelineCode: p.pipelineCode,
-            isActive: p.isActive === 1 || p.isActive === true, // 兼容 boolean 和 integer
+            isActive: p.isActive === 1 || p.isActive === true, 
             category:
               p.category || (index % 2 === 0 ? "genomics" : "transcriptomics"),
           }));
@@ -343,15 +284,14 @@ export default {
         this.loading = false;
       }
     },
+// 🌟 修改跳转路径和传参方式
     usePipeline(tpl) {
-      this.$message.success(`已选定流程: ${tpl.name}，正在返回工作台装载...`);
+      this.$message.success(`已选定流程: ${tpl.name}，即将前往配置...`);
       this.$router.push({
-        path: "/analysis",
-        query: { autoLaunchPipelineId: tpl.id },
+        path: "/analysis/new", // 目标换成你的新组件路由
+        query: { pipelineId: tpl.id }, // 参数名对齐
       });
     },
-
-    // 🌟 处理卡片右上角的下拉菜单点击
     handleCommand(command, tpl) {
       if (command === "edit") {
         this.openDialog("edit", tpl);
@@ -360,7 +300,6 @@ export default {
       }
     },
 
-    // 🌟 打开弹窗
     openDialog(type, row = null) {
       this.dialogType = type;
       if (type === "edit" && row) {
@@ -375,8 +314,6 @@ export default {
           name: "",
           description: "",
           category: "genomics",
-          icon: "el-icon-data-line",
-          color: "#3b82f6",
           isActive: 1,
         };
       }
@@ -386,7 +323,6 @@ export default {
       });
     },
 
-    // 🌟 提交表单 (新增或更新)
     submitForm() {
       this.$refs.form.validate(async (valid) => {
         if (!valid) return;
@@ -400,7 +336,7 @@ export default {
             this.$message.success("修改流程成功！");
           }
           this.dialogVisible = false;
-          this.fetchData(); // 刷新列表
+          this.fetchData(); 
         } catch (error) {
           this.$message.error(
             error.response?.data?.message || "操作失败，请重试",
@@ -411,7 +347,6 @@ export default {
       });
     },
 
-    // 🌟 删除流程
     async handleDelete(row) {
       try {
         await this.$confirm(
@@ -422,11 +357,11 @@ export default {
             cancelButtonText: "取消",
             type: "warning",
             customClass: "bio-dark-message-box",
-          },
+          }
         );
         await deletePipeline(row.id);
         this.$message.success("流程删除成功");
-        this.fetchData(); // 刷新列表
+        this.fetchData(); 
       } catch (error) {
         if (error !== "cancel") {
           this.$message.error("删除失败");
@@ -454,9 +389,7 @@ export default {
   ::v-deep .dark-page-header {
     .el-page-header__left {
       color: #94a3b8;
-      &:hover {
-        color: #3b82f6;
-      }
+      &:hover { color: #3b82f6; }
     }
     .el-page-header__content {
       color: #f8fafc;
@@ -475,9 +408,7 @@ export default {
         border: 1px solid #334155;
         color: #f8fafc;
         border-radius: 20px;
-        &:focus {
-          border-color: #3b82f6;
-        }
+        &:focus { border-color: #3b82f6; }
       }
     }
   }
@@ -517,90 +448,80 @@ export default {
     background: #111827;
     border: 1px solid #1f2937;
     border-radius: 12px;
-    padding: 20px;
+    padding: 24px;
     display: flex;
     flex-direction: column;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
     &:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.5);
       border-color: #374151;
     }
 
     .card-header {
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 16px;
-
-      .icon-box {
-        width: 48px;
-        height: 48px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        i {
-          font-size: 24px;
-          color: white;
-        }
+      align-items: center;
+      margin-bottom: 12px;
+      
+      .pipeline-name {
+        font-size: 18px;
+        color: #f8fafc;
+        margin: 0;
+        font-weight: 600;
+        flex: 1;
+        padding-right: 12px;
       }
-
-      .header-right-actions {
-        display: flex;
-        align-items: center;
+      .action-icon {
+        cursor: pointer;
+        color: #64748b;
+        font-size: 18px;
+        transition: color 0.2s;
+        &:hover { color: #f8fafc; }
       }
     }
 
     .card-body {
       flex: 1;
-      .pipeline-name {
-        font-size: 18px;
-        color: #f8fafc;
-        margin: 0 0 10px 0;
-        font-weight: 600;
-      }
       .pipeline-desc {
-        color: #64748b;
-        font-size: 13px;
-        line-height: 1.5;
-        margin-bottom: 16px;
+        color: #94a3b8;
+        font-size: 14px;
+        line-height: 1.6;
+        margin: 0;
         display: -webkit-box;
-        -webkit-line-clamp: 2;
+        -webkit-line-clamp: 3; /* 允许描述显示3行 */
         -webkit-box-orient: vertical;
         overflow: hidden;
-      }
-      .pipeline-tags {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-        ::v-deep .el-tag {
-          background: transparent;
-          border-color: #334155;
-          color: #94a3b8;
-        }
       }
     }
 
     .card-footer {
-      margin-top: 20px;
+      margin-top: 24px;
       padding-top: 16px;
-      border-top: 1px dashed #334155;
+      border-top: 1px solid #1f2937;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      .author-info {
-        font-size: 12px;
-        color: #475569;
+
+      .pipeline-tags {
         display: flex;
-        align-items: center;
-        gap: 6px;
+        gap: 8px;
+        ::v-deep .el-tag {
+          border: none;
+          &.el-tag--info.is-plain {
+            background: #1e293b;
+            color: #94a3b8;
+          }
+        }
       }
+
       .use-btn {
         background: #1e293b;
         border: 1px solid #3b82f6;
         color: #3b82f6;
+        border-radius: 6px;
+        font-weight: 500;
         transition: 0.3s;
         &:hover:not(:disabled) {
           background: #3b82f6;
@@ -609,6 +530,7 @@ export default {
         &:disabled {
           border-color: #334155;
           color: #475569;
+          background: transparent;
         }
       }
     }
@@ -622,26 +544,25 @@ export default {
   }
 }
 
-/* 按钮通用暗黑风格 */
+.text-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .dark-btn-submit {
   background: linear-gradient(135deg, #3b82f6, #2563eb);
   border: none;
   color: white;
-  &:hover {
-    opacity: 0.9;
-  }
+  &:hover { opacity: 0.9; }
 }
 .dark-btn-cancel {
   background: transparent;
   border: 1px solid #475569;
   color: #94a3b8;
-  &:hover {
-    border-color: #f8fafc;
-    color: #f8fafc;
-  }
+  &:hover { border-color: #f8fafc; color: #f8fafc; }
 }
 
-/* 表单与弹窗彻底黑化 */
 ::v-deep .bio-dark-form {
   .el-form-item__label {
     color: #94a3b8;
@@ -653,22 +574,17 @@ export default {
     background-color: #1e293b;
     border: 1px solid #334155;
     color: #f8fafc;
-    &:focus {
-      border-color: #3b82f6;
-    }
+    &:focus { border-color: #3b82f6; }
   }
   .el-input.is-disabled .el-input__inner {
     background-color: #111827;
     color: #64748b;
   }
 }
-.text-danger {
-  color: #ef4444 !important;
-}
+.text-danger { color: #ef4444 !important; }
 </style>
 
 <style>
-/* 弹出层全局暗黑 */
 .bio-dark-dropdown,
 .bio-dark-select-dropdown {
   background-color: #1e293b !important;

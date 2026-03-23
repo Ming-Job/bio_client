@@ -42,19 +42,6 @@
             </p>
 
             <div class="course-stats">
-              <div class="stat-item">
-                <i class="el-icon-star-on rating-icon"></i>
-                <span class="stat-value"
-                  >{{ courseInfo.rating || "4.9" }} 分</span
-                >
-              </div>
-              <div class="stat-divider"></div>
-              <div class="stat-item">
-                <i class="el-icon-user"></i>
-                <span class="stat-value"
-                  >{{ courseInfo.enrolledCount || 0 }} 人参与学习</span
-                >
-              </div>
               <div class="stat-divider"></div>
               <div class="stat-item">
                 <i class="el-icon-document"></i>

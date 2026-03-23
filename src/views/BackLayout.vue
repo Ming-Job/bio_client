@@ -520,6 +520,528 @@ export default {
   },
 };
 </script>
+<template>
+  <div class="back-layout">
+    <!-- 侧边栏 -->
+    <div class="sidebar" :class="{ collapsed: sidebarCollapsed }">
+      <div class="logo">
+        <img src="@/assets/images/logo.png" alt="Logo" />
+        <transition name="fade">
+          <span v-if="!sidebarCollapsed" class="logo-text">
+            {{ platformName }}
+          </span>
+        </transition>
+      </div>
+
+      <!-- 用户角色信息 -->
+      <div class="user-role-info" v-if="!sidebarCollapsed">
+        <el-tag :type="roleTagType" size="small" class="role-tag">
+          {{ userRoleText }}
+        </el-tag>
+        <div class="welcome-text">
+          欢迎回来，{{ userInfo.username || "用户" }}
+        </div>
+      </div>
+
+      <el-menu
+        :default-active="activeMenu"
+        :collapse="sidebarCollapsed"
+        router
+        class="sidebar-menu"
+        :unique-opened="true"
+        background-color="#1e293b"
+        text-color="#cbd5e1"
+        active-text-color="#3b82f6"
+      >
+        <!-- 管理员菜单 -->
+        <template v-if="isAdmin">
+          <el-menu-item index="/back/admin/dashboard">
+            <i class="el-icon-s-data menu-icon"></i>
+            <span slot="title">仪表盘</span>
+          </el-menu-item>
+
+          <el-menu-item index="/back/admin/users">
+            <i class="el-icon-user-solid menu-icon"></i>
+            <span slot="title">用户管理</span>
+          </el-menu-item>
+
+          <el-menu-item index="/back/admin/courses">
+            <i class="el-icon-notebook-2 menu-icon"></i>
+            <span slot="title">课程管理</span>
+          </el-menu-item>
+
+          <el-menu-item index="/back/admin/cases">
+            <i class="el-icon-files menu-icon"></i>
+            <span slot="title">案例管理</span>
+          </el-menu-item>
+        </template>
+
+        <!-- 普通用户菜单 -->
+
+        
+        <!-- 公共个人设置菜单 -->
+        <el-submenu
+          index="settings"
+          :class="{ 'hidden-submenu': sidebarCollapsed }"
+        >
+          <template slot="title">
+            <i class="el-icon-setting menu-icon"></i>
+            <span>个人设置</span>
+          </template>
+          <el-menu-item index="/back/profile">
+            <i class="el-icon-user submenu-icon"></i>
+            <span>个人中心</span>
+          </el-menu-item>
+          <el-menu-item index="/back/account">
+            <i class="el-icon-s-tools submenu-icon"></i>
+            <span>账号设置</span>
+          </el-menu-item>
+        </el-submenu>
+      </el-menu>
+
+      <!-- 侧边栏底部 -->
+      <div class="sidebar-footer" v-if="!sidebarCollapsed">
+        <div class="version-info">
+          <i class="el-icon-info"></i>
+          <span>{{ userRoleText }}端 v1.0.0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="main-content" :class="{ expanded: sidebarCollapsed }">
+      <!-- 顶部导航 -->
+      <div class="header">
+        <div class="header-left">
+          <el-tooltip
+            :content="sidebarCollapsed ? '展开菜单' : '折叠菜单'"
+            placement="bottom"
+          >
+            <i
+              class="el-icon-s-fold toggle-btn"
+              @click="toggleSidebar"
+              :class="{ rotated: sidebarCollapsed }"
+            ></i>
+          </el-tooltip>
+
+          <!-- 面包屑导航 -->
+          <el-breadcrumb separator="/" class="breadcrumb">
+            <el-breadcrumb-item :to="{ path: getDashboardPath }">
+              {{ userRoleText }}后台
+            </el-breadcrumb-item>
+            <el-breadcrumb-item
+              v-for="(item, index) in breadcrumbs"
+              :key="index"
+              :to="item.path ? { path: item.path } : null"
+            >
+              {{ item.name }}
+            </el-breadcrumb-item>
+          </el-breadcrumb>
+        </div>
+
+        <div class="header-right">
+          <!-- 快捷操作 全屏/刷新 -->
+          <div class="quick-actions-header">
+            <el-tooltip content="全屏" placement="bottom">
+              <i class="el-icon-full-screen" @click="toggleFullscreen"></i>
+            </el-tooltip>
+            <el-tooltip content="刷新" placement="bottom">
+              <i class="el-icon-refresh" @click="refreshPage"></i>
+            </el-tooltip>
+          </div>
+
+          <!-- 通知中心 -->
+          <el-popover placement="bottom" width="300" trigger="click">
+            <div class="notification-panel">
+              <div class="notification-header">
+                <h4>通知中心</h4>
+                <el-button type="text" size="mini" @click="markAllAsRead">
+                  全部已读
+                </el-button>
+              </div>
+              <div class="notification-list">
+                <div
+                  v-for="(notification, index) in notifications"
+                  :key="index"
+                  class="notification-item"
+                  :class="{ unread: !notification.read }"
+                >
+                  <div class="notification-icon">
+                    <i :class="notification.icon"></i>
+                  </div>
+                  <div class="notification-content">
+                    <div class="notification-title">
+                      {{ notification.title }}
+                    </div>
+                    <div class="notification-time">{{ notification.time }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <el-badge
+              :value="unreadCount"
+              class="notification-badge"
+              slot="reference"
+            >
+              <i class="el-icon-bell notification-icon"></i>
+            </el-badge>
+          </el-popover>
+
+          <!-- 用户信息 -->
+          <el-dropdown @command="handleCommand" class="user-dropdown">
+            <div class="user-info">
+              <el-avatar
+                :size="36"
+                :src="userAvatar"
+                class="user-avatar"
+                :style="{
+                  background: avatarGradient,
+                }"
+              >
+                <span v-if="!userAvatar" class="avatar-text">
+                  {{
+                    userInfo.username
+                      ? userInfo.username.charAt(0).toUpperCase()
+                      : "U"
+                  }}
+                </span>
+              </el-avatar>
+
+              <div class="user-details">
+                <span class="username">{{
+                  userInfo.username || userRoleText
+                }}</span>
+                <span class="user-status">
+                  <i
+                    class="el-icon-circle-check"
+                    :style="{ color: '#10b981' }"
+                  ></i>
+                  <span>在线</span>
+                </span>
+              </div>
+              <i class="el-icon-arrow-down dropdown-arrow"></i>
+            </div>
+            <el-dropdown-menu slot="dropdown" class="user-dropdown-menu">
+              <!-- 返回首页按钮（根据角色显示） -->
+              <el-dropdown-item
+                command="home"
+                class="dropdown-item"
+                v-if="userInfo.role !== 'admin'"
+              >
+                <i class="el-icon-s-home"></i>返回首页
+              </el-dropdown-item>
+
+              <el-dropdown-item command="profile" class="dropdown-item">
+                <i class="el-icon-user"></i>个人中心
+              </el-dropdown-item>
+              <el-dropdown-item command="account" class="dropdown-item">
+                <i class="el-icon-setting"></i>账号设置
+              </el-dropdown-item>
+              <el-divider></el-divider>
+              <el-dropdown-item command="help" class="dropdown-item">
+                <i class="el-icon-question"></i>帮助中心
+              </el-dropdown-item>
+              <el-dropdown-item command="feedback" class="dropdown-item">
+                <i class="el-icon-chat-dot-round"></i>意见反馈
+              </el-dropdown-item>
+              <el-divider></el-divider>
+              <el-dropdown-item command="logout" class="dropdown-item logout">
+                <i class="el-icon-switch-button"></i>退出登录
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </el-dropdown>
+        </div>
+      </div>
+
+      <!-- 页面内容 -->
+      <div class="content">
+        <!-- 路由视图 -->
+        <div class="router-view-container">
+          <router-view></router-view>
+        </div>
+      </div>
+
+      <!-- 页脚 -->
+      <div class="footer">
+        <div class="footer-content">
+          <p>© 2025 生物信息科教平台 | {{ userRoleText }}系统</p>
+          <p class="footer-links">
+            <a href="#" @click.prevent="showHelp">帮助中心</a> ·
+            <a href="#" @click.prevent="showFeedback">意见反馈</a> ·
+            <a href="#" @click.prevent="showAbout">关于我们</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import { mapState, mapActions } from "vuex";
+import { getAvatarUrl } from "@/utils/auth";
+import { getRoleText, getRoleTagType } from "@/utils/role";
+
+export default {
+  name: "BackLayout",
+  data() {
+    return {
+      sidebarCollapsed: false,
+      activeMenu: "",
+      searchText: "",
+      notifications: [
+        {
+          id: 1,
+          title: "新用户注册",
+          time: "5分钟前",
+          icon: "el-icon-user",
+          read: false,
+        },
+      ],
+      isDarkTheme: false,
+      isFullscreen: false,
+    };
+  },
+  computed: {
+    ...mapState("user", {
+      isLoggedIn: (state) => state.isLoggedIn,
+      userInfo: (state) => state.userInfo,
+    }),
+
+    // 用户角色相关
+    isAdmin() {
+      return this.userInfo.role === "admin";
+    },
+    isUser() {
+      return this.userInfo.role === "user";
+    },
+
+    userRoleText() {
+      return getRoleText(this.userInfo.role);
+    },
+
+    roleTagType() {
+      return getRoleTagType(this.userInfo.role);
+    },
+
+    platformName() {
+      return this.isAdmin
+        ? "管理后台"
+        : this.isUser
+        ? "普通用户平台"
+        : "学习平台";
+    },
+
+    // 获取当前角色的仪表盘路径
+    getDashboardPath() {
+      if (this.isAdmin) return "/back/admin/dashboard";
+      if (this.isUser) return "/back/user/dashboard";
+      return "/back/profile";
+    },
+
+    // 页面标题
+    pageTitle() {
+      return this.$route.meta?.title || this.userRoleText + "后台";
+    },
+
+    pageIcon() {
+      const routeIcons = {
+        "/back/admin/dashboard": "el-icon-s-data",
+        "/back/admin/users": "el-icon-user-solid",
+        "/back/admin/courses": "el-icon-notebook-2",
+        "/back/admin/datasets": "el-icon-files",
+        "/back/user/dashboard": "el-icon-s-opportunity",
+        "/back/user/learning-center": "el-icon-school",
+        "/back/user/courses": "el-icon-collection",
+        "/back/profile": "el-icon-user",
+        "/back/account": "el-icon-setting",
+      };
+      return routeIcons[this.$route.path] || "el-icon-folder";
+    },
+
+    pageSubtitle() {
+      return this.$route.meta?.subtitle || "";
+    },
+
+    // 面包屑导航
+    breadcrumbs() {
+      const breadcrumbs = [];
+      const matched = this.$route.matched;
+
+      matched.forEach((route) => {
+        if (
+          route.meta &&
+          route.meta.title &&
+          route.meta.title !== this.pageTitle
+        ) {
+          breadcrumbs.push({
+            name: route.meta.title,
+            path: route.path,
+          });
+        }
+      });
+
+      return breadcrumbs;
+    },
+
+    userAvatar() {
+      return getAvatarUrl(this.userInfo.avatar);
+    },
+
+    avatarGradient() {
+      if (this.isAdmin)
+        return "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
+      if (this.isTeacher)
+        return "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)";
+      return "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)";
+    },
+
+    // 未读通知数量
+    unreadCount() {
+      return this.notifications.filter((n) => !n.read).length;
+    },
+  },
+  watch: {
+    $route: {
+      immediate: true,
+      handler(to) {
+        this.activeMenu = to.path;
+      },
+    },
+  },
+  mounted() {
+    this.activeMenu = this.$route.path;
+    this.initFullscreenListener();
+  },
+  beforeDestroy() {
+    this.removeFullscreenListener();
+  },
+  methods: {
+    ...mapActions("user", ["checkLoginStatus", "logout", "setUserInfo"]),
+
+    // 控制侧边栏的展开和折叠
+    toggleSidebar() {
+      this.sidebarCollapsed = !this.sidebarCollapsed;
+    },
+
+    // 处理用户下拉菜单命令
+    handleCommand(command) {
+      switch (command) {
+        case "logout":
+          this.handleLogout();
+          break;
+        case "profile":
+          this.$router.push("/back/profile");
+          break;
+        case "account":
+          this.$router.push("/back/account");
+          break;
+        case "help":
+          this.showHelp();
+          break;
+        case "feedback":
+          this.showFeedback();
+          break;
+        case "home":
+          this.$router.push("/home");
+      }
+    },
+    // 返回首页功能
+    goToHomePage() {
+      const homeRoute = this.getHomeRoute();
+      // 如果当前已经在首页，则不跳转
+      if (this.$route.path === homeRoute) {
+        this.$message.info("您已经在首页");
+        return;
+      }
+      this.$router.push(homeRoute);
+    },
+
+    // 退出登录
+    handleLogout() {
+      this.$confirm("确定要退出登录吗？", "提示", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning",
+      })
+        .then(() => {
+          this.logout();
+          localStorage.removeItem("user");
+          this.$router.push("/login");
+          this.$message.success("已退出登录");
+        })
+        .catch(() => {});
+    },
+    // 通知相关
+    markAllAsRead() {
+      this.notifications.forEach((n) => (n.read = true));
+      this.$message.success("已标记所有通知为已读");
+    },
+
+    // 主题切换
+    toggleTheme() {
+      this.isDarkTheme = !this.isDarkTheme;
+      document.body.classList.toggle("dark-theme", this.isDarkTheme);
+      this.$message.success(
+        `已切换至${this.isDarkTheme ? "深色" : "浅色"}主题`
+      );
+    },
+
+    // 全屏功能
+    toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch((err) => {
+          console.error(`全屏请求失败: ${err.message}`);
+        });
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+    },
+
+    initFullscreenListener() {
+      document.addEventListener(
+        "fullscreenchange",
+        this.handleFullscreenChange
+      );
+    },
+
+    removeFullscreenListener() {
+      document.removeEventListener(
+        "fullscreenchange",
+        this.handleFullscreenChange
+      );
+    },
+
+    handleFullscreenChange() {
+      this.isFullscreen = !!document.fullscreenElement;
+    },
+
+    // 刷新页面
+    refreshPage() {
+      this.$router.go(0);
+    },
+
+    // 系统设置
+    showSettings() {
+      this.$message.info("系统设置功能开发中...");
+    },
+
+    // 帮助中心
+    showHelp() {
+      this.$message.info("帮助中心功能开发中...");
+    },
+
+    showFeedback() {
+      this.$message.info("意见反馈功能开发中...");
+    },
+
+    showAbout() {
+      this.$message.info("关于我们功能开发中...");
+    },
+  },
+};
+</script>
 
 <style scoped lang="scss">
 .back-layout {
@@ -1081,3 +1603,4 @@ export default {
   }
 }
 </style>
+

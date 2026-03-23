@@ -13,7 +13,7 @@
           </div>
           <div class="stat-content">
             <div class="stat-value">{{ userStats.total || 0 }}</div>
-            <div class="stat-label">注册研究员总数</div>
+            <div class="stat-label">注册的用户总数</div>
           </div>
         </div>
       </el-col>
@@ -49,7 +49,7 @@
           </div>
           <div class="stat-content">
             <div class="stat-value">{{ growthStats.totalNewUsers || 0 }}</div>
-            <div class="stat-label">活跃新增注册 (今日)</div>
+            <div class="stat-label">今日新增注册</div>
           </div>
         </div>
       </el-col>
