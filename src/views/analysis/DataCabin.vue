@@ -30,9 +30,8 @@
     <div class="storage-bar">
       <div class="storage-info">
         <span
-          ><i class="el-icon-odometer"></i> 数据资源统计 (共 {{
-            files.length
-          }} 个文件)</span
+          ><i class="el-icon-odometer"></i> 数据资源统计 (共
+          {{ files.length }} 个文件)</span
         >
         <span class="storage-usage">
           已占用物理存储: {{ totalUsedStorage }}
@@ -49,12 +48,12 @@
               size="small"
               class="dark-radio-group"
             >
-              <el-radio-button label="all">全部文件</el-radio-button>
+              <el-radio-button label="all">全部来源</el-radio-button>
               <el-radio-button label="upload"
-                ><i class="el-icon-upload2"></i> 我上传的</el-radio-button
+                ><i class="el-icon-upload2"></i> 手动上传</el-radio-button
               >
               <el-radio-button label="generate"
-                ><i class="el-icon-cpu"></i> 分析产出物</el-radio-button
+                ><i class="el-icon-cpu"></i> 分析产出</el-radio-button
               >
             </el-radio-group>
           </div>
@@ -63,20 +62,35 @@
             <el-select
               v-model="activeType"
               size="small"
-              placeholder="请选择文件格式"
+              placeholder="业务数据分类"
               class="dark-select"
               popper-class="dark-dropdown"
             >
-              <el-option label="全部格式" value="all"></el-option>
+              <el-option label="📁 全部资源" value="all"></el-option>
               <el-option
-                label="原始测序 (FastQ/FASTA)"
-                value="fastq"
+                label="🧬 原始测序 (FastQ/FQ)"
+                value="sequence"
               ></el-option>
-              <el-option label="比对结果 (BAM/SAM)" value="bam"></el-option>
-              <el-option label="变异检测 (VCF)" value="vcf"></el-option>
-              <el-option label="分子结构 (PDB/SDF)" value="struct"></el-option>
-              <el-option label="数据矩阵 (CSV/TXT)" value="csv"></el-option>
-              <el-option label="分析结题 (PDF/报告)" value="pdf"></el-option>
+              <el-option
+                label="📚 参考资源 (FASTA/GTF)"
+                value="reference"
+              ></el-option>
+              <el-option
+                label="🎯 比对/索引 (BAM/SAM)"
+                value="alignment"
+              ></el-option>
+              <el-option
+                label="📊 定量矩阵 (Counts/CSV)"
+                value="expression"
+              ></el-option>
+              <el-option
+                label="🧬 三维结构 (PDB/CIF)"
+                value="structure"
+              ></el-option>
+              <el-option
+                label="📋 报告产出 (PDF/HTML)"
+                value="report"
+              ></el-option>
             </el-select>
           </div>
         </div>
@@ -101,9 +115,13 @@
 
           <el-table-column prop="type" label="格式" width="100">
             <template slot-scope="scope">
-              <el-tag size="mini" effect="plain" type="info">{{
-                scope.row.type.toUpperCase()
-              }}</el-tag>
+              <el-tag
+                size="mini"
+                effect="plain"
+                :type="getTagType(scope.row.type)"
+              >
+                {{ scope.row.type.toUpperCase() }}
+              </el-tag>
             </template>
           </el-table-column>
 
@@ -133,24 +151,15 @@
             </template>
           </el-table-column>
 
-          <el-table-column label="来源" width="120">
+          <el-table-column label="大小" width="120">
             <template slot-scope="scope">
-              <el-tag
-                size="mini"
-                :type="scope.row.source === 'generate' ? 'success' : 'primary'"
-                effect="dark"
-                style="border: none"
+              <span
+                :class="{ 'text-danger': scope.row.size > 1024 * 1024 * 500 }"
               >
-                {{ scope.row.source === "generate" ? "分析产出" : "手动上传" }}
-              </el-tag>
+                {{ scope.row.formattedSize }}
+              </span>
             </template>
           </el-table-column>
-
-          <el-table-column
-            prop="formattedSize"
-            label="大小"
-            width="120"
-          ></el-table-column>
 
           <el-table-column label="产生时间" width="180">
             <template slot-scope="scope">
@@ -188,13 +197,6 @@
               </el-tooltip>
             </template>
           </el-table-column>
-
-          <template slot="empty">
-            <el-empty
-              description="暂无文件数据"
-              :image-size="80"
-            ></el-empty>
-          </template>
         </el-table>
 
         <div class="pagination-container">
@@ -207,8 +209,7 @@
             layout="total, sizes, prev, pager, next, jumper"
             :total="filteredFilesAll.length"
             class="bio-dark-pagination"
-          >
-          </el-pagination>
+          ></el-pagination>
         </div>
       </div>
     </div>
@@ -267,13 +268,11 @@ export default {
       activeType: "all",
       sourceFilter: "all",
       files: [],
-
       showUploadDialog: false,
       previewVisible: false,
       previewLoading: false,
       previewContent: "",
       previewFileName: "",
-
       currentPage: 1,
       pageSize: 10,
     };
@@ -281,6 +280,7 @@ export default {
   computed: {
     ...mapGetters("user", ["userId"]),
 
+    // 🌟 核心业务逻辑：多维度生信文件过滤
     filteredFilesAll() {
       return this.files.filter((f) => {
         const matchSearch = f.name
@@ -294,33 +294,31 @@ export default {
 
         if (this.activeType === "all") {
           matchType = true;
-        } else if (this.activeType === "fastq") {
-          matchType = ["fastq", "fq", "fasta", "fa"].some((t) =>
-            fType.includes(t),
-          );
-        } else if (this.activeType === "csv") {
-          matchType = ["csv", "tsv", "txt"].some((t) => fType.includes(t));
-        } else if (this.activeType === "struct") {
-          matchType = ["pdb", "sdf"].some((t) => fType.includes(t));
         } else {
-          matchType = fType.includes(this.activeType);
+          const typeMap = {
+            sequence: ["fastq", "fq", "gz"],
+            reference: ["fa", "fasta", "gtf", "gff", "fna", "faa"],
+            alignment: ["bam", "sam", "bai", "cram"],
+            expression: ["counts", "matrix", "csv", "tsv", "txt"],
+            structure: ["pdb", "cif"],
+            report: ["pdf", "html", "png", "json"],
+          };
+          const targetExtensions = typeMap[this.activeType] || [];
+          matchType = targetExtensions.some((ext) => fType === ext);
         }
-
         return matchSearch && matchType && matchSource;
       });
     },
 
     paginatedFiles() {
       const start = (this.currentPage - 1) * this.pageSize;
-      const end = start + this.pageSize;
-      return this.filteredFilesAll.slice(start, end);
+      return this.filteredFilesAll.slice(start, start + this.pageSize);
     },
 
     totalUsedStorage() {
       const totalBytes = this.files.reduce((sum, f) => sum + (f.size || 0), 0);
       return this.formatFileSize(totalBytes);
     },
-
   },
 
   watch: {
@@ -338,6 +336,7 @@ export default {
   mounted() {
     this.fetchFiles();
   },
+
   methods: {
     async fetchFiles() {
       this.loading = true;
@@ -345,31 +344,24 @@ export default {
         const res = await getAllFileList({ userId: this.userId || 6 });
         const dataList = res.data || res;
         if (Array.isArray(dataList)) {
-          this.files = dataList.map((file) => {
-            let sourceFlag = "upload";
-            if (file.fileSource) {
-              sourceFlag = file.fileSource.toLowerCase();
-            } else if (file.source) {
-              sourceFlag = file.source.toLowerCase();
-            } else if (file.taskId) {
-              sourceFlag = "generate";
-            }
-
-            return {
-              id: file.id,
-              name: file.originalName,
-              type: file.fileType || this.extractExt(file.originalName),
-              size: file.sizeBytes,
-              formattedSize:
-                file.formattedSize || this.formatFileSize(file.sizeBytes),
-              uploadTime: file.uploadTime,
-              source: sourceFlag,
-              projectName: file.projectName || "未绑定课题",
-            };
-          });
+          this.files = dataList.map((file) => ({
+            id: file.id,
+            name: file.originalName,
+            type: file.fileType || this.extractExt(file.originalName),
+            size: file.sizeBytes,
+            formattedSize:
+              file.formattedSize || this.formatFileSize(file.sizeBytes),
+            uploadTime: file.uploadTime,
+            source: (
+              file.fileSource ||
+              file.source ||
+              (file.taskId ? "generate" : "upload")
+            ).toLowerCase(),
+            projectName: file.projectName || "未绑定课题",
+          }));
         }
       } catch (error) {
-        this.$message.error("无法连接到服务器，请检查网络");
+        this.$message.error("无法连接到服务器");
       } finally {
         this.loading = false;
       }
@@ -383,18 +375,11 @@ export default {
       this.currentPage = val;
     },
 
-    handleUploadComplete(result) {
-      if (result && result.error === 0) {
-        setTimeout(() => {
-          this.showUploadDialog = false;
-          this.fetchFiles();
-        }, 1000);
-      } else {
-        setTimeout(() => {
-          this.showUploadDialog = false;
-          this.fetchFiles();
-        }, 1000);
-      }
+    handleUploadComplete() {
+      setTimeout(() => {
+        this.showUploadDialog = false;
+        this.fetchFiles();
+      }, 1000);
     },
 
     handleDownload(file) {
@@ -402,29 +387,25 @@ export default {
         this.userId || 6
       }`;
       const link = document.createElement("a");
-      link.style.display = "none";
       link.href = downloadUrl;
-      document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
       this.$message.success(`开始下载: ${file.name}`);
     },
 
     async handlePreview(file) {
       if (["bam", "sam", "gz", "zip"].includes(file.type.toLowerCase())) {
-        this.$message.warning("二进制大文件不支持在线预览，请下载后查看");
+        this.$message.warning("二进制文件不支持在线预览");
         return;
       }
       this.previewFileName = file.name;
-      this.previewContent = "";
       this.previewVisible = true;
       this.previewLoading = true;
       try {
         const res = await previewFile(file.id, this.userId || 6);
         this.previewContent =
-          res && typeof res.data === "string" ? res.data : "无法读取内容";
+          res && typeof res.data === "string" ? res.data : "内容无法解析";
       } catch (error) {
-        this.previewContent = "读取预览失败，物理文件可能丢失。";
+        this.previewContent = "预览失败，物理文件可能不存在";
       } finally {
         this.previewLoading = false;
       }
@@ -433,8 +414,8 @@ export default {
     async handleDelete(file) {
       try {
         await this.$confirm(
-          `警告：确定要彻底删除文件 [${file.name}] 吗？删除后将无法恢复。`,
-          "高危操作确认",
+          `确定要彻底删除文件 [${file.name}] 吗？`,
+          "高危操作",
           {
             confirmButtonText: "确定删除",
             cancelButtonText: "取消",
@@ -443,10 +424,10 @@ export default {
           },
         );
         await deleteFile(file.id, this.userId || 6);
-        this.$message.success("文件已成功删除");
+        this.$message.success("已成功删除");
         this.fetchFiles();
       } catch (err) {
-        if (err !== "cancel") this.$message.error("文件删除失败");
+        if (err !== "cancel") this.$message.error("删除失败");
       }
     },
 
@@ -454,45 +435,45 @@ export default {
       return filename ? filename.split(".").pop().toLowerCase() : "unknown";
     },
 
+    // 🌟 细化图标逻辑
     getFileIcon(type) {
-      const map = {
-        fastq: "el-icon-document",
-        fq: "el-icon-document",
-        fasta: "el-icon-files",
-        fa: "el-icon-files",
-        bam: "el-icon-coin",
-        sam: "el-icon-coin",
-        pdf: "el-icon-document-checked",
-        vcf: "el-icon-s-flag",
-        csv: "el-icon-s-data",
-        tsv: "el-icon-s-data",
-        txt: "el-icon-tickets",
-        pdb: "el-icon-connection",
-        sdf: "el-icon-connection",
-      };
-      return map[type.toLowerCase()] || "el-icon-document";
+      const t = type.toLowerCase();
+      if (["fastq", "fq", "gz"].includes(t)) return "el-icon-connection"; // 测序流
+      if (["fa", "fasta", "gtf", "gff"].includes(t))
+        return "el-icon-collection"; // 基建/图书
+      if (["bam", "sam"].includes(t)) return "el-icon-aim"; // 比对目标
+      if (["csv", "tsv", "counts", "matrix"].includes(t))
+        return "el-icon-s-data"; // 数据表
+      if (["vcf"].includes(t)) return "el-icon-warning-outline"; // 变异检测点
+      if (["pdf", "html"].includes(t)) return "el-icon-document-checked"; // 报告
+      return "el-icon-document";
+    },
+
+    // 🌟 细化标签颜色，基建文件用警告色提醒
+    getTagType(type) {
+      const t = type.toLowerCase();
+      if (["fa", "fasta", "gtf", "gff"].includes(t)) return "warning"; // 橙色：重要基建
+      if (["fastq", "fq"].includes(t)) return "primary"; // 蓝色：原始数据
+      if (["bam", "sam"].includes(t)) return "info"; // 灰色：中间文件
+      return "success"; // 绿色：产物
     },
 
     formatFileSize(bytes) {
       if (!bytes) return "0 B";
       const k = 1024,
-        sizes = ["B", "KB", "MB", "GB", "TB"],
-        i = Math.floor(Math.log(bytes) / Math.log(k));
+        sizes = ["B", "KB", "MB", "GB", "TB"];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
       return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
     },
 
     formatTime(timeStr) {
-      if (!timeStr) return "-";
-      return typeof timeStr === "string"
-        ? timeStr.substring(0, 16).replace("T", " ")
-        : "-";
+      return timeStr ? timeStr.substring(0, 16).replace("T", " ") : "-";
     },
   },
 };
 </script>
 
 <style lang="scss" scoped>
-/* ================= 极客暗黑风全局设定 ================= */
 .data-cabin-container {
   min-height: calc(100vh - 60px);
   background-color: #0b0f19;
@@ -500,7 +481,6 @@ export default {
   color: #e2e8f0;
 }
 
-/* 顶部头部 */
 .cabin-header {
   display: flex;
   justify-content: space-between;
@@ -527,9 +507,6 @@ export default {
       color: #f8fafc;
       border-radius: 8px;
       width: 250px;
-      &:focus {
-        border-color: #3b82f6;
-      }
     }
     .upload-btn {
       background: linear-gradient(135deg, #3b82f6, #2563eb);
@@ -538,7 +515,6 @@ export default {
   }
 }
 
-/* 存储监控条 */
 .storage-bar {
   background: #111827;
   border: 1px solid #1f2937;
@@ -560,64 +536,9 @@ export default {
       font-family: Consolas, monospace;
     }
   }
-  ::v-deep .el-progress-bar__outer {
-    background-color: #1e293b !important;
-  }
 }
 
-/* 主体内容区 */
-.cabin-main {
-  display: flex;
-  gap: 24px;
-}
-
-/* ================= 工具栏与来源切换 ================= */
-.table-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-
-  ::v-deep .dark-radio-group {
-    .el-radio-button__inner {
-      background: #0f172a;
-      border-color: #334155;
-      color: #94a3b8;
-      box-shadow: none !important;
-      padding: 8px 16px;
-      font-size: 13px;
-    }
-    .el-radio-button__orig-radio:checked + .el-radio-button__inner {
-      background-color: #3b82f6;
-      border-color: #3b82f6;
-      color: white;
-    }
-    .el-radio-button:first-child .el-radio-button__inner {
-      border-radius: 6px 0 0 6px;
-    }
-    .el-radio-button:last-child .el-radio-button__inner {
-      border-radius: 0 6px 6px 0;
-    }
-  }
-
-  ::v-deep .dark-select {
-    width: 220px;
-    .el-input__inner {
-      background-color: #0f172a;
-      border-color: #334155;
-      color: #f8fafc;
-      border-radius: 6px;
-      &:focus {
-        border-color: #3b82f6;
-      }
-    }
-  }
-}
-
-/* 文件大表样式 */
 .file-table-wrapper {
-  flex: 1;
-  overflow: hidden;
   background: #111827;
   border: 1px solid #1f2937;
   border-radius: 12px;
@@ -641,7 +562,6 @@ export default {
       background-color: #1e293b !important;
     }
   }
-
   .file-name-cell {
     display: flex;
     align-items: center;
@@ -662,13 +582,10 @@ export default {
       text-overflow: ellipsis;
     }
   }
-
-  .time-text {
-    font-size: 13px;
-    color: #64748b;
-    font-family: Consolas, monospace;
+  .text-danger {
+    color: #f87171;
+    font-weight: bold;
   }
-
   .action-icon {
     font-size: 16px;
     padding: 4px 8px;
@@ -688,7 +605,32 @@ export default {
   }
 }
 
-/* 分页器样式 */
+.table-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  ::v-deep .dark-radio-group {
+    .el-radio-button__inner {
+      background: #0f172a;
+      border-color: #334155;
+      color: #94a3b8;
+      font-size: 13px;
+    }
+    .el-radio-button__orig-radio:checked + .el-radio-button__inner {
+      background-color: #3b82f6;
+      border-color: #3b82f6;
+      color: white;
+    }
+  }
+  ::v-deep .dark-select .el-input__inner {
+    background-color: #0f172a;
+    border-color: #334155;
+    color: #f8fafc;
+    border-radius: 6px;
+  }
+}
+
 .pagination-container {
   margin-top: 16px;
   display: flex;
@@ -708,14 +650,9 @@ export default {
   .el-pager li {
     background-color: transparent !important;
     color: #94a3b8;
-    border: none;
-
     &.active {
       color: #3b82f6 !important;
       font-weight: bold;
-    }
-    &:hover:not(.active) {
-      color: #60a5fa !important;
     }
   }
   .el-input__inner {
@@ -725,7 +662,6 @@ export default {
   }
 }
 
-/* 预览弹窗样式复用 */
 ::v-deep .preview-dialog {
   border-radius: 12px;
   overflow: hidden;
@@ -757,7 +693,6 @@ export default {
   }
 }
 
-/* 隐藏弹窗样式复用 */
 ::v-deep .glass-dialog-wrapper {
   background: transparent !important;
   box-shadow: none !important;
@@ -784,7 +719,6 @@ export default {
   font-size: 18px;
   color: #fff;
   cursor: pointer;
-  z-index: 100;
   &:hover {
     background: rgba(239, 68, 68, 0.8);
   }
@@ -806,9 +740,5 @@ export default {
 .dark-dropdown .el-select-dropdown__item.selected {
   color: #3b82f6 !important;
   font-weight: bold;
-}
-.dark-dropdown .popper__arrow::after {
-  border-bottom-color: #1e293b !important;
-  border-top-color: #1e293b !important;
 }
 </style>

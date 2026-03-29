@@ -2,8 +2,7 @@
   <div class="bio-task-center">
     <div class="page-header">
       <div class="header-left">
-        <h2><i class="el-icon-menu"></i> 任务调度中心 (Task Matrix)</h2>
-        <p>全量监控与管理您的云端生信分析流水线</p>
+        <h2><i class="el-icon-menu"></i> 任务中心 (Task Center)</h2>
       </div>
       <div class="header-right">
         <el-input

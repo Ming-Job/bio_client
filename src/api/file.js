@@ -1,16 +1,13 @@
 // @/api/file.js
 import request from './request'
 
-/**
- * 获取最近挂载的文件
- */
+
 export function getRecentUploadFiles(userId, projectId) {
   return request({
-    url: '/api/files/recent', 
+    url: '/api/files/recent', // 🌟 回归正统接口！这个接口里有 projectMapper 查项目名的逻辑
     method: 'get',
-    // 🌟 核心修复：把 userId 和 projectId 全都放进 params 里！匹配后端的 @RequestParam
     params: { 
-      userId: userId,
+      userId: userId,         // 🌟 你的 FileController 里用的是 @RequestParam，所以必须放 Params 里
       projectId: projectId 
     }
   })

@@ -7,9 +7,7 @@
             <i class="el-icon-magic-stick"></i>
             <h3>代码辅助生成区 (Code Generator)</h3>
             <div class="code-info" v-if="generatedCode">
-              <el-tag size="small" effect="dark" :type="getLanguageTagType()">
-                {{ language.toUpperCase() }}
-              </el-tag>
+              <el-tag size="small" effect="dark" type="success">PYTHON</el-tag>
               <span class="lines-count">{{ codeLines }} 行</span>
             </div>
           </div>
@@ -45,15 +43,7 @@
 
         <div class="area-content">
           <div class="input-section">
-          <div
-              class="data-mount-bar"
-              style="
-                margin-bottom: 16px;
-                display: flex;
-                align-items: center;
-                gap: 12px;
-              "
-            >
+            <div class="data-mount-bar">
               <el-upload
                 v-if="!isCloudMounted"
                 action="/api/sandbox-files/upload"
@@ -80,12 +70,20 @@
                   closable
                   @close="handleRemoveFile"
                 >
-                  <i :class="isCloudMounted ? 'el-icon-cloudy' : 'el-icon-document'"></i>
-                  {{ isCloudMounted ? '已关联云端文件: ' : '已挂载本地文件: ' }} {{ mountedFile }}
+                  <i
+                    :class="
+                      isCloudMounted ? 'el-icon-cloudy' : 'el-icon-document'
+                    "
+                  ></i>
+                  {{ isCloudMounted ? "已关联云端文件: " : "已挂载本地文件: " }}
+                  {{ mountedFile }}
                 </el-tag>
               </div>
-              
-              <span v-if="isCloudMounted" style="font-size: 12px; color: #64748b;">
+
+              <span
+                v-if="isCloudMounted"
+                style="font-size: 12px; color: #64748b"
+              >
                 (文件路径已同步至执行环境)
               </span>
             </div>
@@ -109,18 +107,23 @@
               <i class="el-icon-s-opportunity"></i>
               {{
                 mountedFile
-                  ? "🟢 文件已关联，推荐分析示例："
+                  ? "🟢 已读取数据特征，为您智能推荐："
                   : "常用分析指令示例："
               }}
             </span>
-            <div class="examples-grid">
+            <div
+              class="examples-grid"
+              v-loading="loadingExamples"
+              element-loading-background="transparent"
+            >
               <el-button
-                v-for="(example, index) in currentExamples"
+                v-for="(example, index) in dynamicExamples"
                 :key="index"
                 size="mini"
                 @click="userInput = example"
                 class="example-btn dark-plain-btn"
                 :class="{ 'glow-border': mountedFile }"
+                :disabled="loadingExamples"
               >
                 {{ example }}
               </el-button>
@@ -175,7 +178,7 @@
                     icon="el-icon-document-copy"
                   />
                 </el-tooltip>
-                <el-tooltip content="下载 .py/.r 文件" placement="top">
+                <el-tooltip content="下载 Python 脚本" placement="top">
                   <el-button
                     size="small"
                     circle
@@ -189,7 +192,7 @@
 
             <div class="code-display">
               <div class="code-container">
-                <pre><code :class="'language-' + language">{{ generatedCode }}</code></pre>
+                <pre><code class="language-python">{{ generatedCode }}</code></pre>
                 <div class="readonly-overlay">
                   <div class="overlay-content">
                     <i class="el-icon-lock"></i>
@@ -289,25 +292,9 @@
                 <i class="el-icon-edit"></i> 脚本编辑器
               </span>
               <div class="input-info">
-                <el-select
-                  v-model="language"
-                  size="small"
-                  class="dark-select"
-                  style="width: 120px"
-                >
-                  <el-option label="Python 3.9" value="python">
-                    <span class="language-option"
-                      ><i class="el-icon-s-data" style="color: #3b82f6"></i>
-                      Python</span
-                    >
-                  </el-option>
-                  <el-option label="R 4.2" value="r">
-                    <span class="language-option"
-                      ><i class="el-icon-s-data" style="color: #10b981"></i>
-                      R</span
-                    >
-                  </el-option>
-                </el-select>
+                <el-tag size="mini" effect="dark" type="info">
+                  <i class="el-icon-s-data"></i> Python 3.9
+                </el-tag>
                 <span class="lines-count" v-if="executionCode"
                   >{{ executionCodeLines }} 行</span
                 >
@@ -318,7 +305,7 @@
               <textarea
                 v-model="executionCode"
                 class="execution-code-editor"
-                :placeholder="'在此键入或粘贴 ' + language.toUpperCase() + ' 脚本代码...'"
+                placeholder="在此键入或粘贴 Python 脚本代码..."
                 spellcheck="false"
                 @keydown.tab.prevent="insertTab"
                 rows="15"
@@ -327,54 +314,7 @@
           </div>
 
           <div class="execution-controls">
-            <div class="control-group">
-              <div class="control-item">
-                <label class="control-label">运行模式：</label>
-                <el-select
-                  v-model="executionMode"
-                  size="small"
-                  class="dark-select"
-                  style="width: 160px"
-                >
-                  <el-option label="后台异步执行" value="async">
-                    <span class="mode-option"
-                      ><i class="el-icon-time"></i> 后台异步执行</span
-                    >
-                  </el-option>
-                  <el-option label="前台同步执行" value="sync">
-                    <span class="mode-option"
-                      ><i class="el-icon-s-check"></i> 前台同步执行</span
-                    >
-                  </el-option>
-                </el-select>
-              </div>
-              <div class="control-item">
-                <label class="control-label">执行超时限制：</label>
-                <el-select
-                  v-model="timeout"
-                  size="small"
-                  class="dark-select"
-                  style="width: 120px"
-                >
-                  <el-option label="30秒 (测试)" value="30"></el-option>
-                  <el-option label="1分钟" value="60"></el-option>
-                  <el-option label="5分钟" value="300"></el-option>
-                  <el-option label="10分钟 (长任务)" value="600"></el-option>
-                </el-select>
-              </div>
-            </div>
-
             <div class="execution-actions">
-              <div class="security-notice">
-                <div class="notice-content">
-                  <i class="el-icon-lock" style="color: #3b82f6"></i>
-                  <span>沙箱运行环境已就绪</span>
-                </div>
-                <div class="notice-detail">
-                  <span>当前环境已隔离，限制网络访问以保证系统安全。</span>
-                </div>
-              </div>
-
               <div class="action-buttons">
                 <el-button
                   type="success"
@@ -383,19 +323,11 @@
                   :disabled="!canExecute"
                   icon="el-icon-video-play"
                   class="execute-btn glow-btn-success"
+                  style="min-width: 140px"
                 >
-                  {{ executing ? "准备运行..." : "运行代码" }}
+                  {{ executing ? "运行中 " + formattedTimer : "运行代码" }}
                 </el-button>
-                <el-button
-                  type="info"
-                  @click="checkExecutionStatus"
-                  :loading="checkingStatus"
-                  :disabled="!hasExecutionId"
-                  icon="el-icon-refresh"
-                  class="dark-plain-btn"
-                  v-if="executionMode === 'async'"
-                  >检查状态</el-button
-                >
+
                 <el-button
                   type="danger"
                   @click="stopExecution"
@@ -438,7 +370,7 @@
               </div>
             </div>
 
-            <div class="output-content">
+            <div class="output-content" ref="outputContainer">
               <div v-if="executionResult?.error" class="error-output">
                 <div class="error-header">
                   <div style="display: flex; align-items: center; gap: 12px">
@@ -513,15 +445,6 @@
               class="dark-plain-btn"
               >清空画板</el-button
             >
-            <el-button
-              size="small"
-              @click="exportAllCharts"
-              :disabled="!hasCharts"
-              icon="el-icon-download"
-              type="primary"
-              class="glow-btn"
-              >导出全部图表</el-button
-            >
           </div>
         </div>
 
@@ -590,7 +513,9 @@
             <div class="waiting-content">
               <i class="el-icon-loading"></i>
               <p>等待运行结果...</p>
-              <span class="hint">如果代码包含图像生成，运行完毕后将在此显示</span>
+              <span class="hint"
+                >如果代码包含图像生成，运行完毕后将在此显示</span
+              >
             </div>
           </div>
         </div>
@@ -656,17 +581,19 @@
             <ul class="tutorial-list line-4">
               <li>
                 <i class="el-icon-paperclip"></i> <b>STEP 1: 关联数据。</b> 点击
-                <span class="highlight">"挂载本地实验数据"</span> 上传您需要处理的数据文件。
+                <span class="highlight">"挂载本地实验数据"</span>
+                上传您需要处理的数据文件。
               </li>
               <li>
                 <i class="el-icon-chat-dot-square"></i>
-                <b>STEP 2: 提出需求。</b> 输入分析需求，或直接点击下方示例，由 AI 为您生成代码。
+                <b>STEP 2: 提出需求。</b> 输入分析需求，或直接点击下方示例，由
+                AI 为您生成代码。
               </li>
               <li>
                 <i class="el-icon-video-play"></i>
                 <b>STEP 3: 运行代码。</b> 提取代码并点击
                 <span class="highlight">"运行代码"</span
-                >，系统将执行并返回结果图表。
+                >，系统将静默执行并返回结果图表。
               </li>
             </ul>
             <p class="typewriter line-5">
@@ -698,28 +625,23 @@ export default {
     return {
       userInput: "",
       generatedCode: "",
-      language: "python",
       executionCode: "",
-      executionMode: "async",
-      timeout: "60",
       executionId: null,
       executionResult: null,
       executionStatus: "idle",
       loading: false,
       executing: false,
-      checkingStatus: false,
       fixing: false,
 
-      defaultExamples: [
+      // 动态计时器相关
+      elapsedSeconds: 0,
+      timerInterval: null,
+
+      loadingExamples: false,
+      dynamicExamples: [
         "生成随机矩阵数据，做主成分分析(PCA)并绘制散点图 (全英文)",
-        "使用内置的 mtcars 数据集，进行线性回归拟合并绘图 (全英文)",
+        "使用内置的经典数据集，进行线性回归拟合并绘图 (全英文)",
         "利用 seaborn 绘制模拟差异表达矩阵的热图 (全英文)",
-      ],
-      dataReadyExamples: [
-        "读取已挂载的数据(注意基因列名为GeneID)，提取 GAPDH 作为内参，计算其它基因相对表达量并画条形图 (全英文)",
-        "对挂载的数据进行 PCA 主成分分析，绘制 2D 降维散点图并区分 N 组与 T 组 (全英文)",
-        "读取挂载数据，计算 N 组与 T 组的 Log2FoldChange 及 p-value，绘制火山图 (全英文)",
-        "提取挂载矩阵中的 TP53 和 MYC 基因数据，进行 Pearson 相关性分析并绘制散点拟合图 (全英文)",
       ],
 
       codeStatus: "empty",
@@ -728,14 +650,11 @@ export default {
       previewVisible: false,
       currentPreviewImage: "",
       mountedFile: null,
-      isCloudMounted: false, 
+      isCloudMounted: false,
       showWelcomeModal: false,
     };
   },
   computed: {
-    currentExamples() {
-      return this.mountedFile ? this.dataReadyExamples : this.defaultExamples;
-    },
     codeLines() {
       return this.generatedCode ? this.generatedCode.split("\n").length : 0;
     },
@@ -754,7 +673,7 @@ export default {
       return this.executionCode && this.executionCode.trim() && !this.executing;
     },
     hasExecutionId() {
-      return this.executionId && this.executionMode === "async";
+      return this.executionId != null;
     },
     isExecuting() {
       return (
@@ -762,13 +681,22 @@ export default {
         this.executionStatus === "pending"
       );
     },
+    // 格式化秒表输出 (如 01:05)
+    formattedTimer() {
+      const minutes = Math.floor(this.elapsedSeconds / 60)
+        .toString()
+        .padStart(2, "0");
+      const seconds = (this.elapsedSeconds % 60).toString().padStart(2, "0");
+      return `${minutes}:${seconds}`;
+    },
   },
   mounted() {
     const { mount_dataset, fork_prompt } = this.$route.query;
 
     if (mount_dataset) {
       this.mountedFile = mount_dataset;
-      this.isCloudMounted = true; 
+      this.isCloudMounted = true;
+      this.fetchSmartSuggestions(mount_dataset);
       setTimeout(() => {
         this.$message.success(`已成功关联云端数据文件：${mount_dataset}`);
       }, 300);
@@ -787,8 +715,76 @@ export default {
   },
   beforeDestroy() {
     this.clearPolling();
+    this.stopTimer();
   },
   methods: {
+    // ======== 定时器控制 ========
+    startTimer() {
+      this.elapsedSeconds = 0;
+      if (this.timerInterval) clearInterval(this.timerInterval);
+      this.timerInterval = setInterval(() => {
+        this.elapsedSeconds++;
+      }, 1000);
+    },
+    stopTimer() {
+      if (this.timerInterval) {
+        clearInterval(this.timerInterval);
+        this.timerInterval = null;
+      }
+    },
+    // ======== 自动触底控制 ========
+    scrollToBottom() {
+      this.$nextTick(() => {
+        const container = this.$refs.outputContainer;
+        if (container) {
+          container.scrollTop = container.scrollHeight;
+        }
+      });
+    },
+
+    async fetchSmartSuggestions(fileName) {
+      if (!fileName) return;
+      this.loadingExamples = true;
+      this.dynamicExamples = [
+        "正在扫描数据特征...",
+        "呼叫底层大模型中...",
+        "正在分析最优指令...",
+      ];
+
+      try {
+        const res = await request({
+          url: "/api/analysis/smart-prompts",
+          method: "get",
+          params: { fileName: fileName },
+        });
+
+        let prompts = [];
+        if (Array.isArray(res)) {
+          prompts = res;
+        } else if (res && Array.isArray(res.data)) {
+          prompts = res.data;
+        } else if (res && res.data && Array.isArray(res.data.data)) {
+          prompts = res.data.data;
+        }
+
+        if (prompts.length > 0) {
+          this.dynamicExamples = prompts;
+        } else {
+          throw new Error("未解析到有效的提示词数组");
+        }
+      } catch (error) {
+        console.error("探针请求失败:", error);
+        this.$message.warning("特征提取超时，已降级为通用推荐");
+        this.dynamicExamples = [
+          "读取我刚刚挂载的数据，打印前5行并展示数据信息 (全英文)",
+          "检查挂载的数据中是否存在缺失值，如果有请进行均值插补 (全英文)",
+          "提取数据中的数值列，绘制相关性热图 (全英文)",
+        ];
+      } finally {
+        this.loadingExamples = false;
+      }
+    },
+
     showTutorial() {
       this.showWelcomeModal = false;
       this.$nextTick(() => {
@@ -801,21 +797,28 @@ export default {
     },
     beforeUpload(file) {
       const isLt10M = file.size / 1024 / 1024 < 10;
-      if (!isLt10M)
-        this.$message.error("文件大小不能超过 10MB!");
+      if (!isLt10M) this.$message.error("文件大小不能超过 10MB!");
       return isLt10M;
     },
     handleUploadSuccess(res) {
-      if (res.success) {
-        this.mountedFile = res.fileName;
-        this.$message.success(`文件上传成功：${res.fileName} 已挂载`);
+      if (res.success || res.code === 200) {
+        const fName = res.fileName || (res.data ? res.data.fileName : null);
+        this.mountedFile = fName;
+        this.$message.success(`文件上传成功：${fName} 已挂载`);
+        this.fetchSmartSuggestions(fName);
       } else {
         this.$message.error(res.message || "上传失败，连接中断");
       }
     },
     handleRemoveFile() {
       this.mountedFile = null;
-      this.isCloudMounted = false; 
+      this.isCloudMounted = false;
+
+      this.dynamicExamples = [
+        "生成随机矩阵数据，做主成分分析(PCA)并绘制散点图 (全英文)",
+        "使用内置的经典数据集，进行线性回归拟合并绘图 (全英文)",
+        "利用 seaborn 绘制模拟差异表达矩阵的热图 (全英文)",
+      ];
       this.$message.info("已取消文件挂载");
     },
     insertTab(e) {
@@ -841,16 +844,26 @@ export default {
 
       let finalQuestion = this.userInput;
       if (this.mountedFile) {
-        finalQuestion = `【系统指令】：当前挂载的文件绝对路径为 "/tmp/sandbox/${this.mountedFile}"。你接下来生成的 Python 代码中，读取文件时必须使用这个路径，切勿使用示例名称。\n\n用户需求：` + finalQuestion;
+        finalQuestion =
+          `【系统指令】：当前挂载的文件绝对路径为 "/tmp/sandbox/${this.mountedFile}"。你接下来生成的 Python 代码中，读取文件时必须使用这个路径，切勿使用示例名称。\n\n用户需求：` +
+          finalQuestion;
       }
       try {
         const response = await request({
           url: "/api/analysis/assist",
           method: "post",
-          data: { question: finalQuestion, fileName: this.mountedFile }, 
+          data: {
+            question: finalQuestion,
+            fileName: this.mountedFile,
+          },
         });
         const data = response.data || response;
-        this.generatedCode = data.code;
+        if (data.code === 200 && data.data) {
+          this.generatedCode = data.data.code || data.data;
+        } else {
+          this.generatedCode = data.code || data;
+        }
+
         this.codeStatus = "generated";
         this.$message.success("代码生成成功");
       } catch (error) {
@@ -864,9 +877,6 @@ export default {
       this.userInput = "";
       this.$message.info("已清空");
     },
-    getLanguageTagType() {
-      return this.language === "python" ? "success" : "primary";
-    },
     copyGeneratedCode() {
       if (!this.generatedCode) return;
       navigator.clipboard
@@ -874,10 +884,16 @@ export default {
         .then(() => this.$message.success("代码已复制"))
         .catch((err) => this.$message.error("复制失败: " + err.message));
     },
+    // 🌟 导出带有溯源前缀的脚本
     downloadGeneratedCode() {
       if (!this.generatedCode) return;
-      const extension = this.language === "python" ? "py" : "R";
-      const filename = `bio_os_script_${Date.now()}.${extension}`;
+      let baseName = "bio_os_script";
+      if (this.mountedFile) {
+        // 去掉后缀获取源文件名
+        baseName = `[${this.mountedFile.split(".")[0]}]_script`;
+      }
+      const filename = `${baseName}_${Date.now()}.py`;
+
       const blob = new Blob([this.generatedCode], { type: "text/plain" });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -890,10 +906,8 @@ export default {
     },
     extractCodeFromMarkdown(code) {
       const pythonRegex = /```python[ \t]*\n([\s\S]*?)```/i;
-      const rRegex = /```r[ \t]*\n([\s\S]*?)```/i;
       const genericRegex = /```[ \t]*\n([\s\S]*?)```/;
-      let match =
-        this.language === "python" ? pythonRegex.exec(code) : rRegex.exec(code);
+      let match = pythonRegex.exec(code);
       if (!match) match = genericRegex.exec(code);
       return match ? match[1].trim() : code;
     },
@@ -916,57 +930,56 @@ export default {
       this.executing = true;
       this.executionStatus = "executing";
       this.executionResult = null;
+
+      this.startTimer(); // 启动跑表
+
       try {
-        const url =
-          this.executionMode === "async"
-            ? "/api/code/execute"
-            : "/api/code/execute-sync";
+        // 强制走 async 接口
         const response = await request({
-          url: url,
+          url: "/api/code/execute",
           method: "post",
           data: {
             code: this.executionCode,
-            language: this.language,
-            timeout: parseInt(this.timeout),
+            language: "python", // 强制 Python
+            timeout: 600, // 隐藏控制后给定 10分钟 容错上限
             fileName: this.mountedFile,
           },
         });
         const data = response.data || response;
-        if (this.executionMode === "async") {
-          if (data.success || data.taskId) {
-            this.executionId = data.taskId;
-            this.$message.success(`任务提交成功，任务 ID: ${data.taskId}`);
-            this.startPolling();
-          } else throw new Error(data.error || "任务提交失败");
+        if (data.success || data.taskId || data.code === 200) {
+          this.executionId =
+            data.taskId || (data.data ? data.data.taskId : null);
+          this.startPolling();
         } else {
-          this.handleExecutionResult(data);
+          throw new Error(data.message || data.error || "任务提交失败");
         }
       } catch (error) {
         this.executionStatus = "error";
+        this.stopTimer();
         this.$message.error("执行失败：" + (error.message || error));
-      } finally {
-        if (this.executionMode !== "async") this.executing = false;
+        this.executing = false;
       }
     },
     startPolling() {
       this.clearPolling();
-      const timeoutMs = parseInt(this.timeout) * 1000 + 5000;
+      // 容错兜底 10分钟
+      const timeoutMs = 605000;
       this.timeoutTimer = setTimeout(() => {
         this.clearPolling();
         if (
           this.executionStatus === "executing" ||
           this.executionStatus === "pending"
         ) {
-          this.$message.warning("执行超时，已断开连接");
+          this.$message.warning("执行超时，已切断");
           this.executionStatus = "error";
           this.executing = false;
+          this.stopTimer();
         }
       }, timeoutMs);
       this.checkExecutionStatus();
     },
     async checkExecutionStatus() {
       if (!this.executionId) return;
-      this.checkingStatus = true;
       try {
         const response = await request({
           url: `/api/code/result/${this.executionId}`,
@@ -976,11 +989,18 @@ export default {
           this.$message.warning("无法查询到该任务状态");
           this.clearPolling();
           this.executing = false;
+          this.stopTimer();
           return;
         }
         const result = response.data || response;
-        this.handleExecutionResult(result);
-        if (result.status === "pending" || result.status === "executing") {
+        const finalResult = result.data || result;
+
+        this.handleExecutionResult(finalResult);
+
+        if (
+          finalResult.status === "pending" ||
+          finalResult.status === "executing"
+        ) {
           this.pollTimer = setTimeout(() => {
             this.checkExecutionStatus();
           }, 2000);
@@ -989,31 +1009,35 @@ export default {
         this.pollTimer = setTimeout(() => {
           this.checkExecutionStatus();
         }, 3000);
-      } finally {
-        this.checkingStatus = false;
       }
     },
     handleExecutionResult(result) {
       if (result.status === "running") result.status = "executing";
       this.executionResult = result;
       this.executionStatus = result.status;
+
+      this.scrollToBottom(); // 拿到结果后自动触底
+
       if (result.status === "completed" || result.status === "error") {
         this.clearPolling();
+        this.stopTimer(); // 停止跑表
         this.executing = false;
-        if (result.status === "completed")
-          this.$message.success(
-            `执行完毕，耗时 ${result.executionTime} ms`,
-          );
-        else
+
+        if (result.status === "completed") {
+          this.$message.success(`执行完毕，耗时 ${result.executionTime} ms`);
+        } else {
           this.$message.error(
-            "运行发生错误：" + (result.error || "Unknown Error"),
+            "运行发生错误：" +
+              (result.error || result.message || "Unknown Error"),
           );
+        }
       }
     },
     stopExecution() {
       this.executionStatus = "idle";
       this.executing = false;
       this.clearPolling();
+      this.stopTimer();
       this.executionResult = null;
       this.$message.info("已发送停止执行指令");
     },
@@ -1036,21 +1060,23 @@ export default {
     clearVisualization() {
       if (this.executionResult) this.executionResult.images = [];
     },
-    exportAllCharts() {
-      if (!this.hasCharts) return;
-      this.$message.info("图表导出功能准备中...");
+    // 🌟 导出带有溯源前缀的图像
+    downloadChart(imageUrl, index) {
+      let baseName = "figure";
+      if (this.mountedFile) {
+        baseName = `[${this.mountedFile.split(".")[0]}]_figure`;
+      }
+
+      const link = document.createElement("a");
+      link.href = imageUrl;
+      link.download = `${baseName}_${index + 1}_${Date.now()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     },
     previewChart(imageUrl) {
       this.currentPreviewImage = imageUrl;
       this.previewVisible = true;
-    },
-    downloadChart(imageUrl, index) {
-      const link = document.createElement("a");
-      link.href = imageUrl;
-      link.download = `figure_${index + 1}_${Date.now()}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
     },
     handleImageError(event) {
       event.target.src =
@@ -1076,21 +1102,20 @@ export default {
           method: "post",
           data: {
             question: debugPrompt,
-            fileName: this.mountedFile, 
+            fileName: this.mountedFile,
           },
         });
 
         const data = response.data || response;
+        const aiCode = data.code || (data.data ? data.data.code : data.data);
 
-        this.generatedCode = data.code;
-        this.executionCode = this.extractCodeFromMarkdown(data.code);
+        this.generatedCode = aiCode;
+        this.executionCode = this.extractCodeFromMarkdown(aiCode);
 
         this.executionResult = null;
         this.executionStatus = "idle";
 
-        this.$message.success(
-          "AI 修复完毕，新代码已更新，请重新执行。",
-        );
+        this.$message.success("AI 修复完毕，新代码已更新，请重新执行。");
       } catch (error) {
         this.$message.error("请求 AI 修复失败：" + (error.message || error));
       } finally {
@@ -1192,15 +1217,6 @@ export default {
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
   }
 }
-::v-deep .dark-select .el-input__inner {
-  background-color: #0f172a;
-  border: 1px solid #334155;
-  color: #f8fafc;
-  border-radius: 6px;
-  &:focus {
-    border-color: #3b82f6;
-  }
-}
 ::v-deep .dark-plain-btn {
   background: transparent !important;
   border: 1px solid #334155 !important;
@@ -1253,6 +1269,7 @@ export default {
   background: linear-gradient(135deg, #10b981, #059669) !important;
   border: none !important;
   color: #fff;
+  transition: all 0.3s;
   &:hover:not(:disabled) {
     box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
     transform: translateY(-1px);
@@ -1476,44 +1493,11 @@ export default {
     }
   }
   .execution-controls {
-    .control-group {
-      display: flex;
-      gap: 24px;
-      margin-bottom: 24px;
-      .control-item {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        .control-label {
-          font-size: 13px;
-          color: #64748b;
-        }
-      }
-    }
+    margin-bottom: 24px;
     .execution-actions {
       display: flex;
-      justify-content: space-between;
+      justify-content: flex-end;
       align-items: center;
-      .security-notice {
-        background: rgba(59, 130, 246, 0.05);
-        border: 1px solid rgba(59, 130, 246, 0.2);
-        border-radius: 8px;
-        padding: 12px 16px;
-        .notice-content {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-size: 13px;
-          color: #60a5fa;
-          margin-bottom: 6px;
-          font-weight: 500;
-        }
-        .notice-detail {
-          font-size: 12px;
-          color: #64748b;
-          font-family: Consolas, monospace;
-        }
-      }
       .action-buttons {
         display: flex;
         gap: 12px;
@@ -1565,6 +1549,7 @@ export default {
       max-height: 400px;
       overflow: auto;
       padding: 20px;
+      scroll-behavior: smooth;
       &::-webkit-scrollbar {
         width: 8px;
       }

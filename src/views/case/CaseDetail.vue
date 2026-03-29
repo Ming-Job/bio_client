@@ -1,10 +1,11 @@
 <template>
   <div class="detail-wrapper">
     <div class="detail-layout" v-if="caseData">
-      
       <div
         class="case-banner"
-        :style="{ backgroundImage: `url(${resolveImageUrl(caseData.imageUrl)})` }"
+        :style="{
+          backgroundImage: `url(${resolveImageUrl(caseData.imageUrl)})`,
+        }"
       >
         <div class="banner-grid-overlay"></div>
         <div class="banner-overlay">
@@ -13,8 +14,9 @@
             size="small"
             icon="el-icon-back"
             @click="$router.back()"
-          >返回案例大厅</el-button>
-          
+            >返回案例大厅</el-button
+          >
+
           <div class="banner-content">
             <div class="tags">
               <el-tag
@@ -23,75 +25,115 @@
                 size="small"
                 effect="dark"
                 class="cyber-tag"
-              >{{ tag }}</el-tag>
+                >{{ tag }}</el-tag
+              >
             </div>
             <h1 class="title">{{ caseData.title }}</h1>
             <div class="meta">
-              <span><i class="el-icon-time"></i> {{ formatDate(caseData.createTime) }}</span>
-              <span><i class="el-icon-view"></i> {{ caseData.forks || 0 }} 次学习</span>
-              <span class="difficulty" :class="caseData.difficulty">
-                <i class="el-icon-medal"></i> {{ (caseData.difficulty || "medium").toUpperCase() }}
-              </span>
+              <span
+                ><i class="el-icon-time"></i>
+                {{ formatDate(caseData.createTime) }}</span
+              >
             </div>
           </div>
         </div>
       </div>
 
-      <div class="main-content">
-        <el-row :gutter="30">
-          <el-col :span="16">
-            <div class="content-panel panel-glass">
-              <h3 class="panel-title">
-                <i class="el-icon-reading"></i> 案例解析
-              </h3>
-              <div
-                class="markdown-body custom-scroll"
-                v-html="renderedContent"
-              ></div>
-            </div>
-          </el-col>
+      <div class="main-content single-column">
+        <div class="content-panel panel-glass">
+          <div class="panel-header-flex">
+            <h3 class="panel-title no-border">
+              <i class="el-icon-setting"></i> 运行参数概览
+            </h3>
+            <el-button
+              type="success"
+              class="glow-btn-success"
+              icon="el-icon-download"
+              @click="forkCase"
+            >
+              载入参数至工作区
+            </el-button>
+          </div>
 
-          <el-col :span="8">
-            <div class="action-panel panel-glass sticky-panel">
-              <h3 class="panel-title">
-                <i class="el-icon-cpu"></i> 实验执行配置
-              </h3>
-
-              <div class="info-block">
-                <label>目标分析模块</label>
-                <div class="engine-badge glow-text">
-                  <i class="el-icon-connection"></i> {{ getEngineName(caseData.category) }}
-                </div>
-              </div>
-
-              <div class="info-block">
-                <label>关联数据集 (Dataset)</label>
-                <div class="dataset-box terminal-style">
-                  <span class="prompt-arrow">❯</span> {{ caseData.dataset || "无需外部数据" }}
-                </div>
-              </div>
-
-              <div class="info-block" v-if="caseData.prompt">
-                <label>预设分析指令 (System Prompt)</label>
-                <div class="prompt-box terminal-style">
-                  <span class="prompt-arrow">#</span> {{ caseData.prompt }}
-                </div>
-              </div>
-
-              <div class="dispatch-action">
-                <el-button
-                  type="success"
-                  class="glow-btn-success fork-big-btn"
-                  icon="el-icon-video-play"
-                  @click="forkCase"
-                >
-                  载入案例并开始实验
-                </el-button>
-                <p class="action-hint"><i class="el-icon-info"></i> 系统将自动配置实验运行环境</p>
+          <div class="params-grid">
+            <div class="param-box">
+              <label>目标分析模块</label>
+              <div class="engine-badge glow-text">
+                <i class="el-icon-connection"></i>
+                {{ getEngineName(caseData.category) }}
               </div>
             </div>
-          </el-col>
-        </el-row>
+            <div class="param-box">
+              <label>关联数据集 (Dataset)</label>
+              <div class="terminal-style">
+                <span class="prompt-arrow">❯</span>
+                {{ caseData.dataset || "无需外部数据" }}
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="param-box"
+            v-if="caseData.prompt"
+            style="margin-top: 15px"
+          >
+            <label>预设分析指令 (Prompt)</label>
+            <div
+              class="terminal-style custom-scroll"
+              style="max-height: 150px; overflow-y: auto"
+            >
+              <span class="prompt-arrow">#</span> {{ caseData.prompt }}
+            </div>
+          </div>
+        </div>
+
+        <div class="content-panel panel-glass" style="margin-top: 24px">
+          <h3 class="panel-title"><i class="el-icon-reading"></i> 案例解析</h3>
+          <div
+            class="markdown-body custom-scroll"
+            v-html="renderedContent"
+          ></div>
+        </div>
+
+        <div
+          class="content-panel panel-glass"
+          style="margin-top: 24px"
+          v-if="caseData.resultImageUrl"
+        >
+          <h3 class="panel-title">
+            <i class="el-icon-picture-outline"></i> 预期产出样例 (Expected
+            Output)
+          </h3>
+          <div class="result-image-box-large">
+            <el-image
+              :src="resolveImageUrl(caseData.resultImageUrl)"
+              :preview-src-list="[resolveImageUrl(caseData.resultImageUrl)]"
+              fit="contain"
+              class="expected-result-img-large"
+            >
+              <div slot="placeholder" class="image-slot">
+                加载图表中<span class="dot">...</span>
+              </div>
+              <div slot="error" class="image-slot text-gray">
+                <i class="el-icon-picture-outline"></i> 图表加载失败
+              </div>
+            </el-image>
+            <p class="image-caption">
+              <i class="el-icon-zoom-in"></i> 点击图片可全屏放大，查看高清细节
+            </p>
+          </div>
+        </div>
+
+        <div class="bottom-action-area">
+          <el-button
+            type="primary"
+            class="glow-btn-cyan big-bottom-btn"
+            icon="el-icon-position"
+            @click="forkCase"
+          >
+            阅读完毕，立即载入参数去实操
+          </el-button>
+        </div>
       </div>
     </div>
 
@@ -101,7 +143,10 @@
     </div>
 
     <div v-else class="loading-state">
-      <i class="el-icon-document-delete" style="font-size: 40px; color: #f87171;"></i>
+      <i
+        class="el-icon-document-delete"
+        style="font-size: 40px; color: #f87171"
+      ></i>
       <p>未找到该案例</p>
       <el-button type="text" @click="$router.back()">点击返回</el-button>
     </div>
@@ -111,9 +156,9 @@
 <script>
 import { getCaseDetail } from "@/api/case";
 import { getImageUrl } from "@/utils/image";
-import MarkdownIt from 'markdown-it';
-import mdKatex from 'markdown-it-katex';
-import 'katex/dist/katex.min.css';
+import MarkdownIt from "markdown-it";
+import mdKatex from "markdown-it-katex";
+import "katex/dist/katex.min.css";
 
 export default {
   name: "CaseDetail",
@@ -124,8 +169,8 @@ export default {
       md: new MarkdownIt({
         html: true,
         linkify: true,
-        typographer: true
-      }).use(mdKatex) 
+        typographer: true,
+      }).use(mdKatex),
     };
   },
   computed: {
@@ -134,7 +179,7 @@ export default {
         return this.md.render(this.caseData.content);
       }
       return '<p class="no-data">系统暂未收录该案例的详细文档...</p>';
-    }
+    },
   },
   created() {
     const id = this.$route.params.id;
@@ -172,40 +217,72 @@ export default {
     formatDate(dateStr) {
       if (!dateStr) return "未知时间";
       const date = new Date(dateStr);
-      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
+        2,
+        "0",
+      )}-${String(date.getDate()).padStart(2, "0")}`;
     },
     getEngineName(cat) {
       const map = {
-        pipeline: "分析流水线 (Pipelines)",
-        structure: "分子结构展示 (3D-Viewer)",
+        pipeline: "标准分析流 (Pipelines)",
+        structure: "三维结构预览 (3D-Viewer)",
         template: "交互式分析模板",
-        copilot: "代码辅助生成 (Sandbox)",
+        copilot: "代码辅助 (Copilot Sandbox)",
       };
       return map[cat] || "未知分析模块";
     },
     forkCase() {
-      this.$message.success(`案例载入中，正在前往实验区...`);
+      this.$message.success(`参数提取成功，正在前往对应模块...`);
       switch (this.caseData.category) {
         case "copilot":
-          this.$router.push({ 
-            path: "/assistant", 
-            query: { 
-              fork_prompt: this.caseData.prompt, 
-              mount_dataset: this.caseData.dataset 
-            }
+          this.$router.push({
+            path: "/assistant",
+            query: {
+              fork_prompt: this.caseData.prompt,
+              mount_dataset: this.caseData.dataset,
+            },
           });
           break;
-        case "pipeline":
-          this.$router.push({ path: "/analysis/pipelines", query: { load_pipeline_id: this.caseData.id }});
+        case "pipeline": {
+          // 🌟 注意这里加了左大括号
+          this.$message.success(`模板提取成功，正在前往任务创建向导...`);
+
+          let targetPipelineId = "";
+          try {
+            const promptData = JSON.parse(this.caseData.prompt);
+            targetPipelineId = promptData.target_pipeline_id;
+          } catch (e) {
+            targetPipelineId = this.caseData.prompt;
+          }
+
+          this.$router.push({
+            path: "/analysis/new",
+            query: {
+              pipelineId: targetPipelineId,
+            },
+          });
           break;
+        } // 🌟 注意这里加了右大括号
         case "structure":
-          this.$router.push({ path: "/3d-viewer", query: { load_pdb: this.caseData.dataset }});
+          this.$router.push({
+            // 🌟这里的 path 是“生信分析工作台” (AnalysisPage.vue) 的真实路由路径。
+            // 比如是 "/analysis"。
+            path: "/analysis",
+            query: {
+              // 🌟这里的参数名必须和工作台里写的 checkUrlParams 严格一致
+              action: "open_3d_viewer",
+              file_id: this.caseData.dataset,
+            },
+          });
           break;
         case "template":
-          this.$router.push({ path: "/analysis/data", query: { use_template_id: this.caseData.id }});
+          this.$router.push({
+            path: "/analysis/data",
+            query: { use_template_id: this.caseData.id },
+          });
           break;
         default:
-          this.$message.warning("未知分析类别，无法自动跳转！");
+          this.$message.warning("未知的案例类型，无法自动跳转");
       }
     },
   },
@@ -220,40 +297,47 @@ export default {
   background-image: radial-gradient(circle at 50% 0%, #111827 0%, #050810 70%);
   font-family: "Inter", -apple-system, sans-serif;
   color: #e2e8f0;
-  padding-bottom: 60px;
+  padding-bottom: 80px;
 }
 .detail-layout {
-  max-width: 1200px;
-  margin: 0 auto;
+  /* 移除 max-width: 1200px 转移给内部的单栏 */
+  width: 100%;
 }
 
 .case-banner {
-  height: 340px;
+  height: 360px;
   background-size: cover;
   background-position: center;
   position: relative;
   border-bottom: 1px solid rgba(59, 130, 246, 0.3);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  
+
   .banner-grid-overlay {
     position: absolute;
     inset: 0;
-    background-image: 
-      linear-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px),
+    background-image: linear-gradient(
+        rgba(59, 130, 246, 0.1) 1px,
+        transparent 1px
+      ),
       linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px);
     background-size: 30px 30px;
     z-index: 1;
   }
-  
+
   .banner-overlay {
     position: absolute;
     inset: 0;
     z-index: 2;
-    background: linear-gradient(to bottom, rgba(5, 8, 16, 0.2) 0%, #050810 100%);
+    background: linear-gradient(
+      to bottom,
+      rgba(5, 8, 16, 0.2) 0%,
+      #050810 100%
+    );
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    padding: 40px 50px;
+    align-items: center; /* 标题居中 */
+    padding: 50px 20px;
 
     .back-btn {
       position: absolute;
@@ -264,6 +348,8 @@ export default {
   }
 
   .banner-content {
+    max-width: 1000px;
+    width: 100%;
     .tags {
       margin-bottom: 15px;
       display: flex;
@@ -278,11 +364,12 @@ export default {
     }
     .title {
       margin: 0 0 15px 0;
-      font-size: 40px;
+      font-size: 42px;
       font-weight: 900;
       color: #fff;
       letter-spacing: 1px;
-      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8), 0 0 20px rgba(59, 130, 246, 0.4);
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8),
+        0 0 20px rgba(59, 130, 246, 0.4);
     }
     .meta {
       display: flex;
@@ -300,75 +387,238 @@ export default {
         border-radius: 4px;
         font-weight: bold;
         background: rgba(255, 255, 255, 0.05);
-        &.easy { color: #34d399; border: 1px solid rgba(52, 211, 153, 0.3); }
-        &.medium { color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); }
-        &.hard { color: #f87171; border: 1px solid rgba(248, 113, 113, 0.3); }
+        &.easy {
+          color: #34d399;
+          border: 1px solid rgba(52, 211, 153, 0.3);
+        }
+        &.medium {
+          color: #fbbf24;
+          border: 1px solid rgba(251, 191, 36, 0.3);
+        }
+        &.hard {
+          color: #f87171;
+          border: 1px solid rgba(248, 113, 113, 0.3);
+        }
       }
     }
   }
 }
 
-.main-content {
-  margin-top: -30px; 
-  padding: 0 30px;
+/* 🌟 核心布局：1000px 黄金阅读宽度居中 */
+.single-column {
+  max-width: 1000px;
+  width: 100%;
+  margin: -40px auto 0; /* 负边距，使其覆盖在 Banner 渐变之上 */
+  padding: 0 20px;
   position: relative;
   z-index: 10;
 }
 
 .panel-glass {
-  background: rgba(17, 24, 39, 0.7);
+  background: rgba(17, 24, 39, 0.8);
   backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
-  padding: 30px;
+  padding: 35px 40px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-  
+
   .panel-title {
     margin: 0 0 25px 0;
-    font-size: 20px;
+    font-size: 22px;
     font-weight: 700;
     color: #f8fafc;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     padding-bottom: 15px;
     display: flex;
     align-items: center;
-    i { color: #3b82f6; margin-right: 10px; font-size: 22px; }
-    span { font-size: 14px; color: #64748b; margin-left: 10px; font-family: Consolas, monospace; font-weight: normal; }
+    i {
+      color: #3b82f6;
+      margin-right: 12px;
+      font-size: 24px;
+    }
+    &.no-border {
+      border-bottom: none;
+      padding-bottom: 0;
+      margin-bottom: 0;
+    }
   }
 }
 
-.sticky-panel {
-  position: sticky;
-  top: 30px; 
+/* ================= 顶部横向参数控制台 ================= */
+.panel-header-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 20px;
+  margin-bottom: 20px;
 }
 
+.params-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.param-box {
+  label {
+    display: block;
+    font-size: 13px;
+    color: #94a3b8;
+    margin-bottom: 8px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  .engine-badge {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.4);
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    height: 42px; /* 和终端输入框对齐高度 */
+    box-sizing: border-box;
+  }
+
+  .terminal-style {
+    background: #000;
+    border: 1px solid #334155;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 13px;
+    color: #a7f3d0;
+    line-height: 1.6;
+    word-break: break-all;
+
+    /* 🌟 核心修复：让浏览器保留换行符 (\n) 和空格缩进，同时允许过长的文本自动折行 */
+    white-space: pre-wrap;
+
+    box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5);
+    min-height: 42px;
+    box-sizing: border-box;
+    .prompt-arrow {
+      color: #f59e0b;
+      margin-right: 8px;
+      font-weight: bold;
+    }
+  }
+}
+
+/* ================= 巨幕级图片展示区 ================= */
+.result-image-box-large {
+  background: #000;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 10px;
+  text-align: center;
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+
+  .expected-result-img-large {
+    width: 100%;
+    /* 放开最大高度限制，让火山图按原比例全尺寸展示 */
+    max-height: 800px;
+    border-radius: 8px;
+    cursor: zoom-in;
+    background-color: #0b0f19;
+  }
+
+  .image-caption {
+    margin-top: 15px;
+    margin-bottom: 5px;
+    font-size: 14px;
+    color: #94a3b8;
+  }
+
+  .image-slot {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 300px;
+    color: #64748b;
+  }
+}
+
+/* ================= 底部操作区 ================= */
+.bottom-action-area {
+  margin-top: 40px;
+  display: flex;
+  justify-content: center;
+
+  .big-bottom-btn {
+    width: 320px;
+    height: 54px;
+    font-size: 16px;
+    font-weight: 700;
+    border-radius: 27px;
+    letter-spacing: 1px;
+    transition: all 0.3s ease;
+    &:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 25px rgba(6, 182, 212, 0.4);
+    }
+  }
+}
+
+/* ================= Markdown 排版增强 ================= */
 .markdown-body {
-  font-size: 15px;
+  font-size: 16px; /* 适当增大字号，适应单列宽屏阅读 */
   line-height: 1.8;
   color: #cbd5e1;
-  min-height: 400px;
   text-align: left;
 
   ::v-deep {
-    h1, h2, h3 { 
-      color: #fff; 
-      margin-top: 24px; 
-      margin-bottom: 16px; 
-      font-weight: 600; 
-      line-height: 1.25; 
+    h1,
+    h2,
+    h3 {
+      color: #fff;
+      margin-top: 30px;
+      margin-bottom: 16px;
+      font-weight: 600;
+      line-height: 1.3;
     }
-    h1 { font-size: 2em; border-bottom: 1px solid #30363d; padding-bottom: 0.3em; }
-    h2 { font-size: 1.5em; border-bottom: 1px solid #30363d; padding-bottom: 0.3em; }
-    p { margin-top: 0; margin-bottom: 16px; line-height: 1.6; }
-    ul, ol { padding-left: 2em; margin-bottom: 16px; }
-    li { margin: 0.25em 0; }
-    strong { color: #60a5fa; font-weight: 600; } 
-    code { 
-      background: rgba(255, 255, 255, 0.1); 
-      padding: 2px 6px; 
-      border-radius: 4px; 
-      font-family: Consolas, monospace; 
+    h1 {
+      font-size: 2.2em;
+      border-bottom: 1px solid #30363d;
+      padding-bottom: 0.3em;
+    }
+    h2 {
+      font-size: 1.6em;
+      border-bottom: 1px solid #30363d;
+      padding-bottom: 0.3em;
+    }
+    h3 {
+      font-size: 1.3em;
+      color: #93c5fd;
+    }
+    p {
+      margin-top: 0;
+      margin-bottom: 18px;
+      line-height: 1.7;
+    }
+    ul,
+    ol {
+      padding-left: 2em;
+      margin-bottom: 18px;
+    }
+    li {
+      margin: 0.3em 0;
+    }
+    strong {
+      color: #60a5fa;
+      font-weight: 700;
+    }
+    code {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 3px 6px;
+      border-radius: 4px;
+      font-family: Consolas, monospace;
       font-size: 0.9em;
+      color: #fbbf24;
     }
     .katex-display {
       margin: 20px 0;
@@ -378,11 +628,12 @@ export default {
       color: #34d399;
     }
     blockquote {
-      padding: 0 1em;
-      color: #8b949e;
-      border-left: 0.25em solid #3b82f6;
-      margin: 0 0 16px 0;
-      background: rgba(59, 130, 246, 0.05);
+      padding: 10px 20px;
+      color: #94a3b8;
+      border-left: 4px solid #3b82f6;
+      margin: 0 0 20px 0;
+      background: rgba(59, 130, 246, 0.08);
+      border-radius: 0 8px 8px 0;
     }
   }
 
@@ -391,84 +642,6 @@ export default {
     font-style: italic;
     text-align: center;
     margin-top: 50px;
-  }
-}
-
-.action-panel {
-  .info-block {
-    margin-bottom: 25px;
-    label {
-      display: block;
-      font-size: 13px;
-      color: #94a3b8;
-      margin-bottom: 10px;
-      font-weight: 600;
-      letter-spacing: 0.5px;
-    }
-    
-    .engine-badge {
-      display: inline-flex;
-      align-items: center;
-      background: rgba(59, 130, 246, 0.15);
-      color: #60a5fa;
-      border: 1px solid rgba(59, 130, 246, 0.4);
-      padding: 8px 16px;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 14px;
-    }
-
-    .terminal-style {
-      background: #000;
-      border: 1px solid #334155;
-      padding: 12px 16px;
-      border-radius: 8px;
-      font-family: Consolas, "Courier New", monospace;
-      font-size: 13px;
-      color: #a7f3d0;
-      line-height: 1.6;
-      word-break: break-all;
-      box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
-      .prompt-arrow {
-        color: #f59e0b;
-        margin-right: 8px;
-        font-weight: bold;
-      }
-    }
-    
-    .prompt-box {
-      color: #e2e8f0;
-    }
-  }
-
-  .dispatch-action {
-    margin-top: 40px;
-    border-top: 1px dashed rgba(255, 255, 255, 0.1);
-    padding-top: 25px;
-    
-    .fork-big-btn {
-      width: 100%;
-      height: 54px;
-      font-size: 16px;
-      font-weight: 800;
-      letter-spacing: 1px;
-      border-radius: 12px;
-      transition: all 0.3s ease;
-      &:hover {
-        transform: translateY(-2px);
-      }
-    }
-    
-    .action-hint {
-      text-align: center;
-      font-size: 12px;
-      color: #64748b;
-      margin-top: 15px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 5px;
-    }
   }
 }
 
@@ -493,7 +666,11 @@ export default {
     letter-spacing: 2px;
   }
 }
-@keyframes spin { 100% { transform: rotate(360deg); } }
+@keyframes spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}
 
 ::v-deep .dark-plain-btn {
   background: rgba(15, 23, 42, 0.6) !important;
@@ -513,5 +690,17 @@ export default {
   &:hover {
     box-shadow: 0 6px 25px rgba(16, 185, 129, 0.6);
   }
+}
+::v-deep .glow-btn-cyan {
+  background: linear-gradient(135deg, #06b6d4, #0ea5e9) !important;
+  border: none !important;
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(6, 182, 212, 0.3);
+  &:hover {
+    box-shadow: 0 6px 25px rgba(6, 182, 212, 0.6);
+  }
+}
+.text-gray {
+  color: #64748b;
 }
 </style>

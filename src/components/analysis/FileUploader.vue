@@ -178,7 +178,7 @@ export default {
   props: {
     projectId: { type: [Number, String], default: null },
     description: { type: String, default: "" },
-    maxFileSize: { type: Number, default: 10 * 1024 * 1024 * 1024 }, // 10GB
+    maxFileSize: { type: Number, default: 1 * 1024 * 1024 * 1024 }, // 1GB
     allowedExtensions: {
       type: Array,
       default: () => [
@@ -304,13 +304,13 @@ export default {
       files.forEach((file) => {
         if (file.size > this.maxFileSize) {
           this.$message.error(
-            `文件 ${file.name} 大小超出系统限制 (${this.maxFileSizeText})`
+            `文件 ${file.name} 大小超出系统限制 (${this.maxFileSizeText})`,
           );
           return;
         }
 
         const allowedExts = this.allowedExtensions.map((ext) =>
-          ext.toLowerCase()
+          ext.toLowerCase(),
         );
         let isValidExt = false;
         for (let ext of allowedExts) {
@@ -322,13 +322,13 @@ export default {
 
         if (!isValidExt) {
           this.$message.error(
-            `文件格式不支持，允许格式：${this.allowedExtensions.join("、")}`
+            `文件格式不支持，允许格式：${this.allowedExtensions.join("、")}`,
           );
           return;
         }
 
         const exists = this.fileList.some(
-          (f) => f.name === file.name && f.size === file.size
+          (f) => f.name === file.name && f.size === file.size,
         );
         if (exists) {
           this.$message.warning(`文件已存在：${file.name} 已在待上传列表中`);
@@ -355,11 +355,11 @@ export default {
 
       if (!this.selectedProjectId) {
         this.$message.error("请先选择该文件所属的科研课题！");
-        return; 
+        return;
       }
 
       const pendingFiles = this.fileList.filter(
-        (f) => f.status === "pending" || f.status === "error"
+        (f) => f.status === "pending" || f.status === "error",
       );
       if (pendingFiles.length === 0) {
         this.$message.warning("待上传列表为空");
@@ -368,7 +368,7 @@ export default {
 
       this.uploading = true;
       const uploadPromises = pendingFiles.map((fileItem) =>
-        this.uploadSingle(fileItem)
+        this.uploadSingle(fileItem),
       );
 
       try {
@@ -377,11 +377,11 @@ export default {
         this.uploading = false;
         if (this.errorCount === 0) {
           this.$message.success(
-            `上传完毕，共成功上传 ${this.successCount} 个文件`
+            `上传完毕，共成功上传 ${this.successCount} 个文件`,
           );
         } else {
           this.$message.warning(
-            `上传结束。成功 ${this.successCount} 个，失败 ${this.errorCount} 个`
+            `上传结束。成功 ${this.successCount} 个，失败 ${this.errorCount} 个`,
           );
         }
 
@@ -416,7 +416,7 @@ export default {
       try {
         const response = await uploadSingleFile(formData, (progressEvent) => {
           let percent = Math.round(
-            (progressEvent.loaded * 100) / progressEvent.total
+            (progressEvent.loaded * 100) / progressEvent.total,
           );
           if (percent > 99) percent = 99;
           this.$set(this.fileList[index], "progress", percent);
@@ -429,7 +429,7 @@ export default {
           this.$set(
             this.fileList[index],
             "error",
-            "系统提示：该文件已在平台中存在"
+            "系统提示：该文件已在平台中存在",
           );
           this.$set(this.fileList[index], "progress", 0);
         } else if (

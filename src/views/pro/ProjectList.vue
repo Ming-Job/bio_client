@@ -44,8 +44,7 @@
             <div class="chart-card">
               <div class="chart-header">
                 <span class="chart-title"
-                  ><i class="el-icon-data-analysis"></i>
-                  累计分析任务分布</span
+                  ><i class="el-icon-data-analysis"></i> 累计分析任务分布</span
                 >
               </div>
               <div ref="taskChart" class="echarts-container"></div>
@@ -125,13 +124,15 @@
           </div>
 
           <div class="card-stats">
-            <div 
-              class="stat-item clickable-stat" 
+            <div
+              class="stat-item clickable-stat"
               title="点击查看项目文件详情"
               @click="openFileListDialog(project)"
             >
               <span class="stat-value">{{ project.fileCount || 0 }}</span>
-              <span class="stat-label">文件数 <i class="el-icon-search"></i></span>
+              <span class="stat-label"
+                >文件数 <i class="el-icon-search"></i
+              ></span>
             </div>
             <div class="stat-divider"></div>
             <div class="stat-item" title="占用存储空间">
@@ -143,7 +144,7 @@
             <div class="stat-divider"></div>
             <div class="stat-item" title="已执行分析次数">
               <span class="stat-value">{{
-                project.analysisTaskCount || 0  
+                project.analysisTaskCount || 0
               }}</span>
               <span class="stat-label">任务数</span>
             </div>
@@ -172,6 +173,28 @@
             </el-button>
           </div>
         </div>
+      </div>
+
+      <div
+        v-else-if="projectList.length > 0 && filteredProjects.length === 0"
+        class="state-container empty-state"
+      >
+        <img
+          src="https://gw.alipayobjects.com/zos/antfincdn/ZHrcdLPrvN/empty.svg"
+          alt="no-result"
+          class="empty-img"
+          style="opacity: 0.5"
+        />
+        <h3>没有找到匹配的课题</h3>
+        <p>找不到与 "{{ searchQuery }}" 相关的科研空间，请尝试其他关键词。</p>
+        <el-button
+          type="primary"
+          plain
+          @click="searchQuery = ''"
+          style="margin-top: 20px"
+        >
+          清空搜索条件
+        </el-button>
       </div>
 
       <div v-else class="state-container empty-state">
@@ -237,13 +260,26 @@
       width="700px"
       custom-class="file-list-dialog"
     >
-      <div v-loading="fileLoading" style="min-height: 200px;">
+      <div v-loading="fileLoading" style="min-height: 200px">
         <el-tabs v-model="activeFileTab">
           <el-tab-pane label="原始上传文件 (Source)" name="uploaded">
-            <el-table :data="uploadedFiles" height="350" size="small" stripe empty-text="暂无上传数据">
-              <el-table-column prop="name" label="文件名称" show-overflow-tooltip>
+            <el-table
+              :data="uploadedFiles"
+              height="350"
+              size="small"
+              stripe
+              empty-text="暂无上传数据"
+            >
+              <el-table-column
+                prop="name"
+                label="文件名称"
+                show-overflow-tooltip
+              >
                 <template slot-scope="scope">
-                  <i class="el-icon-document text-blue" style="margin-right: 5px;"></i>
+                  <i
+                    class="el-icon-document text-blue"
+                    style="margin-right: 5px"
+                  ></i>
                   {{ scope.row.name }}
                 </template>
               </el-table-column>
@@ -252,16 +288,38 @@
                   {{ formatFileSize(scope.row.size) }}
                 </template>
               </el-table-column>
-              <el-table-column prop="createdAt" label="上传时间" width="160"></el-table-column>
+              <el-table-column
+                prop="createdAt"
+                label="上传时间"
+                width="160"
+              ></el-table-column>
             </el-table>
           </el-tab-pane>
 
           <el-tab-pane label="分析产出文件 (Generated)" name="generated">
-            <el-table :data="generatedFiles" height="350" size="small" stripe empty-text="暂无分析结果">
-              <el-table-column prop="name" label="文件名称" show-overflow-tooltip>
+            <el-table
+              :data="generatedFiles"
+              height="350"
+              size="small"
+              stripe
+              empty-text="暂无分析结果"
+            >
+              <el-table-column
+                prop="name"
+                label="文件名称"
+                show-overflow-tooltip
+              >
                 <template slot-scope="scope">
-                  <i class="el-icon-picture-outline text-green" style="margin-right: 5px;" v-if="isImage(scope.row.name)"></i>
-                  <i class="el-icon-document text-green" style="margin-right: 5px;" v-else></i>
+                  <i
+                    class="el-icon-picture-outline text-green"
+                    style="margin-right: 5px"
+                    v-if="isImage(scope.row.name)"
+                  ></i>
+                  <i
+                    class="el-icon-document text-green"
+                    style="margin-right: 5px"
+                    v-else
+                  ></i>
                   {{ scope.row.name }}
                 </template>
               </el-table-column>
@@ -270,13 +328,16 @@
                   {{ formatFileSize(scope.row.size) }}
                 </template>
               </el-table-column>
-              <el-table-column prop="createdAt" label="生成时间" width="160"></el-table-column>
+              <el-table-column
+                prop="createdAt"
+                label="生成时间"
+                width="160"
+              ></el-table-column>
             </el-table>
           </el-tab-pane>
         </el-tabs>
       </div>
     </el-dialog>
-
   </div>
 </template>
 
@@ -315,9 +376,9 @@ export default {
 
       fileDialogVisible: false,
       fileLoading: false,
-      activeFileTab: 'uploaded',
-      currentViewProjectName: '',
-      projectFiles: [], 
+      activeFileTab: "uploaded",
+      currentViewProjectName: "",
+      projectFiles: [],
     };
   },
   computed: {
@@ -333,11 +394,15 @@ export default {
       );
     },
     uploadedFiles() {
-      return this.projectFiles.filter(f => f.sourceType === 'UPLOADED' || f.sourceType === 'upload');
+      return this.projectFiles.filter(
+        (f) => f.sourceType === "UPLOADED" || f.sourceType === "upload",
+      );
     },
     generatedFiles() {
-      return this.projectFiles.filter(f => f.sourceType === 'GENERATE' || f.sourceType === 'generate');
-    }
+      return this.projectFiles.filter(
+        (f) => f.sourceType === "GENERATE" || f.sourceType === "generate",
+      );
+    },
   },
   mounted() {
     if (this.isLoggedIn && this.userId) {
@@ -424,13 +489,24 @@ export default {
         this.taskChartInstance = echarts.init(taskChartDom);
         this.taskChartInstance.setOption({
           tooltip: { trigger: "axis", axisPointer: { type: "shadow" } },
-          grid: { left: "3%", right: "4%", bottom: "3%", top: "10%", containLabel: true },
+          grid: {
+            left: "3%",
+            right: "4%",
+            bottom: "3%",
+            top: "10%",
+            containLabel: true,
+          },
           xAxis: [
             {
               type: "category",
               data: projectNames,
               axisTick: { alignWithLabel: true },
-              axisLabel: { color: "#6b7280", fontSize: 11, interval: 0, rotate: 30 },
+              axisLabel: {
+                color: "#6b7280",
+                fontSize: 11,
+                interval: 0,
+                rotate: 30,
+              },
             },
           ],
           yAxis: [
@@ -470,30 +546,30 @@ export default {
     },
 
     formatFileSize(bytes) {
-      if (!bytes || bytes === 0) return '0 B';
+      if (!bytes || bytes === 0) return "0 B";
       const k = 1024;
-      const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+      const sizes = ["B", "KB", "MB", "GB", "TB"];
       const i = Math.floor(Math.log(bytes) / Math.log(k));
-      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
     },
 
     isImage(filename) {
       if (!filename) return false;
-      const ext = filename.split('.').pop().toLowerCase();
-      return ['png', 'jpg', 'jpeg', 'svg', 'gif'].includes(ext);
+      const ext = filename.split(".").pop().toLowerCase();
+      return ["png", "jpg", "jpeg", "svg", "gif"].includes(ext);
     },
 
     async openFileListDialog(project) {
       this.currentViewProjectName = project.name;
-      this.activeFileTab = 'uploaded';
+      this.activeFileTab = "uploaded";
       this.fileDialogVisible = true;
       this.fileLoading = true;
-      this.projectFiles = []; 
-      
+      this.projectFiles = [];
+
       try {
-        const res = await getAllFileList({ 
+        const res = await getAllFileList({
           projectId: project.id,
-          userId: this.userId 
+          userId: this.userId,
         });
 
         const responseData = res.data || res;
@@ -507,15 +583,15 @@ export default {
           files = responseData.data;
         }
 
-        this.projectFiles = files.map(file => ({
+        this.projectFiles = files.map((file) => ({
           id: file.id,
-          name: file.originalName, 
-          size: file.sizeBytes || 0, 
-          createdAt: file.uploadTime || "未知时间", 
-          sourceType: file.fileSource 
+          name: file.originalName,
+          size: file.sizeBytes || 0,
+          createdAt: file.uploadTime || "未知时间",
+          sourceType: file.fileSource,
         }));
       } catch (error) {
-        this.$message.error('拉取课题文件失败');
+        this.$message.error("拉取课题文件失败");
       } finally {
         this.fileLoading = false;
       }
@@ -572,7 +648,7 @@ export default {
             this.$message.success("科研工作空间已建立");
           }
           this.dialogVisible = false;
-          this.fetchProjects(); 
+          this.fetchProjects();
         } catch (error) {
           this.$message.error(this.isEdit ? "更新失败" : "创建失败");
         } finally {
@@ -697,7 +773,7 @@ export default {
 
     .echarts-container {
       width: 100%;
-      height: 220px; 
+      height: 220px;
     }
   }
 }
@@ -802,7 +878,7 @@ export default {
     padding: 12px 24px;
     border-top: 1px solid #f3f4f6;
     border-bottom: 1px solid #f3f4f6;
-    
+
     .clickable-stat {
       cursor: pointer;
       transition: background-color 0.2s ease, border-radius 0.2s ease;
@@ -810,7 +886,8 @@ export default {
       border-radius: 8px;
       &:hover {
         background-color: #e5e7eb;
-        .stat-value, .stat-label {
+        .stat-value,
+        .stat-label {
           color: #3b82f6;
         }
       }
@@ -888,6 +965,10 @@ export default {
 .text-danger {
   color: #ef4444 !important;
 }
-.text-blue { color: #3b82f6; }
-.text-green { color: #10b981; }
+.text-blue {
+  color: #3b82f6;
+}
+.text-green {
+  color: #10b981;
+}
 </style>

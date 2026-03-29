@@ -82,7 +82,7 @@ const routes = [
         path: "analysis",
         name: "AnalysisPage",
         component: AnalysisPage,
-        meta: { title: "云端分析大盘" },
+        meta: { title: "分析大盘" },
       },
       {
         path: "analysis/new",
@@ -102,6 +102,14 @@ const routes = [
         component: () => import('@/views/analysis/PipelineLibrary.vue'),
         meta: { title: '分析流库' }
       },
+      // 🌟 新增：差异分析(对撞比对)页面
+      {
+        path: "analysis/diff",
+        name: "DiffAnalysis",
+        component: () => import('@/views/analysis/DiffAnalysis.vue'),
+        meta: { title: '差异表达比对分析' }
+      },
+      
       {
         path: "analysis/data",
         name: "DataCabin",

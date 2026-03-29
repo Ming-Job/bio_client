@@ -24,18 +24,18 @@ export function getDashboard(userId, projectId) {
 }
 
 /**
- * 3. 获取云端数据舱最近挂载的文件
- * 🌟 核心修改：增加 projectId 参数
+ * 获取云端数据舱最近挂载的文件
  */
 export function getRecentFiles(userId, projectId) {
   return request({
-    url: '/api/analysis/files/recent',
+    url: '/api/files/recent',  // 🌟 核心修复：把中间的 /analysis 删掉，认准正统接口！
     method: 'get',
-    params: { projectId: projectId }, // 会变成 /files/recent?projectId=1
-    headers: { 'userId': userId }
+    params: { 
+      userId: userId,          // 🌟 顺手把 params 补全，和之前 file.js 里一样
+      projectId: projectId 
+    }
   })
 }
-
 /**
  * 4. 提交(发射)新的生信分析任务
  * @param {Object} data - 包含 pipelineCode, fileIds, params 的 DTO

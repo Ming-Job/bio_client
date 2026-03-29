@@ -29,13 +29,15 @@
             >
           </div>
           <div class="stat-card">
-            <span class="label">执行成功率</span>
-            <span class="value text-emerald">{{ stats.successRate }}%</span>
+            <span class="label">累计产出结果</span>
+            <span class="value text-emerald"
+              >{{ stats.totalOutputs || 0 }} <small>份</small></span
+            >
           </div>
           <div class="stat-card">
-            <span class="label">系统活跃任务</span>
+            <span class="label">本地纳管数据</span>
             <span class="value text-purple"
-              >{{ stats.activeTasks || 0 }} <small>个</small></span
+              >{{ stats.totalFiles || 0 }} <small>份</small></span
             >
           </div>
         </div>
@@ -62,16 +64,13 @@
                 <div class="icon-wrapper launch">
                   <i class="el-icon-video-play"></i>
                 </div>
-                <span>启动流程</span>
+                <span>RNA-Seq 上游分析</span>
               </div>
-              <div
-                class="action-btn"
-                @click="$router.push('/analysis/pipelines')"
-              >
+              <div class="action-btn" @click="$router.push('/analysis/diff')">
                 <div class="icon-wrapper template">
-                  <i class="el-icon-magic-stick"></i>
+                  <i class="el-icon-data-analysis"></i>
                 </div>
-                <span>分析流模板库</span>
+                <span>差异表达分析</span>
               </div>
               <div class="action-btn" @click="$router.push('/analysis/data')">
                 <div class="icon-wrapper data">
@@ -216,15 +215,6 @@
       </div>
     </div>
 
-    <TaskSubmitDrawer 
-      :visible.sync="drawerVisible" 
-      :pipeline="selectedPipeline" 
-      :userId="userId"
-      :projects="projectList"
-      :files="availableFiles"
-      @submit-success="fetchDashboardData"
-    />
-
     <TaskTerminalDrawer ref="terminalDrawer" />
 
     <el-dialog
@@ -240,87 +230,12 @@
       <FileUploader @upload-complete="handleUploadComplete" />
     </el-dialog>
 
-    <el-dialog
-      title="三维分子结构预览 (3D Structure Viewer)"
+    <StructureViewer3D
+      ref="viewer3DRef"
       :visible.sync="show3DViewer"
-      width="800px"
-      custom-class="bio-dark-dialog"
-      append-to-body
-      :close-on-click-modal="false"
-    >
-      <div
-        class="structure-viewer-container"
-        v-loading="loading3D"
-        element-loading-background="rgba(11, 15, 25, 0.9)"
-        element-loading-text="解析分子拓扑并初始化 WebGL 引擎..."
-      >
-        <div class="viewer-controls">
-          <el-select
-            v-model="selectedStructure"
-            placeholder="选择系统内的结构文件 (PDB/SDF)"
-            size="small"
-            class="dark-select"
-            style="width: 350px"
-            @change="loadStructure"
-            popper-class="bio-dark-select-dropdown"
-          >
-            <el-option
-              v-for="file in structureFiles"
-              :key="file.id"
-              :label="file.originalName || file.name"
-              :value="file.id"
-            >
-              <span style="float: left"
-                ><i class="el-icon-help" style="color: #14b8a6"></i>
-                {{ file.originalName || file.name }}</span
-              >
-            </el-option>
-          </el-select>
-
-          <div class="render-tools" v-if="selectedStructure">
-            <el-radio-group
-              v-model="renderStyle"
-              size="mini"
-              class="dark-radio-group"
-              @change="updateRenderStyle"
-            >
-              <el-radio-button label="cartoon">Cartoon</el-radio-button>
-              <el-radio-button label="stick">Stick</el-radio-button>
-              <el-radio-button label="sphere">Sphere</el-radio-button>
-            </el-radio-group>
-          </div>
-        </div>
-
-        <div class="viewer-stage" id="3d-stage">
-          <div v-if="!selectedStructure" class="empty-stage">
-            <i class="el-icon-discover empty-icon"></i>
-            <p>请选择结构文件以启动预览</p>
-            <span class="support-text">支持格式：.pdb, .sdf, .mol2</span>
-          </div>
-          <div v-else class="stage-overlay">
-            <div class="overlay-info">
-              <span class="info-item"
-                ><i class="el-icon-cpu"></i> WebGL Render Active</span
-              >
-              <span class="info-item"
-                ><i class="el-icon-aim"></i> Auto Focused</span
-              >
-            </div>
-            <div
-              id="glcontainer"
-              style="
-                width: 100%;
-                height: 100%;
-                position: relative;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-              "
-            ></div>
-          </div>
-        </div>
-      </div>
-    </el-dialog>
+      :files="allStructureFiles"
+      :userId="userId"
+    />
   </div>
 </template>
 
@@ -330,12 +245,13 @@ import AnalysisTemplates from "@/components/analysis/AnalysisTemplates.vue";
 import RecentFiles from "@/components/analysis/RecentFiles.vue";
 import FileUploader from "@/components/analysis/FileUploader.vue";
 import TaskTerminalDrawer from "@/components/analysis/TaskTerminalDrawer.vue";
+// 🌟 引入刚写好的 3D 组件
+import StructureViewer3D from "@/views/analysis/StructureViewer3D.vue";
+
 import { getUserProjects } from "@/api/project";
-import {
-  getPipelines,
-  getDashboard,
-  getRecentFiles,
-} from "@/api/analysis";
+import { getPipelines, getDashboard, getRecentFiles } from "@/api/analysis";
+// 在原有的引入下面加上这行
+import { getAllFileList } from "@/api/file";
 
 export default {
   name: "AnalysisPage",
@@ -344,6 +260,7 @@ export default {
     RecentFiles,
     FileUploader,
     TaskTerminalDrawer,
+    StructureViewer3D, // 🌟 注册组件
   },
   data() {
     return {
@@ -355,26 +272,28 @@ export default {
       hardware: { cpu: 0, memory: 0, storage: 0 },
       recentTasks: [],
 
-      // 控制抽屉所需的基础数据
       drawerVisible: false,
       selectedPipeline: null,
       availableFiles: [],
       projectList: [],
 
-      show3DViewer: false,
-      loading3D: false,
-      selectedStructure: "",
-      renderStyle: "cartoon",
-      viewer3D: null,
-      currentMolData: "",
-
+      show3DViewer: false, // 只需要这一个状态控制弹窗即可
       currentProjectId: null,
+      allStructureFiles: [], // 🌟 新增：专门用于存储全量 3D 结构文件
     };
   },
+
+  created() {
+    if (this.$route.query.projectId) {
+      this.currentProjectId = this.$route.query.projectId;
+    }
+  },
+
   computed: {
     ...mapState("user", ["isLoggedIn", "userInfo"]),
     ...mapGetters("user", ["userId", "username", "userRole"]),
 
+    // 计算属性保留，传给子组件用作下拉列表
     structureFiles() {
       return this.availableFiles.filter((f) => {
         const fileName = (f.originalName || f.name || "").toLowerCase();
@@ -394,8 +313,7 @@ export default {
     },
   },
   mounted() {
-    if (this.$route.query.projectId) {
-      this.currentProjectId = this.$route.query.projectId;
+    if (this.currentProjectId) {
       this.$message.success("已进入专属课题工作台");
     }
 
@@ -406,13 +324,11 @@ export default {
       this.fetchUserProjects();
     }
     this.checkAutoLaunch();
+    this.checkUrlParams(); // 🌟 新增：检查是不是从案例页带参数跳过来的3d
   },
   beforeDestroy() {
     this.stopDashboardPolling();
-    if (this.viewer3D) {
-      this.viewer3D.clear();
-      this.viewer3D = null;
-    }
+    // 3D 清理逻辑已移交子组件
   },
   methods: {
     async fetchPipelineData() {
@@ -506,13 +422,11 @@ export default {
       }
     },
 
- // 🌟 路由跳转
     handleUseTemplate(template) {
       if (!this.isLoggedIn) {
         this.$message.warning("提示：请先登录");
         return;
       }
-      // 带着 ID 跳向你的分步向导页面！
       this.$router.push({
         path: "/analysis/new",
         query: { pipelineId: template.id },
@@ -589,95 +503,74 @@ export default {
       this.fetchDashboardData();
     },
 
+    // 🌟 新增：处理跨页面跳转带来的弹窗渲染参数
+    async checkUrlParams() {
+      const query = this.$route.query;
+
+      // 检查指令：是不是要求打开 3D 弹窗，且带了文件标识
+      if (query.action === "open_3d_viewer" && query.file_id) {
+        // 1. 复用你原来的方法：它会去拉取文件列表并把 show3DViewer 设为 true
+        await this.openStructureViewer();
+
+        // 2. 匹配真实的 file.id (因为 query.file_id 传过来的是 '1A3N.pdb')
+        const targetFile = this.allStructureFiles.find(
+          (f) =>
+            (f.originalName || f.name) === query.file_id ||
+            f.id == query.file_id,
+        );
+
+        if (targetFile) {
+          // 3. 找到文件了，等弹窗渲染出来后，遥控子组件加载结构
+          this.$nextTick(() => {
+            if (this.$refs.viewer3DRef) {
+              this.$refs.viewer3DRef.selectedStructure = targetFile.id;
+              this.$refs.viewer3DRef.loadStructure(targetFile.id);
+            }
+          });
+        } else {
+          // 没找到文件，给用户一个友好的提示
+          this.$message.warning(
+            `未在您的文件库中找到：${query.file_id}，请先点击"上传数据"将该文件加入工作区。`,
+          );
+        }
+
+        // 4. “过河拆桥”：清空 URL 参数，防止刷新页面时重复弹窗
+        this.$router
+          .replace({ path: this.$route.path, query: {} })
+          .catch(() => {});
+      }
+    },
+
+    // 🌟3d
     async openStructureViewer() {
       if (!this.isLoggedIn) {
         this.$message.warning("提示：请先登录");
         return;
       }
-      this.show3DViewer = true;
-      this.selectedStructure = "";
-
-      await this.fetchAvailableFiles();
-
-      if (this.viewer3D) {
-        this.viewer3D.clear();
-      }
-    },
-
-    async loadStructure(fileId) {
-      if (!fileId) return;
-      this.loading3D = true;
 
       try {
-        const fileUrl = `/api/files/download/${fileId}?userId=${this.userId}`;
-        const response = await fetch(fileUrl);
+        // 1. 强制拉取用户所有的文件 (而不是最近文件)
+        const res = await getAllFileList({ userId: this.userId });
+        const dataList = res.data || res;
 
-        if (!response.ok) {
-          throw new Error("文件获取失败");
+        if (Array.isArray(dataList)) {
+          // 2. 精准过滤出合法的 3D 结构文件
+          this.allStructureFiles = dataList.filter((f) => {
+            const fileName = (f.originalName || f.name || "").toLowerCase();
+            return (
+              fileName.endsWith(".pdb") ||
+              fileName.endsWith(".sdf") ||
+              fileName.endsWith(".mol2") ||
+              fileName.endsWith(".mol")
+            );
+          });
         }
-
-        this.currentMolData = await response.text();
-
-        if (
-          this.currentMolData.includes("【Bio-OS 系统提示】") ||
-          this.currentMolData.includes("<!DOCTYPE html>")
-        ) {
-          this.$message.warning(
-            "提示：当前选中的文件不是合法的结构文件，无法预览。"
-          );
-          this.loading3D = false;
-          return;
-        }
-
-        this.$nextTick(() => {
-          let element = document.getElementById("glcontainer");
-
-          if (!this.viewer3D) {
-            element.innerHTML = "";
-            this.viewer3D = window.$3Dmol.createViewer(element, {
-              backgroundColor: "black",
-            });
-          }
-
-          this.viewer3D.clear();
-
-          const fileObj = this.structureFiles.find((f) => f.id === fileId);
-          const format = (fileObj.originalName || fileObj.name)
-            .toLowerCase()
-            .endsWith("sdf")
-            ? "sdf"
-            : "pdb";
-
-          this.viewer3D.addModel(this.currentMolData, format);
-
-          this.updateRenderStyle();
-          this.viewer3D.zoomTo();
-
-          this.$message.success("结构解析完毕，预览已就绪");
-        });
       } catch (error) {
-        console.error("3D 预览失败:", error);
-        this.$message.error("无法读取结构文件，预览失败");
-      } finally {
-        this.loading3D = false;
-      }
-    },
-
-    updateRenderStyle() {
-      if (!this.viewer3D) return;
-
-      this.viewer3D.removeAllLabels();
-      this.viewer3D.setStyle({}, {});
-
-      if (this.renderStyle === "cartoon") {
-        this.viewer3D.setStyle({}, { cartoon: { color: "spectrum" } });
-      } else if (this.renderStyle === "stick") {
-        this.viewer3D.setStyle({}, { stick: { radius: 0.15 } });
-      } else if (this.renderStyle === "sphere") {
-        this.viewer3D.setStyle({}, { sphere: { radius: 1.0 } });
+        console.error("拉取结构文件失败:", error);
       }
 
-      this.viewer3D.render();
+      // 3. 唤醒 3D 组件弹窗
+      this.show3DViewer = true;
     },
   },
 };
@@ -910,7 +803,7 @@ export default {
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        max-width: 140px; 
+        max-width: 140px;
       }
       .dark-project-tag {
         background: transparent;
@@ -1017,84 +910,6 @@ export default {
   }
 }
 
-/* ================= 7. 3D 渲染舱专属样式 ================= */
-.structure-viewer-container {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 10px 0;
-}
-.viewer-controls {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  background: #0f172a;
-  border: 1px solid #1f2937;
-  border-radius: 8px;
-}
-.viewer-stage {
-  height: 480px;
-  background: #000000;
-  border: 1px solid #1f2937;
-  border-radius: 8px;
-  position: relative;
-  overflow: hidden;
-  box-shadow: inset 0 0 60px rgba(20, 184, 166, 0.05);
-}
-.empty-stage {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: #64748b;
-  .empty-icon {
-    font-size: 54px;
-    margin-bottom: 16px;
-    opacity: 0.5;
-    color: #14b8a6;
-  }
-  p {
-    margin: 0 0 8px 0;
-    font-size: 15px;
-    color: #94a3b8;
-    font-weight: 500;
-  }
-  .support-text {
-    font-size: 12px;
-    font-family: Consolas, monospace;
-  }
-}
-.stage-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  .overlay-info {
-    position: absolute;
-    top: 16px;
-    left: 16px;
-    z-index: 10;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    pointer-events: none;
-    .info-item {
-      background: rgba(15, 23, 42, 0.85);
-      border: 1px solid #1e293b;
-      color: #2dd4bf;
-      font-size: 11px;
-      padding: 6px 10px;
-      border-radius: 4px;
-      font-family: Consolas, monospace;
-      backdrop-filter: blur(4px);
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-    }
-  }
-}
-
 @media (max-width: 1200px) {
   .bento-grid {
     grid-template-columns: 1fr;
@@ -1115,54 +930,5 @@ export default {
       flex: 1;
     }
   }
-}
-</style>
-
-/* 修复下拉框白底问题和暗黑单选按钮样式 */
-<style>
-.bio-dark-select-dropdown {
-  background-color: #1e293b !important;
-  border: 1px solid #334155 !important;
-}
-.bio-dark-select-dropdown .el-select-dropdown__item {
-  color: #94a3b8 !important;
-}
-.bio-dark-select-dropdown .el-select-dropdown__item.hover,
-.bio-dark-select-dropdown .el-select-dropdown__item:hover {
-  background-color: #0f172a !important;
-  color: #f8fafc !important;
-}
-.bio-dark-dialog {
-  background-color: #0f172a !important;
-  border: 1px solid #1e293b;
-  border-radius: 12px;
-}
-.bio-dark-dialog .el-dialog__title {
-  color: #f8fafc;
-  font-weight: 600;
-  font-family: Consolas, monospace;
-}
-.bio-dark-dialog .el-dialog__header {
-  border-bottom: 1px solid #1e293b;
-  padding: 16px 20px;
-}
-.bio-dark-dialog .el-dialog__body {
-  padding: 20px;
-  background: #0b0f19;
-  border-bottom-left-radius: 12px;
-  border-bottom-right-radius: 12px;
-}
-.dark-radio-group .el-radio-button__inner {
-  background: #1e293b;
-  border-color: #334155;
-  color: #94a3b8;
-  box-shadow: none !important;
-}
-.dark-radio-group
-  .el-radio-button__orig-radio:checked
-  + .el-radio-button__inner {
-  background-color: #14b8a6;
-  border-color: #14b8a6;
-  color: white;
 }
 </style>

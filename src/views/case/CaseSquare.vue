@@ -9,7 +9,7 @@
         </div>
         <div class="header-search">
           <el-input
-            placeholder="搜索 16S、分子对接、PCA..."
+            placeholder="根据案例名称搜索..."
             v-model="searchQuery"
             class="dark-input"
             prefix-icon="el-icon-search"
@@ -25,13 +25,10 @@
         >
           <el-radio-button label="all">综合大厅 (All)</el-radio-button>
           <el-radio-button label="pipeline"
-            ><i class="el-icon-guide"></i> 智能分析流</el-radio-button
+            ><i class="el-icon-guide"></i> 标准分析流</el-radio-button
           >
           <el-radio-button label="structure"
-            ><i class="el-icon-discover"></i> 三维洞察</el-radio-button
-          >
-          <el-radio-button label="template"
-            ><i class="el-icon-document-copy"></i> 分析模板</el-radio-button
+            ><i class="el-icon-discover"></i> 三维结构预览</el-radio-button
           >
           <el-radio-button label="copilot"
             ><i class="el-icon-cpu"></i> 代码辅助</el-radio-button
@@ -40,17 +37,27 @@
       </div>
 
       <div class="case-grid">
-       <div
+        <div
           v-for="caseItem in filteredCases"
           :key="caseItem.id"
           class="case-card"
-          @click="previewCase(caseItem)" 
-          style="cursor: pointer;"
+          @click="previewCase(caseItem)"
+          style="cursor: pointer"
         >
           <div class="card-image-wrapper">
-            <img :src="resolveImageUrl(caseItem.imageUrl)" :alt="caseItem.title" class="card-image" />
+            <img
+              :src="resolveImageUrl(caseItem.imageUrl)"
+              :alt="caseItem.title"
+              class="card-image"
+            />
             <div class="image-overlay">
-              <el-button type="primary" size="mini" icon="el-icon-view" circle class="preview-btn"></el-button>
+              <el-button
+                type="primary"
+                size="mini"
+                icon="el-icon-view"
+                circle
+                class="preview-btn"
+              ></el-button>
             </div>
             <div class="module-badge" :class="caseItem.category">
               {{ getCategoryName(caseItem.category) }}
@@ -58,10 +65,9 @@
           </div>
 
           <div class="card-body">
-             <h3 class="case-title">{{ caseItem.title }}</h3>
-             <p class="case-desc">{{ caseItem.description }}</p>
-             </div>
-
+            <h3 class="case-title">{{ caseItem.title }}</h3>
+            <p class="case-desc">{{ caseItem.description }}</p>
+          </div>
         </div>
       </div>
 
@@ -109,9 +115,8 @@ export default {
     async fetchCases() {
       try {
         const res = await getCaseList();
-        console.log("【Debug】后端传来的原始包:", res); // 留个监控探针
+        console.log("【Debug】后端传来的原始案例包:", res);
 
-        // 🌟 终极兼容解包逻辑：无论拦截器怎么剥洋葱，都能精准命中
         const responseData = res.success !== undefined ? res : res.data;
 
         if (responseData && responseData.success) {
@@ -129,19 +134,17 @@ export default {
     },
     getCategoryName(cat) {
       const map = {
-        pipeline: "智能分析流",
-        structure: "三维洞察",
-        template: "分析模板",
+        pipeline: "标准分析流",
+        structure: "三维结构预览",
         copilot: "代码辅助",
       };
-      return map[cat] || "未知组件";
+      return map[cat] || "未知分类";
     },
     getButtonText(cat) {
       const map = {
         pipeline: "载入分析流 (Load)",
         structure: "开启预览 (View)",
-        template: "应用此模板 (Use)",
-        copilot: "提取至工作区 (Fork)",
+        copilot: "载入工作区 (Load)",
       };
       return map[cat] || "查看";
     },
@@ -149,33 +152,26 @@ export default {
       const map = {
         pipeline: "el-icon-guide",
         structure: "el-icon-discover",
-        template: "el-icon-document-copy",
         copilot: "el-icon-cpu",
       };
       return map[cat] || "el-icon-right";
     },
     getButtonType(cat) {
-      return cat === "structure"
-        ? "primary"
-        : cat === "template"
-        ? "warning"
-        : "success";
+      return cat === "structure" ? "primary" : "success";
     },
     getButtonGlowClass(cat) {
       const map = {
         pipeline: "glow-btn-cyan",
         structure: "glow-btn-purple",
-        template: "glow-btn-warning",
         copilot: "glow-btn-success",
       };
       return map[cat] || "";
     },
-   previewCase(caseItem) {
-      // 🌟 极客探针：看看 ID 到底有没有拿到！
-      console.log("【准备发车】当前点击的案例数据：", caseItem);
-      
+    previewCase(caseItem) {
+      console.log("【案例路由跳转】当前选中数据：", caseItem);
+
       if (!caseItem.id) {
-        this.$message.error("致命错误：当前案例缺少主键 ID，请检查后端字段！");
+        this.$message.error("数据异常：当前案例缺少主键 ID");
         return;
       }
 
@@ -185,7 +181,7 @@ export default {
       });
     },
     dispatchToEngine(caseItem) {
-      this.$message.success(`案例 [${caseItem.title}] 提取成功...`);
+      this.$message.success(`案例 [${caseItem.title}] 参数已带入工作区`);
       switch (caseItem.category) {
         case "copilot":
           this.$router.push({
@@ -202,16 +198,10 @@ export default {
             query: { load_pipeline_id: caseItem.id },
           });
           break;
-        case "structure": // 🌟 修复点：3d -> structure
+        case "structure":
           this.$router.push({
             path: "/3d-viewer",
             query: { load_pdb: caseItem.dataset },
-          });
-          break;
-        case "template":
-          this.$router.push({
-            path: "/template-tools",
-            query: { use_template_id: caseItem.id },
           });
           break;
       }
@@ -320,7 +310,6 @@ export default {
       }
     }
 
-    /* 🌟 核心修复：这里不再使用 .3d 而是使用 .structure */
     .module-badge {
       position: absolute;
       top: 10px;
@@ -341,11 +330,6 @@ export default {
         background: rgba(139, 92, 246, 0.2);
         color: #a78bfa;
         border: 1px solid rgba(139, 92, 246, 0.4);
-      }
-      &.template {
-        background: rgba(245, 158, 11, 0.2);
-        color: #fbbf24;
-        border: 1px solid rgba(245, 158, 11, 0.4);
       }
       &.copilot {
         background: rgba(16, 185, 129, 0.2);
@@ -461,14 +445,6 @@ export default {
   color: #fff;
   &:hover {
     box-shadow: 0 0 15px rgba(139, 92, 246, 0.4);
-  }
-}
-::v-deep .glow-btn-warning {
-  background: linear-gradient(135deg, #f59e0b, #d97706) !important;
-  border: none !important;
-  color: #fff;
-  &:hover {
-    box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
   }
 }
 ::v-deep .glow-btn-success {
