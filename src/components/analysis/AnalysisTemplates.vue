@@ -16,7 +16,7 @@
 
     <div class="template-grid">
       <div
-        v-for="template in templates.slice(0, 4)" 
+        v-for="template in templates.slice(0, 4)"
         :key="template.id"
         class="template-card"
         @click="$emit('use', template)"
@@ -37,15 +37,24 @@
 
         <div class="card-body">
           <p class="template-description">
-            {{ template.description || "系统预置标准生信分析流程，暂无详细描述。" }}
+            {{
+              template.description || "系统预置标准生信分析流程，暂无详细描述。"
+            }}
           </p>
         </div>
 
         <div class="card-footer">
-          <el-tag size="mini" type="info" effect="plain" v-if="template.category" class="category-tag">
+          <el-tag
+            size="mini"
+            type="info"
+            effect="plain"
+            v-if="template.category"
+            class="category-tag"
+          >
             {{ formatCategory(template.category) }}
           </el-tag>
-          <span v-else></span> <el-button
+          <span v-else></span>
+          <el-button
             type="primary"
             size="small"
             class="use-btn"
@@ -58,7 +67,7 @@
       </div>
 
       <div v-if="templates.length === 0" class="empty-state">
-        <span style="color: #64748b; font-size: 13px;">暂无可用模板</span>
+        <span style="color: #64748b; font-size: 13px">暂无可用模板</span>
       </div>
     </div>
   </div>
@@ -80,11 +89,11 @@ export default {
       const map = {
         genomics: "基因组学",
         transcriptomics: "转录组学",
-        proteomics: "蛋白质组学",
+        microbiome: "微生物组",
       };
       return map[category] || category;
-    }
-  }
+    },
+  },
 };
 </script>
 
@@ -101,7 +110,7 @@ export default {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
-    
+
     .section-title {
       font-size: 16px;
       color: #f8fafc;
@@ -110,11 +119,15 @@ export default {
       align-items: center;
       gap: 8px;
       font-weight: 600;
-      i { color: #3b82f6; }
+      i {
+        color: #3b82f6;
+      }
     }
     .more-btn {
       color: #94a3b8;
-      &:hover { color: #3b82f6; }
+      &:hover {
+        color: #3b82f6;
+      }
     }
   }
 

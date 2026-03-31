@@ -15,7 +15,7 @@
               class="cyber-btn"
               @click="handleLearnMore(item)"
             >
-              {{ item.btnText || '了解更多' }}
+              {{ item.btnText || "进入模块" }}
             </el-button>
           </div>
         </div>
@@ -32,27 +32,30 @@ export default {
       carouselItems: [
         {
           id: 1,
-          title: "Bio-OS 云原生算力沙箱",
-          description: "告别繁琐环境配置。一键分配 Python/R 隔离容器，千兆带宽静默挂载云端数据集，随时随地开启极客推演。",
+          title: "生物信息科教一体化平台",
+          description:
+            "打破理论与实践的壁垒。在这里，你可以观看生信理论课程，并无缝跳转至在线工作台进行代码级实操演练。",
           image: "ceil01.webp",
-          link: "/analysis",
-          btnText: "启动算力节点"
+          link: "/course",
+          btnText: "进入课程中心",
         },
         {
           id: 2,
-          title: "AI 极客副驾 (Copilot)",
-          description: "由硅基流动驱动。通过自然语言对话，自动生成并执行 Pandas 分析与可视化代码，让 AI 成为你的专属生信工程师。",
+          title: "交互式分析工作台",
+          description:
+            "免去复杂的本地环境配置。系统内置 Python 运行环境，支持 AI 辅助生成代码，实现在线数据处理与可视化图表渲染。",
           image: "ceil02.webp",
-          link: "/assistant",
-          btnText: "唤醒副驾"
+          link: "/analysis",
+          btnText: "打开工作台",
         },
         {
           id: 3,
-          title: "3D 分子与组学管线矩阵",
-          description: "内置 3D-Mol 空间引擎与零代码工作流。从虚拟筛选到转录组差异分析，科研成果触手可及。",
+          title: "真实科研案例复现",
+          description:
+            "收录转录组差异分析、大分子三维结构等经典教学案例。提供详尽的步骤解析，支持一键载入参数进行实战复现。",
           image: "struture01.jpg",
           link: "/case",
-          btnText: "进入控制台"
+          btnText: "浏览案例广场",
         },
       ],
     };
@@ -102,18 +105,21 @@ export default {
   position: relative;
 }
 
-/* 加深遮罩，让文字更清晰 */
 .carousel-item::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, rgba(15, 23, 42, 0.9) 0%, rgba(15, 23, 42, 0.4) 100%);
+  background: linear-gradient(
+    90deg,
+    rgba(15, 23, 42, 0.9) 0%,
+    rgba(15, 23, 42, 0.4) 100%
+  );
 }
 
 .carousel-content {
   position: relative;
   z-index: 2;
-  text-align: left; /* 改为左对齐，更具大厂控制台风格 */
+  text-align: left;
   width: 100%;
   padding: 0 80px;
   max-width: 1000px;
@@ -143,7 +149,7 @@ export default {
   padding: 12px 32px;
   font-size: 1.05rem;
   font-weight: bold;
-  border-radius: 8px; /* 方形圆角更具科技感 */
+  border-radius: 8px;
   background: linear-gradient(135deg, #3b82f6, #2563eb);
   border: none;
   box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
@@ -156,11 +162,41 @@ export default {
 }
 
 @media (max-width: 768px) {
-  .carousel-content { padding: 0 30px; text-align: center; }
-  .glow-text { font-size: 2rem; }
+  .carousel-content {
+    padding: 0 30px;
+    text-align: center;
+  }
+  .glow-text {
+    font-size: 2rem;
+  }
 }
 
-@keyframes fadeInDown { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
 </style>

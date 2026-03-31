@@ -64,13 +64,16 @@
                 <div class="icon-wrapper launch">
                   <i class="el-icon-video-play"></i>
                 </div>
-                <span>RNA-Seq 上游分析</span>
+                <span>新建分析</span>
               </div>
-              <div class="action-btn" @click="$router.push('/analysis/diff')">
+              <div
+                class="action-btn"
+                @click="$router.push('/analysis/pipelines')"
+              >
                 <div class="icon-wrapper template">
                   <i class="el-icon-data-analysis"></i>
                 </div>
-                <span>差异表达分析</span>
+                <span>分析流模板库</span>
               </div>
               <div class="action-btn" @click="$router.push('/analysis/data')">
                 <div class="icon-wrapper data">

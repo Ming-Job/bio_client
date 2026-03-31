@@ -1,7 +1,6 @@
 <template>
   <header class="header">
     <div class="header-container">
-      
       <div class="brand-section" @click="$router.push('/')">
         <img src="@/assets/images/logo.png" alt="Logo" class="logo" />
         <span class="brand-title">生物信息科教平台</span>
@@ -18,9 +17,11 @@
         >
           <el-menu-item index="/home">首页</el-menu-item>
           <el-menu-item index="/course">课程中心</el-menu-item>
-          <el-menu-item index="/analysis">云端分析</el-menu-item>
+          <el-menu-item index="/analysis">分析工作台 </el-menu-item>
           <el-menu-item index="/case">案例广场</el-menu-item>
-          <el-menu-item index="/project" v-if="isLoggedIn">我的项目</el-menu-item>
+          <el-menu-item index="/project" v-if="isLoggedIn"
+            >我的项目</el-menu-item
+          >
         </el-menu>
       </div>
 
@@ -53,9 +54,18 @@
           </div>
 
           <el-dropdown-menu slot="dropdown" class="header-dropdown-menu">
-            <el-dropdown-item command="profile" icon="el-icon-user">个人中心</el-dropdown-item>
-            <el-dropdown-item command="settings" icon="el-icon-setting">账号设置</el-dropdown-item>
-            <el-dropdown-item command="logout" icon="el-icon-switch-button" divided>退出登录</el-dropdown-item>
+            <el-dropdown-item command="profile" icon="el-icon-user"
+              >个人中心</el-dropdown-item
+            >
+            <el-dropdown-item command="settings" icon="el-icon-setting"
+              >账号设置</el-dropdown-item
+            >
+            <el-dropdown-item
+              command="logout"
+              icon="el-icon-switch-button"
+              divided
+              >退出登录</el-dropdown-item
+            >
           </el-dropdown-menu>
         </el-dropdown>
 
@@ -70,7 +80,6 @@
           登录 / 注册
         </el-button>
       </div>
-
     </div>
   </header>
 </template>
@@ -182,7 +191,7 @@ export default {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 32px; 
+    padding: 0 32px;
   }
 
   /* 左侧：品牌区 */
@@ -207,7 +216,7 @@ export default {
     }
 
     &:hover .logo {
-      transform: scale(1.08) rotate(-5deg); 
+      transform: scale(1.08) rotate(-5deg);
     }
   }
 
@@ -260,7 +269,7 @@ export default {
 
       .avatar-ring {
         border: 2px solid #42b983;
-        background-color: #3b82f6; 
+        background-color: #3b82f6;
         font-weight: bold;
         color: #fff;
         box-shadow: 0 0 8px rgba(66, 185, 131, 0.4);
@@ -284,7 +293,7 @@ export default {
           margin-top: 2px;
           width: fit-content;
           opacity: 0.9;
-          font-family: Consolas, monospace; 
+          font-family: Consolas, monospace;
 
           &--admin {
             background: #e6a23c;
@@ -299,7 +308,7 @@ export default {
             color: #fff;
           }
           /* 默认样式防错 */
-          background: #42b983; 
+          background: #42b983;
         }
       }
 

@@ -197,6 +197,10 @@ export default {
         ".gtf",
         ".pdb",
         ".sdf",
+        ".txt", // 增加 .txt 支持 (GWAS 表型文件必备)
+        ".csv", // 顺手把 .csv 也加上，方便以后的表格类数据
+        ".qza", // Silva 138 数据库文件
+        ".tsv", // 以及 .tsv 格式的表格数据
       ],
     },
   },
@@ -500,6 +504,7 @@ export default {
       if (ext.includes("bam") || ext.includes("sam")) return "el-icon-coin";
       if (ext.includes("vcf")) return "el-icon-s-flag";
       if (ext.includes("pdb") || ext.includes("sdf")) return "el-icon-discover";
+      if (ext.includes("qza")) return "el-icon-collection"; // 使用书架/数据库图标
       return "el-icon-document";
     },
 

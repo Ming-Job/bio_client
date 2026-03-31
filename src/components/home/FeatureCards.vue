@@ -2,8 +2,7 @@
   <div class="feature-cards">
     <div class="container">
       <div class="section-header-center">
-        <h2 class="section-title">核心引擎矩阵</h2>
-        <p class="section-subtitle">Bio-OS Engine Matrix</p>
+        <h2 class="section-title">平台核心模块</h2>
       </div>
       <div class="cards-grid">
         <el-card
@@ -12,13 +11,24 @@
           class="feature-card"
           shadow="hover"
         >
-          <div class="card-icon" :style="{ backgroundColor: feature.color + '20', color: feature.color }">
+          <div
+            class="card-icon"
+            :style="{
+              backgroundColor: feature.color + '20',
+              color: feature.color,
+            }"
+          >
             <i :class="feature.icon"></i>
           </div>
           <h3>{{ feature.title }}</h3>
           <p>{{ feature.description }}</p>
-          <el-button type="text" class="learn-more" :style="{ color: feature.color }"> 
-            调用此引擎 <i class="el-icon-right"></i>
+          <el-button
+            type="text"
+            class="learn-more"
+            :style="{ color: feature.color }"
+            @click="$router.push(feature.link)"
+          >
+            进入模块 <i class="el-icon-right"></i>
           </el-button>
         </el-card>
       </div>
@@ -33,28 +43,36 @@ export default {
     return {
       features: [
         {
-          title: "AI 代码沙箱环境",
-          description: "内置 pandas, scipy 等生信常用库，支持 Python/R 脚本云端安全执行与动态可视化渲染。",
-          icon: "el-icon-cpu",
-          color: "#3b82f6", 
+          title: "课程中心",
+          description:
+            "提供从生物学基础到生信进阶的系统性理论课程，为实操分析打下扎实基础。",
+          icon: "el-icon-reading",
+          color: "#3b82f6",
+          link: "/course",
         },
         {
-          title: "多组学空间 Workspace",
-          description: "项目级的数据隔离体系，实时监控云存储余量与算力任务调度状态，科研资产井井有条。",
+          title: "分析工作台",
+          description:
+            "提供 AI 辅助代码生成与在线 Python 执行环境，直接在网页端处理数据并输出图表。",
+          icon: "el-icon-monitor",
+          color: "#10b981",
+          link: "/analysis",
+        },
+        {
+          title: "案例广场",
+          description:
+            "精选生信标准分析案例，结合理论背景与真实参数，支持一键提取到工作台运行。",
+          icon: "el-icon-discover",
+          color: "#8b5cf6",
+          link: "/case",
+        },
+        {
+          title: "我的项目",
+          description:
+            "专属的课题管理空间。分类管理原始数据与分析产出文件，支持一键切入分析台。",
           icon: "el-icon-folder-opened",
-          color: "#10b981", 
-        },
-        {
-          title: "生信案例矩阵库",
-          description: "提供从转录组、16S到虚拟药物筛选的黄金数据集与标准分析协议，一键克隆复现。",
-          icon: "el-icon-connection",
-          color: "#8b5cf6", 
-        },
-        {
-          title: "3D 空间结构引擎",
-          description: "原生支持 PDB 等分子格式，提供配体-受体对接结果的 360 度沉浸式预览与交互。",
-          icon: "el-icon-view",
-          color: "#f59e0b", 
+          color: "#f59e0b",
+          link: "/project",
         },
       ],
     };
@@ -68,7 +86,10 @@ export default {
   background-color: #ffffff;
 }
 
-.container { max-width: 1200px; margin: 0 auto; }
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
 
 .section-header-center {
   text-align: center;
@@ -82,16 +103,8 @@ export default {
   font-weight: 700;
 }
 
-.section-subtitle {
-  color: #6b7280;
-  font-family: Consolas, monospace;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-}
-
 .cards-grid {
   display: grid;
-  /* 保证宽屏下 4 个卡片一行 */
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 24px;
 }
@@ -102,11 +115,13 @@ export default {
   transition: all 0.3s ease;
   border-radius: 12px;
   border: 1px solid #f3f4f6;
+  display: flex;
+  flex-direction: column;
 }
 
 .feature-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 12px 24px rgba(0,0,0,0.06);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.06);
   border-color: #e5e7eb;
 }
 
@@ -133,12 +148,13 @@ export default {
   line-height: 1.6;
   margin-bottom: 20px;
   font-size: 0.95rem;
-  min-height: 70px;
+  flex-grow: 1; /* 让按钮沉底对齐 */
 }
 
 .learn-more {
   font-weight: 600;
   font-size: 0.9rem;
   padding: 0;
+  align-self: flex-start;
 }
 </style>

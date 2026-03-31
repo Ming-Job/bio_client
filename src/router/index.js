@@ -1,6 +1,6 @@
 import Vue from 'vue'
 import VueRouter from 'vue-router'
-import store from '@/store' // 假设您有 Vuex store
+import store from '@/store'
 
 Vue.use(VueRouter)
 
@@ -15,41 +15,26 @@ VueRouter.prototype.replace = function replace(location) {
 }
 
 // ================== 路由懒加载 ==================
-// 登录注册
 const Login = () => import('@/views/login/LoginPage.vue')
 const Register = () => import('@/views/login/RegisterPage.vue')
 const NotFound = () => import('@/views/error/404Page.vue')
-
-// 布局组件
 const MainLayout = () => import('@/components/MainLayout.vue')
 const BackLayout = () => import('@/views/BackLayout.vue')
-
-// 前台模块
 const HomePage = () => import('@/views/Home.vue')
 const AnalysisPage = () => import('@/views/analysis/AnalysisPage.vue')
-
-// 管理员模块
 const AdminDashboard = () => import('@/views/admin/AdminDashboard.vue')
 const UserManagement = () => import('@/views/admin/UserManagement.vue')
 const CourseManagement = () => import('@/views/admin/CourseManagement.vue')
 const CaseManagement = () => import('@/views/admin/CaseManagement.vue')
-
-// 普通用户后台模块
-
-
-// 公共设置模块
 const UserProfile = () => import('@/components/user/UserProfile.vue')
 const AccountSetting = () => import('@/components/user/AccountSetting.vue')
 
 // ================== 路由表配置 ==================
 const routes = [
-  // 🌟 修复点 1：根路径重定向统一为 /home，与你的 Logo 点击和顶部菜单默认态保持一致
   {
     path: '/',
     redirect: '/home'
   },
-
-  // 独立页面（不带顶部 Header 和底部 Footer）
   {
     path: '/login',
     name: 'LoginPage',
@@ -69,7 +54,6 @@ const routes = [
     name: "MainLayout",
     component: MainLayout,
     children: [
-      // 🌟 修复点 2：所有子路由全部去掉开头的 "/"，使用标准的相对路径写法
       {
         path: "home",
         name: "HomePage",
@@ -90,6 +74,30 @@ const routes = [
         component: () => import('@/components/analysis/NewAnalysis.vue'),
         meta: { title: '启动新分析' }
       },
+
+      // 🌟 新增：RNA-Seq 专业向导组件
+      {
+        path: "analysis/rna-wizard",
+        name: "RnaAnalysisWizard",
+        component: () => import('@/components/analysis/RnaAnalysisWizard.vue'),
+        meta: { title: 'RNA-Seq 分析向导' }
+      },
+
+      // 🌟 新增：GWAS 专业向导组件
+      {
+        path: "analysis/gwas-wizard",
+        name: "GwasAnalysisWizard",
+        component: () => import('@/components/analysis/GwasAnalysisWizard.vue'),
+        meta: { title: 'GWAS 分析向导' }
+      },
+
+      // 🌟 新增：16S 专业向导组件
+      {
+        path: '/analysis/microbiome-wizard',
+        name: 'MicrobiomeWizard',
+        component: () => import('@/components/analysis/MicrobiomeAnalysisWizard.vue') // 刚才新建的文件
+      },
+
       {
         path: "analysis/tasks", 
         name: "TaskCenter",
@@ -102,14 +110,12 @@ const routes = [
         component: () => import('@/views/analysis/PipelineLibrary.vue'),
         meta: { title: '分析流库' }
       },
-      // 🌟 新增：差异分析(对撞比对)页面
       {
         path: "analysis/diff",
         name: "DiffAnalysis",
         component: () => import('@/views/analysis/DiffAnalysis.vue'),
         meta: { title: '差异表达比对分析' }
       },
-      
       {
         path: "analysis/data",
         name: "DataCabin",
@@ -155,24 +161,21 @@ const routes = [
         meta: { title: '我的学习' }
       },
 
-      // --- 用户专属与生态模块 ---
+      // --- 项目与案例 ---
       {
         path: "project",
         name: "ProjectList",
         component: () => import('@/views/pro/ProjectList.vue'),
         meta: { title: "我的项目" }
       },
-      // 案例广场
       {
         path: "case",
         name: "CaseSquare",
-        // 占位组件，等你有空了再建对应的 vue 文件
         component: () => import('@/views/case/CaseSquare.vue'),
         meta: { title: "案例广场" }
       },
-      // 案例详情
       { 
-        path: "case/:id",  // 👈 这里的参数名叫 id
+        path: "case/:id",
         name: "CaseDetail",
         component: () => import('@/views/case/CaseDetail.vue'),
         meta: { title: '案例详情' }
@@ -187,7 +190,6 @@ const routes = [
     component: BackLayout,
     meta: { requiresAuth: true },
     children: [
-      // 公共路由
       {
         path: 'profile',
         name: 'UserProfile',
@@ -200,8 +202,6 @@ const routes = [
         component: AccountSetting,
         meta: { title: '账号设置', roles: ['admin', 'user'] }
       },
-      
-      // 管理员路由
       {
         path: 'admin/dashboard',
         name: 'AdminDashboard',
@@ -226,12 +226,6 @@ const routes = [
         component: CaseManagement,
         meta: { title: '案例管理', roles: ['admin'] }
       },
-     
-      
-      // 普通用户后台路由
-     
-      
-      // 默认重定向 (非常精妙的设计，保留原样)
       {
         path: '',
         redirect: () => {
@@ -246,7 +240,6 @@ const routes = [
     ]
   },
 
-  // 404 兜底路由 (必须放在最后面)
   {
     path: '/404',
     name: 'NotFound',
@@ -264,15 +257,8 @@ const router = new VueRouter({
   base: process.env.BASE_URL,
   routes,
   scrollBehavior(savedPosition) {
-    if (savedPosition) {
-      return savedPosition
-    } else {
-      return { x: 0, y: 0 }
-    }
+    return savedPosition ? savedPosition : { x: 0, y: 0 }
   }
 })
-
-// 🌟 我暂时帮你把路由守卫注释着，等你后面要联调权限的时候再解开。
-// 这套守卫写得很好，非常标准。
 
 export default router

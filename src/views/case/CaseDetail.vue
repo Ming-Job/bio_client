@@ -176,7 +176,11 @@ export default {
   computed: {
     renderedContent() {
       if (this.caseData && this.caseData.content) {
-        return this.md.render(this.caseData.content);
+        // 🌟 核心修复：利用正则清除每一行开头的多余空格和 Tab 缩进
+        // 防止被 markdown-it 误判为代码块
+        const cleanContent = this.caseData.content.replace(/^[ \t]+/gm, "");
+
+        return this.md.render(cleanContent);
       }
       return '<p class="no-data">系统暂未收录该案例的详细文档...</p>';
     },

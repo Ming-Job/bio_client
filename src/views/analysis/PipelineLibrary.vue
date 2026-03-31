@@ -6,7 +6,6 @@
         content="分析流模板库"
         class="dark-page-header"
       ></el-page-header>
-
       <div class="header-actions">
         <el-input
           v-model="searchQuery"
@@ -20,9 +19,8 @@
           icon="el-icon-plus"
           class="dark-btn-submit"
           @click="openDialog('add')"
+          >新建流程</el-button
         >
-          新建流程
-        </el-button>
       </div>
     </div>
 
@@ -35,7 +33,7 @@
         <el-radio-button label="all">全部领域</el-radio-button>
         <el-radio-button label="genomics">基因组学</el-radio-button>
         <el-radio-button label="transcriptomics">转录组学</el-radio-button>
-        <el-radio-button label="proteomics">蛋白质组</el-radio-button>
+        <el-radio-button label="microbiome">微生物组</el-radio-button>
       </el-radio-group>
     </div>
 
@@ -77,41 +75,34 @@
             </el-dropdown-menu>
           </el-dropdown>
         </div>
-
         <div class="card-body">
-          <p class="pipeline-desc">
-            {{ tpl.description || "暂无描述" }}
-          </p>
+          <p class="pipeline-desc">{{ tpl.description || "暂无描述" }}</p>
         </div>
-
         <div class="card-footer">
           <div class="pipeline-tags">
             <el-tag
               size="mini"
               effect="dark"
               :type="tpl.isActive ? 'success' : 'info'"
+              >{{ tpl.isActive ? "可用" : "停用" }}</el-tag
             >
-              {{ tpl.isActive ? "可用" : "停用" }}
-            </el-tag>
-            <el-tag size="mini" type="info" effect="plain" v-if="tpl.category">
-              {{ tpl.category }}
-            </el-tag>
+            <el-tag
+              size="mini"
+              type="info"
+              effect="plain"
+              v-if="tpl.category"
+              >{{ formatCategory(tpl.category) }}</el-tag
+            >
           </div>
-
           <el-button
             type="primary"
             size="small"
             class="use-btn"
             :disabled="!tpl.isActive"
             @click="usePipeline(tpl)"
-          >
-            使用流程 <i class="el-icon-right"></i>
-          </el-button>
+            >使用流程 <i class="el-icon-right"></i
+          ></el-button>
         </div>
-      </div>
-
-      <div v-if="filteredPipelines.length === 0" class="empty-state">
-        <el-empty description="未找到流程" :image-size="100"></el-empty>
       </div>
     </div>
 
@@ -134,7 +125,7 @@
             <el-form-item label="流程名称" prop="name">
               <el-input
                 v-model="form.name"
-                placeholder="如：RNA-Seq分析"
+                placeholder="如：16S 扩增子物种多样性分析"
               ></el-input>
             </el-form-item>
           </el-col>
@@ -142,7 +133,7 @@
             <el-form-item label="唯一编码" prop="pipelineCode">
               <el-input
                 v-model="form.pipelineCode"
-                placeholder="如：rna_seq"
+                placeholder="如：qiime2_16s"
                 :disabled="dialogType === 'edit'"
               ></el-input>
             </el-form-item>
@@ -159,7 +150,7 @@
               >
                 <el-option label="基因组学" value="genomics"></el-option>
                 <el-option label="转录组学" value="transcriptomics"></el-option>
-                <el-option label="蛋白质组" value="proteomics"></el-option>
+                <el-option label="微生物组" value="microbiome"></el-option>
               </el-select>
             </el-form-item>
           </el-col>
@@ -178,7 +169,7 @@
           </el-col>
         </el-row>
 
-        <el-row :gutter="20">
+        <el-row :gutter="20" v-if="form.category === 'transcriptomics'">
           <el-col :span="12">
             <el-form-item label="参考基因组 (.fa)">
               <el-upload
@@ -201,7 +192,6 @@
               </el-upload>
             </el-form-item>
           </el-col>
-
           <el-col :span="12">
             <el-form-item label="基因注释 (.gtf)">
               <el-upload
@@ -226,11 +216,52 @@
           </el-col>
         </el-row>
 
+        <el-row :gutter="20" v-if="form.category === 'microbiome'">
+          <el-col :span="24">
+            <el-form-item label="物种注释分类器数据库">
+              <div class="db-upload-container">
+                <el-upload
+                  class="compact-uploader"
+                  action="#"
+                  :http-request="uploadDbFile"
+                  :on-remove="handleDbRemove"
+                  :before-upload="handleBeforeUpload"
+                  :file-list="dbFileList"
+                  :limit="1"
+                  :disabled="dbUploading"
+                  accept=".qza"
+                >
+                  <el-button
+                    size="small"
+                    type="primary"
+                    plain
+                    :loading="dbUploading"
+                    icon="el-icon-collection"
+                  >
+                    {{ dbUploading ? "上传中..." : "上传 注释分类器数据库" }}
+                  </el-button>
+                </el-upload>
+                <div v-if="dbUploading" style="margin-top: 10px">
+                  <el-progress
+                    :percentage="dbProgress"
+                    :stroke-width="8"
+                    color="#3b82f6"
+                  ></el-progress>
+                </div>
+                <div v-if="!dbUploading" class="db-tip">
+                  提示：支持 .qza 格式
+                </div>
+              </div>
+            </el-form-item>
+          </el-col>
+        </el-row>
+
         <el-form-item label="功能描述" style="margin-bottom: 0">
           <el-input
             type="textarea"
-            :rows="2"
+            :rows="3"
             v-model="form.description"
+            placeholder="描述该流程的核心用途..."
           ></el-input>
         </el-form-item>
       </el-form>
@@ -252,7 +283,7 @@
 </template>
 
 <script>
-import { mapState } from "vuex";
+import { mapState, mapGetters } from "vuex";
 import {
   getPipelines,
   createPipeline,
@@ -270,10 +301,10 @@ export default {
       searchQuery: "",
       activeCategory: "all",
       pipelines: [],
-
       dialogVisible: false,
       dialogType: "add",
-
+      dbUploading: false,
+      dbProgress: 0,
       form: {
         id: null,
         pipelineCode: "",
@@ -283,11 +314,11 @@ export default {
         isActive: 1,
         refFaFileId: null,
         refGtfFileId: null,
+        refDbFileId: null,
       },
-
       faFileList: [],
       gtfFileList: [],
-
+      dbFileList: [],
       rules: {
         name: [{ required: true, message: "请输入流程名称", trigger: "blur" }],
         pipelineCode: [
@@ -300,9 +331,8 @@ export default {
     };
   },
   computed: {
-    ...mapState("user", {
-      userId: (state) => state.userInfo?.id,
-    }),
+    ...mapState("user", ["userInfo"]),
+    ...mapGetters("user", ["userId"]),
     filteredPipelines() {
       return this.pipelines.filter((p) => {
         const matchQuery =
@@ -328,26 +358,24 @@ export default {
       this.loading = true;
       try {
         const res = await getPipelines();
-        if (res && res.data) {
-          let pList = [];
-          if (Array.isArray(res.data)) pList = res.data;
-          else if (res.data.data && Array.isArray(res.data.data))
-            pList = res.data.data;
-
-          this.pipelines = pList.map((p, index) => ({
-            ...p,
-            id: p.id,
-            pipelineCode: p.pipelineCode,
-            isActive: p.isActive === 1 || p.isActive === true,
-            category:
-              p.category || (index % 2 === 0 ? "genomics" : "transcriptomics"),
-          }));
-        }
+        const pList = res.data?.data || res.data || [];
+        this.pipelines = pList.map((p) => ({
+          ...p,
+          isActive: p.isActive === 1 || p.isActive === true,
+        }));
       } catch (error) {
-        this.$message.error("获取模板失败");
+        this.$message.error("获取模板列表失败");
       } finally {
         this.loading = false;
       }
+    },
+    formatCategory(category) {
+      const map = {
+        genomics: "基因组学",
+        transcriptomics: "转录组学",
+        microbiome: "微生物组",
+      };
+      return map[category] || category;
     },
     usePipeline(tpl) {
       this.$router.push({
@@ -356,24 +384,18 @@ export default {
       });
     },
     handleCommand(command, tpl) {
-      if (command === "edit") {
-        this.openDialog("edit", tpl);
-      } else if (command === "delete") {
-        this.handleDelete(tpl);
-      }
+      if (command === "edit") this.openDialog("edit", tpl);
+      else if (command === "delete") this.handleDelete(tpl);
     },
     openDialog(type, row = null) {
       this.dialogType = type;
       this.faFileList = [];
       this.gtfFileList = [];
-
+      this.dbFileList = [];
+      this.dbProgress = 0;
+      this.dbUploading = false;
       if (type === "edit" && row) {
-        this.form = {
-          ...row,
-          isActive: row.isActive ? 1 : 0,
-          refFaFileId: row.refFaFileId || null,
-          refGtfFileId: row.refGtfFileId || null,
-        };
+        this.form = { ...row, isActive: row.isActive ? 1 : 0 };
         if (row.refFaFileId)
           this.faFileList = [
             { name: `已绑定参考基因组 (ID: ${row.refFaFileId})`, url: "" },
@@ -381,6 +403,10 @@ export default {
         if (row.refGtfFileId)
           this.gtfFileList = [
             { name: `已绑定注释文件 (ID: ${row.refGtfFileId})`, url: "" },
+          ];
+        if (row.refDbFileId)
+          this.dbFileList = [
+            { name: `已绑定分类器 (ID: ${row.refDbFileId})`, url: "" },
           ];
       } else {
         this.form = {
@@ -392,113 +418,81 @@ export default {
           isActive: 1,
           refFaFileId: null,
           refGtfFileId: null,
+          refDbFileId: null,
         };
       }
       this.dialogVisible = true;
-      this.$nextTick(() => {
-        this.$refs.form?.clearValidate();
-      });
     },
-
-    // 物理拦截判断，去除花哨的提示语
     handleBeforeUpload(file) {
-      const isLt20M = file.size / 1024 / 1024 < 20;
-      if (!isLt20M) {
-        this.$message.error("文件大小不能超过 20MB");
-      }
-      return isLt20M;
+      const isLt1500M = file.size / 1024 / 1024 < 1536;
+      if (!isLt1500M) this.$message.error("文件不能超过 1.5GB");
+      return isLt1500M;
     },
-
-    // 🌟 自定义上传 参考基因组
     async uploadFaFile(options) {
-      const { file, onProgress, onSuccess, onError } = options;
+      const res = await this.performUpload(options.file);
+      if (res) {
+        this.form.refFaFileId = res;
+        options.onSuccess();
+      } else options.onError();
+    },
+    async uploadGtfFile(options) {
+      const res = await this.performUpload(options.file);
+      if (res) {
+        this.form.refGtfFileId = res;
+        options.onSuccess();
+      } else options.onError();
+    },
+    async uploadDbFile(options) {
+      this.dbUploading = true;
+      const res = await this.performUpload(options.file, (event) => {
+        this.dbProgress = Math.round((event.loaded * 100) / event.total);
+      });
+      if (res) {
+        this.form.refDbFileId = res;
+        options.onSuccess();
+      } else options.onError();
+      this.dbUploading = false;
+    },
+    async performUpload(file, onProgress) {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("userId", this.userId);
-
       try {
-        const res = await uploadSingleFile(formData, (progressEvent) => {
-          let percent = Math.round(
-            (progressEvent.loaded * 100) / progressEvent.total,
-          );
-          onProgress({ percent });
-        });
-
+        const res = await uploadSingleFile(formData, onProgress);
         const resultData = res.data || res;
-        if (res.code === 200 || resultData.id) {
-          this.form.refFaFileId = resultData.fileId || resultData;
-          this.$message.success("参考基因组上传成功");
-          onSuccess(resultData, file);
-        } else {
-          throw new Error("上传异常");
-        }
+        this.$message.success("上传成功");
+        return resultData.fileId || resultData;
       } catch (error) {
-        this.$message.error("上传失败，请重试");
-        this.faFileList = [];
-        onError(error);
+        this.$message.error("上传失败");
+        return null;
       }
     },
-
     handleFaRemove() {
       this.form.refFaFileId = null;
     },
-
-    // 🌟 自定义上传 注释文件
-    async uploadGtfFile(options) {
-      const { file, onProgress, onSuccess, onError } = options;
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("userId", this.userId);
-
-      try {
-        const res = await uploadSingleFile(formData, (progressEvent) => {
-          let percent = Math.round(
-            (progressEvent.loaded * 100) / progressEvent.total,
-          );
-          onProgress({ percent });
-        });
-
-        const resultData = res.data || res;
-        if (res.code === 200 || resultData.id) {
-          this.form.refGtfFileId = resultData.fileId || resultData;
-          this.$message.success("注释文件上传成功");
-          onSuccess(resultData, file);
-        } else {
-          throw new Error("上传异常");
-        }
-      } catch (error) {
-        this.$message.error("上传失败，请重试");
-        this.gtfFileList = [];
-        onError(error);
-      }
-    },
-
     handleGtfRemove() {
       this.form.refGtfFileId = null;
     },
-
+    handleDbRemove() {
+      this.form.refDbFileId = null;
+    },
     submitForm() {
       this.$refs.form.validate(async (valid) => {
         if (!valid) return;
         this.submitLoading = true;
         try {
-          if (this.dialogType === "add") {
-            await createPipeline(this.form);
-            this.$message.success("保存成功");
-          } else {
-            await updatePipeline(this.form);
-            this.$message.success("更新成功");
-          }
+          if (this.dialogType === "add") await createPipeline(this.form);
+          else await updatePipeline(this.form);
+          this.$message.success("操作成功");
           this.dialogVisible = false;
           this.fetchData();
         } catch (error) {
-          this.$message.error(error.response?.data?.message || "操作失败");
+          this.$message.error("操作失败");
         } finally {
           this.submitLoading = false;
         }
       });
     },
-
     async handleDelete(row) {
       try {
         await this.$confirm(`确定删除流程 "${row.name}" 吗？`, "确认", {
@@ -519,6 +513,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+/* 局部样式：针对组件内部 */
 .pipeline-library {
   min-height: calc(100vh - 60px);
   background-color: #0b0f19;
@@ -594,7 +589,7 @@ export default {
   padding: 24px;
   display: flex;
   flex-direction: column;
-  transition: all 0.3s;
+  transition: 0.3s;
   &:hover {
     transform: translateY(-4px);
     box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.5);
@@ -705,7 +700,20 @@ export default {
   color: #ef4444 !important;
 }
 
-/* 🌟 表单元素精简版样式 */
+/* 微生物组上传容器样式 */
+.db-upload-container {
+  background: rgba(30, 41, 59, 0.4);
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px dashed #334155;
+  .db-tip {
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 10px;
+    line-height: 1.4;
+  }
+}
+
 ::v-deep .bio-dark-form {
   .el-form-item__label {
     color: #94a3b8;
@@ -728,7 +736,6 @@ export default {
     color: #64748b;
     border-color: #1e293b;
   }
-
   .compact-uploader {
     .el-upload {
       text-align: left;
@@ -754,6 +761,7 @@ export default {
 </style>
 
 <style>
+/* 🌟 全局样式：必须放在这里才能覆盖 append-to-body 的弹窗和下拉 */
 .bio-dark-dropdown,
 .bio-dark-select-dropdown {
   background-color: #1e293b !important;
@@ -769,6 +777,8 @@ export default {
   background-color: #0f172a !important;
   color: #f8fafc !important;
 }
+
+/* 🌟 核心：这里决定了弹窗的背景颜色 */
 .bio-dark-dialog {
   background-color: #0f172a !important;
   border: 1px solid #1e293b;

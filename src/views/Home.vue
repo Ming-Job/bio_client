@@ -2,7 +2,7 @@
   <main>
     <Carousel />
     <FeatureCards />
-    <NewsSection />
+    <LatestCases />
     <ResourceGrid />
   </main>
 </template>
@@ -10,7 +10,7 @@
 <script>
 import Carousel from "@/components/home/Carousel.vue";
 import FeatureCards from "@/components/home/FeatureCards.vue";
-import NewsSection from "@/components/home/NewsSection.vue";
+import LatestCases from "@/components/home/LatestCases.vue";
 import ResourceGrid from "@/components/home/ResourceGrid.vue";
 
 export default {
@@ -18,7 +18,7 @@ export default {
   components: {
     Carousel,
     FeatureCards,
-    NewsSection,
+    LatestCases,
     ResourceGrid,
   },
 };
