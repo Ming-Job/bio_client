@@ -21,6 +21,21 @@ export function getCaseDetail(id) {
   })
 }
 
+// ==================== 🌟 新增：数据集物理下载 API ====================
+
+/**
+ * 下载案例绑定的数据集压缩包 (.rar / .zip)
+ * @param {String} fileName 数据库里存的文件名 (例如: gwas_case_data.rar)
+ */
+export function downloadCaseData(fileName) {
+  return request({
+    url: '/api/admin/cases/download-dataset',
+    method: 'get',
+    params: { fileName: fileName },
+    responseType: 'blob' // ⚠️ 极其关键：必须告诉 Axios 接收二进制文件流，否则下载的压缩包必定损坏！
+  })
+}
+
 // ==================== 管理员案例管理 API ====================
 
 export function getAdminCasePage(params) {

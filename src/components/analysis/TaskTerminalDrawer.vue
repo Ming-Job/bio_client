@@ -180,6 +180,47 @@
               ></div>
             </div>
           </template>
+
+          <template v-else-if="isMicrobiomeTask">
+            <h4 class="section-title" style="margin-top: 24px; font-size: 16px">
+              <i class="el-icon-s-data" style="color: #10b981"></i>
+              16S 物种组成丰度图 (Taxa Relative Abundance)
+            </h4>
+            <div
+              class="chart-wrapper"
+              v-loading="chartLoading"
+              element-loading-background="rgba(15, 23, 42, 0.8)"
+            >
+              <div
+                v-if="hasTaxaData === false && !chartLoading"
+                style="text-align: center; color: #64748b; padding: 40px 0"
+              >
+                <i
+                  class="el-icon-warning-outline"
+                  style="font-size: 30px; margin-bottom: 10px"
+                ></i>
+                <p>未提取到有效的物种丰度数据</p>
+                <p style="font-size: 12px; margin-top: 8px">
+                  (提示：需后端解析物种分类矩阵供 Echarts 渲染)
+                </p>
+                <el-button
+                  type="primary"
+                  size="small"
+                  plain
+                  style="margin-top: 15px"
+                  @click="downloadQzv"
+                >
+                  下载 .qzv 在线查看
+                </el-button>
+              </div>
+              <div
+                v-show="hasTaxaData"
+                ref="taxaChart"
+                class="echarts-container"
+                style="height: 450px"
+              ></div>
+            </div>
+          </template>
         </div>
       </div>
     </el-drawer>
@@ -233,7 +274,9 @@ export default {
       activeUserId: null,
 
       chartInstance: null,
-      hasVolcanoData: null, // 标记是否有火山图数据
+      hasVolcanoData: null,
+      // 🌟 新增标记：是否有 16S 丰度图数据
+      hasTaxaData: null,
     };
   },
   computed: {
@@ -242,7 +285,6 @@ export default {
       const name = (this.task.taskName || this.task.name || "").toUpperCase();
       return name.includes("GWAS") || name.includes("变异关联");
     },
-    // 🌟 新增判断：是否为 RNA 转录组任务
     isRnaTask() {
       if (!this.task) return false;
       const name = (this.task.taskName || this.task.name || "").toUpperCase();
@@ -250,6 +292,17 @@ export default {
         name.includes("RNA") ||
         name.includes("转录组") ||
         name.includes("DESEQ2")
+      );
+    },
+    // 🌟 新增判断：是否为 16S 任务
+    isMicrobiomeTask() {
+      if (!this.task) return false;
+      const name = (this.task.taskName || this.task.name || "").toUpperCase();
+      return (
+        name.includes("16S") ||
+        name.includes("微生物") ||
+        name.includes("MICROBIOME") ||
+        name.includes("扩增子")
       );
     },
   },
@@ -269,6 +322,7 @@ export default {
       this.logs = [];
       this.resultFiles = [];
       this.hasVolcanoData = null;
+      this.hasTaxaData = null; // 重置状态
       this.disposeChart();
 
       await this.fetchDetails();
@@ -311,8 +365,10 @@ export default {
 
             if (this.task.status === "COMPLETED") {
               if (this.isRnaTask && !this.chartInstance) {
-                // 如果是 RNA-Seq 端到端，去拉取 DESeq2 结果画火山图
                 this.fetchVolcanoData();
+              } else if (this.isMicrobiomeTask && !this.chartInstance) {
+                // 🌟 如果是 16S 任务，自动拉取后端解析的物种丰度数据
+                this.fetchTaxaData();
               }
             }
           }
@@ -323,17 +379,18 @@ export default {
       }
     },
 
-    // 🌟 新增：拉取 DESeq2 火山图数据
+    // ==========================================
+    // 🌟 RNA-Seq 火山图渲染区 (保持原样)
+    // ==========================================
     async fetchVolcanoData() {
       this.chartLoading = true;
       try {
-        // 利用巧妙的复用机制：controlId 和 treatId 都传当前的 taskId
         const res = await axios.get(`/api/analysis/tasks/diff/result`, {
           params: { controlId: this.activeTaskId, treatId: this.activeTaskId },
           headers: { userId: this.activeUserId },
         });
 
-        const diffData = res.data?.data || res.data; // 兼容不同的 axios 拦截器封装
+        const diffData = res.data?.data || res.data;
         if (diffData && diffData.length > 0) {
           this.hasVolcanoData = true;
           this.$nextTick(() => {
@@ -350,28 +407,20 @@ export default {
       }
     },
 
-    // 🌟 新增：渲染防弹版 Echarts 火山图
     renderVolcanoPlot(data) {
       if (!this.$refs.volcanoChart) return;
       this.chartInstance = echarts.init(this.$refs.volcanoChart);
 
-      // 🌟 修正后的解析逻辑（防弹版）
       const scatterData = data.map((item) => {
-        // 1. 自动适配大小写：先找 pvalue(小写)，找不到再找 pValue(大写)
         let rawP = item.pvalue !== undefined ? item.pvalue : item.pValue || 1.0;
         let pVal = parseFloat(rawP);
-
-        // 2. 这里的 log2FoldChange 看起来是对的，但也建议给个 0 兜底
         const x = parseFloat(item.log2FoldChange || 0);
-
-        // 3. 极端值处理：防止 P=0 导致计算出 Infinity 导致 Echarts 崩溃
         if (pVal <= 0) pVal = 1e-300;
         const y = -Math.log10(pVal);
 
-        // 4. 这里的判断逻辑也需要用刚才拿到的 pVal
         let category = 0;
-        if (x >= 1.0 && pVal <= 0.05) category = 1; // 显著上调（红）
-        else if (x <= -1.0 && pVal <= 0.05) category = 2; // 显著下调（蓝）
+        if (x >= 1.0 && pVal <= 0.05) category = 1;
+        else if (x <= -1.0 && pVal <= 0.05) category = 2;
 
         return [x, y, item.geneId || "Unknown", category];
       });
@@ -413,14 +462,14 @@ export default {
         series: [
           {
             type: "scatter",
-            symbolSize: 6, // 调整点的大小适应大屏
+            symbolSize: 6,
             data: scatterData,
             itemStyle: {
               color: function (params) {
                 const category = params.data[3];
-                if (category === 1) return "#ef4444"; // 红色上调
-                if (category === 2) return "#3b82f6"; // 蓝色下调
-                return "#64748b"; // 灰色不显著
+                if (category === 1) return "#ef4444";
+                if (category === 2) return "#3b82f6";
+                return "#64748b";
               },
             },
             markLine: {
@@ -456,7 +505,7 @@ export default {
                     position: "insideEndTop",
                     color: "#f8fafc",
                   },
-                }, // -log10(0.05) ≈ 1.301
+                },
               ],
             },
           },
@@ -469,13 +518,137 @@ export default {
       }, 300);
     },
 
+    // ==========================================
+    // 🌟 新增：16S 堆叠柱状图渲染区
+    // ==========================================
+    async fetchTaxaData() {
+      this.chartLoading = true;
+      try {
+        // 调用后端专门提供用于读取解析 CSV 文件并返回 Echarts JSON 的接口
+        const res = await axios.get(`/api/analysis/tasks/taxa/result`, {
+          params: { taskId: this.activeTaskId },
+          headers: { userId: this.activeUserId },
+        });
+
+        const taxaData = res.data?.data || res.data;
+        if (taxaData && taxaData.samples && taxaData.samples.length > 0) {
+          this.hasTaxaData = true;
+          this.$nextTick(() => {
+            this.renderTaxaPlot(taxaData);
+          });
+        } else {
+          this.hasTaxaData = false;
+        }
+      } catch (error) {
+        console.error("拉取物种丰度图数据失败:", error);
+        this.hasTaxaData = false;
+      } finally {
+        this.chartLoading = false;
+      }
+    },
+
+    renderTaxaPlot(data) {
+      if (!this.$refs.taxaChart) return;
+      this.chartInstance = echarts.init(this.$refs.taxaChart);
+
+      const seriesData = data.series.map((item) => {
+        return {
+          name: item.name,
+          type: "bar",
+          stack: "total", // 核心：开启堆叠模式
+          emphasis: { focus: "series" },
+          data: item.data,
+        };
+      });
+
+      const option = {
+        backgroundColor: "transparent",
+        tooltip: {
+          trigger: "axis",
+          axisPointer: { type: "shadow" },
+          backgroundColor: "rgba(15, 23, 42, 0.9)",
+          borderColor: "#334155",
+          textStyle: { color: "#f8fafc" },
+          // 悬浮提示：过滤掉数值为0的物种，让提示框更清爽
+          formatter: function (params) {
+            let tooltipHtml = `<b>${params[0].axisValue}</b><br/>`;
+            // 按数值从大到小排个序展示
+            let sortedParams = params.sort((a, b) => b.value - a.value);
+            sortedParams.forEach((p) => {
+              if (p.value > 0) {
+                tooltipHtml += `${p.marker} ${p.seriesName}: ${(
+                  p.value * 100
+                ).toFixed(2)}%<br/>`;
+              }
+            });
+            return tooltipHtml;
+          },
+        },
+        legend: {
+          type: "scroll",
+          orient: "vertical",
+          right: "0%", // 🌟 死死贴住最右侧
+          top: 20,
+          bottom: 20,
+          textStyle: { color: "#94a3b8", fontSize: 11 },
+          pageTextStyle: { color: "#f8fafc" },
+          pageIconColor: "#3b82f6",
+        },
+        grid: {
+          left: "5%",
+          right: "40%", // 🌟 核心修改：把画板主体往左边疯狂挤，给图例留出 40% 的黄金地段！
+          bottom: "15%", // 🌟 底部留出 15% 的高度，防止两行的 X 轴文字被裁切
+          top: "5%",
+          containLabel: true,
+        },
+        xAxis: {
+          type: "category",
+          data: data.samples,
+          axisLabel: {
+            color: "#94a3b8",
+            interval: 0,
+            rotate: 25, // 微微倾斜 25 度最优雅
+            align: "center", // 让样本名和分组名居中对齐
+          },
+          axisLine: { lineStyle: { color: "#334155" } },
+        },
+        yAxis: {
+          type: "value",
+          name: "相对丰度 (Relative Abundance)",
+          nameTextStyle: { color: "#94a3b8" },
+          axisLabel: { color: "#94a3b8" },
+          splitLine: { lineStyle: { color: "#1e293b", type: "dashed" } },
+          max: 1.0, // 丰度图通常封顶为 1
+        },
+        series: seriesData,
+      };
+
+      this.chartInstance.setOption(option);
+      setTimeout(() => {
+        if (this.chartInstance) this.chartInstance.resize();
+      }, 300);
+    },
+
+    // 辅助功能：如果没取到数据，提供兜底方案下载 QZV 去官方网站看
+    downloadQzv() {
+      const qzvFile = this.resultFiles.find((f) => f.name.endsWith(".qzv"));
+      if (qzvFile) {
+        this.downloadFile(qzvFile);
+        this.$message.info("下载后，请前往 view.qiime2.org 拖拽查看可视化结果");
+      } else {
+        this.$message.error("未找到 .qzv 产出物文件");
+      }
+    },
+
+    // ==========================================
+    // 🌟 通用生命周期与控制逻辑
+    // ==========================================
     disposeChart() {
       if (this.chartInstance) {
         this.chartInstance.dispose();
         this.chartInstance = null;
       }
     },
-
     startPolling() {
       this.stopPolling();
       this.pollingTimer = setInterval(() => {

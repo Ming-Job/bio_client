@@ -2,26 +2,13 @@
   <div class="resource-section">
     <div class="container">
       <div class="section-header-center">
-        <h2 class="section-title">内置资源矩阵</h2>
-        <p class="section-subtitle">Datasets & Pipelines</p>
-      </div>
-
-      <div class="tabs">
-        <el-tabs v-model="activeTab">
-          <el-tab-pane
-            label="演示数据集 (Datasets)"
-            name="datasets"
-          ></el-tab-pane>
-          <el-tab-pane
-            label="标准分析流 (Pipelines)"
-            name="pipelines"
-          ></el-tab-pane>
-        </el-tabs>
+        <h2 class="section-title">核心分析引擎</h2>
+        <p class="section-subtitle">Standard Pipelines & Copilot</p>
       </div>
 
       <div class="resource-grid">
         <div
-          v-for="(resource, index) in resources[activeTab]"
+          v-for="(resource, index) in pipelines"
           :key="index"
           class="resource-item"
         >
@@ -33,9 +20,7 @@
             <p>{{ resource.description }}</p>
             <div class="resource-meta">
               <span><i class="el-icon-collection-tag"></i> 系统内置</span>
-              <span
-                ><i class="el-icon-document"></i> {{ resource.format }}</span
-              >
+              <span><i class="el-icon-cpu"></i> {{ resource.format }}</span>
             </div>
             <el-button
               type="primary"
@@ -58,58 +43,36 @@ export default {
   name: "ResourceGrid",
   data() {
     return {
-      activeTab: "datasets",
-      resources: {
-        datasets: [
-          {
-            title: "RNA-Seq 质控对照样本",
-            description:
-              "包含原始测序片段的 FASTQ 样本数据，用于 RNA-Seq 上游分析流程的运行测试。",
-            icon: "el-icon-document",
-            format: "FASTQ 格式",
-            link: "/analysis/new",
-            btnText: "去运行上游分析",
-          },
-          {
-            title: "标准基因表达矩阵",
-            description:
-              "经过上游定量生成的 Count/TPM 表达矩阵，用于差异表达分析 (Differential Expression)。",
-            icon: "el-icon-data-analysis",
-            format: "CSV/TXT 矩阵",
-            link: "/analysis/diff",
-            btnText: "去运行差异分析",
-          },
-          {
-            title: "大分子三维结构文件",
-            description:
-              "支持 PDB / SDF / MOL2 等格式，用于在工作台进行 360 度交互式渲染预览。",
-            icon: "el-icon-view",
-            format: "空间坐标数据",
-            link: "/analysis",
-            btnText: "去工作台预览",
-          },
-        ],
-        pipelines: [
-          {
-            title: "RNA-Seq 上游分析标准流",
-            description:
-              "整合质控与序列比对的标准流水线，将测序文件自动化处理为可用的表达矩阵。",
-            icon: "el-icon-video-play",
-            format: "自动化流水线",
-            link: "/analysis/new",
-            btnText: "载入分析流",
-          },
-          {
-            title: "差异表达基因 (DEG) 分析",
-            description:
-              "针对表达量矩阵进行组间差异基因计算，产出标准的上下调统计数据与绘图基础。",
-            icon: "el-icon-s-data",
-            format: "统计算法",
-            link: "/analysis/diff",
-            btnText: "载入分析流",
-          },
-        ],
-      },
+      // 直接砍掉 tabs，只保留真实跑得通的四大核心流水线
+      pipelines: [
+        {
+          title: "RNA-Seq 端到端全流程",
+          description:
+            "自动化串联 fastp 清洗、HISAT2 比对与特征定量。后台 Docker 沙盒动态生成脚本，无缝衔接多样本 DESeq2 计算。",
+          icon: "el-icon-set-up",
+          format: "Shell / Python",
+          link: "/analysis/new",
+          btnText: "载入分析流",
+        },
+        {
+          title: "全基因组关联分析 (E2E GWAS)",
+          description:
+            "整合 GATK4 单样本处理、多样本联合 Calling (GVCF) 与 PLINK 质控，采用 vcf2gwas (LMM 模型) 极速生成曼哈顿图矩阵。",
+          icon: "el-icon-cpu",
+          format: "GATK4 / LMM",
+          link: "/analysis/new",
+          btnText: "载入分析流",
+        },
+        {
+          title: "16S 扩增子物种多样性分析",
+          description:
+            "基于 QIIME2 与 VSEARCH 双核引擎，自动执行双端拼接、去嵌合体、OTU 聚类 (97%) 与 Silva 数据库物种注释。",
+          icon: "el-icon-data-analysis",
+          format: "QIIME2 / VSEARCH",
+          link: "/analysis/new",
+          btnText: "载入分析流",
+        },
+      ],
     };
   },
 };
@@ -141,15 +104,6 @@ export default {
   margin: 0;
   text-transform: uppercase;
   letter-spacing: 1px;
-}
-.tabs {
-  margin-bottom: 30px;
-}
-::v-deep .el-tabs__item {
-  font-size: 16px;
-  font-weight: 500;
-  height: 50px;
-  line-height: 50px;
 }
 
 .resource-grid {
@@ -203,7 +157,7 @@ export default {
   font-size: 0.9rem;
   margin-bottom: 16px;
   line-height: 1.6;
-  min-height: 60px;
+  min-height: 80px;
 }
 .resource-meta {
   display: flex;

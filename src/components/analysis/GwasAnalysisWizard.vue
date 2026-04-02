@@ -18,7 +18,6 @@
           finish-status="success"
         >
           <el-step title="配置数据" description="参考、测序与表型"></el-step>
-          <el-step title="参数过滤" description="设置统计质控阈值"></el-step>
           <el-step title="启动执行" description="任务概览"></el-step>
         </el-steps>
       </div>
@@ -156,39 +155,6 @@
         </div>
 
         <div v-show="currentStep === 1" class="step-panel">
-          <h3 class="panel-title">步骤 2: PLINK 质控参数</h3>
-          <el-form label-position="top">
-            <el-row :gutter="20">
-              <el-col :span="12">
-                <el-form-item label="最小等位基因频率 (MAF)">
-                  <el-input-number
-                    v-model="params.maf"
-                    :precision="3"
-                    :step="0.01"
-                    :min="0"
-                    :max="0.5"
-                    style="width: 100%"
-                  ></el-input-number>
-                </el-form-item>
-              </el-col>
-              <el-col :span="12">
-                <el-form-item label="哈代-温伯格平衡 (HWE)">
-                  <el-input v-model="params.hwe" placeholder="1e-6"></el-input>
-                </el-form-item>
-              </el-col>
-            </el-row>
-            <el-form-item label="计算资源分配 (Threads)">
-              <el-slider
-                v-model="params.threads"
-                :min="1"
-                :max="16"
-                show-stops
-              ></el-slider>
-            </el-form-item>
-          </el-form>
-        </div>
-
-        <div v-show="currentStep === 2" class="step-panel">
           <div class="launch-summary">
             <div class="check-icon-large">
               <i class="el-icon-document-checked"></i>
@@ -218,10 +184,8 @@
                 }}</span>
               </div>
               <div class="summary-item">
-                <span class="label">质控标准:</span
-                ><span class="value"
-                  >MAF:{{ params.maf }} / HWE:{{ params.hwe }}</span
-                >
+                <span class="label">执行策略:</span>
+                <span class="value">GATK4 + PLINK + LMM 智能全自动执行</span>
               </div>
             </div>
           </div>
@@ -237,7 +201,7 @@
           <el-button
             type="primary"
             @click="handleNext"
-            v-if="currentStep < 2"
+            v-if="currentStep < 1"
             :disabled="!canProceedNext"
             class="dark-btn-submit"
           >
@@ -246,7 +210,7 @@
           <el-button
             type="success"
             @click="submitTask"
-            v-if="currentStep === 2"
+            v-if="currentStep === 1"
             :loading="submitting"
             class="dark-btn-launch"
           >
@@ -268,23 +232,21 @@ export default {
   name: "GwasAnalysisWizard",
   data() {
     return {
-      currentStep: 0,
-      subStep: 0, // 0: 参考(.fa), 1: 测序(.fq), 2: 表型(.txt)
+      currentStep: 0, // 🌟 现在的上限是 1 (0: 数据, 1: 确认)
+      subStep: 0,
       projectId: null,
       pipelineId: null,
       pipeline: null,
       myFiles: [],
       projectList: [],
 
-      // 阶段状态记录
-      selectedId: null, // 用于阶段0和2的单选绑定
-      refFile: null, // 阶段0：选中的参考基因组
-      tempSelectedFq: [], // 阶段1：实时勾选的FQ
-      fqFiles: [], // 阶段1：确认选中的FQ集合
-      phenoFile: null, // 阶段2：选中的表型
+      selectedId: null,
+      refFile: null,
+      tempSelectedFq: [],
+      fqFiles: [],
+      phenoFile: null,
 
       submitting: false,
-      params: { threads: 4, maf: 0.05, hwe: "1e-6" },
     };
   },
   computed: {
@@ -324,11 +286,10 @@ export default {
       if (this.currentStep === 0) {
         if (this.subStep === 0) return "选好参考，去选测序数据";
         if (this.subStep === 1) return "测序完毕，去选表型";
-        if (this.subStep === 2) return "确认数据，进入质控配置";
+        if (this.subStep === 2) return "确认数据，进入任务概览"; // 🌟 修改提示文案
       }
       return "下一步";
     },
-    // 🌟 核心过滤逻辑：实事求是地根据当前阶段后缀进行严格筛选
     filteredFiles() {
       return this.myFiles.filter((f) => {
         const isProjectMatch = String(f.projectId) === String(this.projectId);
@@ -414,14 +375,12 @@ export default {
         this.$message.error("数据加载失败");
       }
     },
-    // 🌟 核心新增：一键全选当前过滤出的所有 FastQ 文件
     selectAllFiles() {
       this.$refs.fileTable.clearSelection();
       this.filteredFiles.forEach((row) => {
         this.$refs.fileTable.toggleRowSelection(row, true);
       });
     },
-    // 🌟 核心新增：一键清空选中
     clearSelection() {
       this.$refs.fileTable.clearSelection();
     },
@@ -453,10 +412,8 @@ export default {
           this.selectedId = this.phenoFile ? this.phenoFile.id : null;
         } else if (this.subStep === 2) {
           this.phenoFile = this.myFiles.find((f) => f.id === this.selectedId);
-          this.currentStep = 1;
+          this.currentStep = 1; // 🌟 选完表型，直接跳到步骤 1 (任务概览)
         }
-      } else {
-        this.currentStep++;
       }
     },
     handlePrev() {
@@ -473,8 +430,9 @@ export default {
           this.subStep = 0;
           this.selectedId = this.refFile ? this.refFile.id : null;
         }
-      } else if (this.currentStep > 0) {
-        this.currentStep--;
+      } else if (this.currentStep === 1) {
+        this.currentStep = 0; // 🌟 从概览退回时，回到数据配置的第 3 小步 (选表型)
+        this.subStep = 2;
       }
     },
     async submitTask() {
@@ -489,12 +447,14 @@ export default {
         projectId: Number(this.projectId),
         pipelineId: Number(this.pipelineId),
         fileIds: allFileIds,
-        params: JSON.stringify(this.params),
+        // 🌟 发送一个空的 params 或者保留系统默认配置，防止后端 JSON 解析报 Null 指针
+        params: JSON.stringify({ mode: "auto_e2e" }),
       };
+
       try {
         const res = await submitAnalysisTask(payload, this.userId || 6);
-        if (res.code === 200) {
-          this.$message.success("端到端分析流水线已点火启动");
+        if (res.code === 200 || res.status === 200) {
+          this.$message.success("端到端 GWAS 分析流水线已全自动点火启动！");
           this.$router.push("/analysis/tasks");
         }
       } catch (e) {
@@ -507,6 +467,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+/* 样式部分完全保持你原来的暗黑极客风，一行没动 */
 .new-analysis-container {
   min-height: calc(100vh - 60px);
   background-color: #0b0f19;
@@ -630,7 +591,6 @@ export default {
   }
 }
 
-/* 🌟 新增：工具栏样式 */
 .table-toolbar {
   display: flex;
   justify-content: space-between;

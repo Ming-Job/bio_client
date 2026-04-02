@@ -59,9 +59,9 @@
             {{ tpl.name }}
           </h3>
           <el-dropdown trigger="click" @command="handleCommand($event, tpl)">
-            <span class="el-dropdown-link">
-              <i class="el-icon-more el-icon--right action-icon"></i>
-            </span>
+            <span class="el-dropdown-link"
+              ><i class="el-icon-more el-icon--right action-icon"></i
+            ></span>
             <el-dropdown-menu slot="dropdown" class="bio-dark-dropdown">
               <el-dropdown-item command="edit" icon="el-icon-edit"
                 >编辑配置</el-dropdown-item
@@ -109,7 +109,7 @@
     <el-dialog
       :title="dialogType === 'add' ? '新建分析流程' : '编辑分析流程'"
       :visible.sync="dialogVisible"
-      width="600px"
+      width="650px"
       custom-class="bio-dark-dialog"
       :close-on-click-modal="false"
     >
@@ -217,39 +217,77 @@
         </el-row>
 
         <el-row :gutter="20" v-if="form.category === 'microbiome'">
-          <el-col :span="24">
-            <el-form-item label="物种注释分类器数据库">
+          <el-col :span="12">
+            <el-form-item label="1. 参考序列库 (.qza)">
               <div class="db-upload-container">
                 <el-upload
                   class="compact-uploader"
                   action="#"
-                  :http-request="uploadDbFile"
-                  :on-remove="handleDbRemove"
+                  :http-request="uploadSeqsFile"
+                  :on-remove="handleSeqsRemove"
                   :before-upload="handleBeforeUpload"
-                  :file-list="dbFileList"
+                  :file-list="seqsFileList"
                   :limit="1"
-                  :disabled="dbUploading"
+                  :disabled="seqsUploading"
                   accept=".qza"
                 >
                   <el-button
                     size="small"
                     type="primary"
                     plain
-                    :loading="dbUploading"
+                    :loading="seqsUploading"
                     icon="el-icon-collection"
                   >
-                    {{ dbUploading ? "上传中..." : "上传 注释分类器数据库" }}
+                    {{ seqsUploading ? "上传中..." : "上传 Seq 文件" }}
                   </el-button>
                 </el-upload>
-                <div v-if="dbUploading" style="margin-top: 10px">
+                <div v-if="seqsUploading" style="margin-top: 10px">
                   <el-progress
-                    :percentage="dbProgress"
+                    :percentage="seqsProgress"
                     :stroke-width="8"
                     color="#3b82f6"
                   ></el-progress>
                 </div>
-                <div v-if="!dbUploading" class="db-tip">
-                  提示：支持 .qza 格式
+                <div v-if="!seqsUploading" class="db-tip">
+                  提示：文件名应含 seq 字符
+                </div>
+              </div>
+            </el-form-item>
+          </el-col>
+
+          <el-col :span="12">
+            <el-form-item label="2. 参考物种层级库 (.qza)">
+              <div class="db-upload-container">
+                <el-upload
+                  class="compact-uploader"
+                  action="#"
+                  :http-request="uploadTaxFile"
+                  :on-remove="handleTaxRemove"
+                  :before-upload="handleBeforeUpload"
+                  :file-list="taxFileList"
+                  :limit="1"
+                  :disabled="taxUploading"
+                  accept=".qza"
+                >
+                  <el-button
+                    size="small"
+                    type="primary"
+                    plain
+                    :loading="taxUploading"
+                    icon="el-icon-collection"
+                  >
+                    {{ taxUploading ? "上传中..." : "上传 Tax 文件" }}
+                  </el-button>
+                </el-upload>
+                <div v-if="taxUploading" style="margin-top: 10px">
+                  <el-progress
+                    :percentage="taxProgress"
+                    :stroke-width="8"
+                    color="#10b981"
+                  ></el-progress>
+                </div>
+                <div v-if="!taxUploading" class="db-tip">
+                  提示：文件名应含 tax 字符
                 </div>
               </div>
             </el-form-item>
@@ -303,8 +341,13 @@ export default {
       pipelines: [],
       dialogVisible: false,
       dialogType: "add",
-      dbUploading: false,
-      dbProgress: 0,
+
+      // 🌟 分离为两组状态
+      seqsUploading: false,
+      seqsProgress: 0,
+      taxUploading: false,
+      taxProgress: 0,
+
       form: {
         id: null,
         pipelineCode: "",
@@ -314,11 +357,14 @@ export default {
         isActive: 1,
         refFaFileId: null,
         refGtfFileId: null,
-        refDbFileId: null,
+        // 🌟 新增字段替代原来的 refDbFileId
+        refSeqsFileId: null,
+        refTaxFileId: null,
       },
       faFileList: [],
       gtfFileList: [],
-      dbFileList: [],
+      seqsFileList: [],
+      taxFileList: [],
       rules: {
         name: [{ required: true, message: "请输入流程名称", trigger: "blur" }],
         pipelineCode: [
@@ -391,9 +437,13 @@ export default {
       this.dialogType = type;
       this.faFileList = [];
       this.gtfFileList = [];
-      this.dbFileList = [];
-      this.dbProgress = 0;
-      this.dbUploading = false;
+      this.seqsFileList = [];
+      this.taxFileList = [];
+      this.seqsProgress = 0;
+      this.taxProgress = 0;
+      this.seqsUploading = false;
+      this.taxUploading = false;
+
       if (type === "edit" && row) {
         this.form = { ...row, isActive: row.isActive ? 1 : 0 };
         if (row.refFaFileId)
@@ -404,9 +454,14 @@ export default {
           this.gtfFileList = [
             { name: `已绑定注释文件 (ID: ${row.refGtfFileId})`, url: "" },
           ];
-        if (row.refDbFileId)
-          this.dbFileList = [
-            { name: `已绑定分类器 (ID: ${row.refDbFileId})`, url: "" },
+        // 🌟 编辑时回显两组数据库
+        if (row.refSeqsFileId)
+          this.seqsFileList = [
+            { name: `已绑定序列库 (ID: ${row.refSeqsFileId})`, url: "" },
+          ];
+        if (row.refTaxFileId)
+          this.taxFileList = [
+            { name: `已绑定层级库 (ID: ${row.refTaxFileId})`, url: "" },
           ];
       } else {
         this.form = {
@@ -418,7 +473,8 @@ export default {
           isActive: 1,
           refFaFileId: null,
           refGtfFileId: null,
-          refDbFileId: null,
+          refSeqsFileId: null,
+          refTaxFileId: null,
         };
       }
       this.dialogVisible = true;
@@ -427,31 +483,6 @@ export default {
       const isLt1500M = file.size / 1024 / 1024 < 1536;
       if (!isLt1500M) this.$message.error("文件不能超过 1.5GB");
       return isLt1500M;
-    },
-    async uploadFaFile(options) {
-      const res = await this.performUpload(options.file);
-      if (res) {
-        this.form.refFaFileId = res;
-        options.onSuccess();
-      } else options.onError();
-    },
-    async uploadGtfFile(options) {
-      const res = await this.performUpload(options.file);
-      if (res) {
-        this.form.refGtfFileId = res;
-        options.onSuccess();
-      } else options.onError();
-    },
-    async uploadDbFile(options) {
-      this.dbUploading = true;
-      const res = await this.performUpload(options.file, (event) => {
-        this.dbProgress = Math.round((event.loaded * 100) / event.total);
-      });
-      if (res) {
-        this.form.refDbFileId = res;
-        options.onSuccess();
-      } else options.onError();
-      this.dbUploading = false;
     },
     async performUpload(file, onProgress) {
       const formData = new FormData();
@@ -467,15 +498,57 @@ export default {
         return null;
       }
     },
+    async uploadFaFile(options) {
+      const res = await this.performUpload(options.file);
+      if (res) {
+        this.form.refFaFileId = res;
+        options.onSuccess();
+      } else options.onError();
+    },
+    async uploadGtfFile(options) {
+      const res = await this.performUpload(options.file);
+      if (res) {
+        this.form.refGtfFileId = res;
+        options.onSuccess();
+      } else options.onError();
+    },
+    // 🌟 处理 Seq 上传
+    async uploadSeqsFile(options) {
+      this.seqsUploading = true;
+      const res = await this.performUpload(options.file, (event) => {
+        this.seqsProgress = Math.round((event.loaded * 100) / event.total);
+      });
+      if (res) {
+        this.form.refSeqsFileId = res;
+        options.onSuccess();
+      } else options.onError();
+      this.seqsUploading = false;
+    },
+    // 🌟 处理 Tax 上传
+    async uploadTaxFile(options) {
+      this.taxUploading = true;
+      const res = await this.performUpload(options.file, (event) => {
+        this.taxProgress = Math.round((event.loaded * 100) / event.total);
+      });
+      if (res) {
+        this.form.refTaxFileId = res;
+        options.onSuccess();
+      } else options.onError();
+      this.taxUploading = false;
+    },
     handleFaRemove() {
       this.form.refFaFileId = null;
     },
     handleGtfRemove() {
       this.form.refGtfFileId = null;
     },
-    handleDbRemove() {
-      this.form.refDbFileId = null;
+    handleSeqsRemove() {
+      this.form.refSeqsFileId = null;
     },
+    handleTaxRemove() {
+      this.form.refTaxFileId = null;
+    },
+
     submitForm() {
       this.$refs.form.validate(async (valid) => {
         if (!valid) return;
@@ -513,7 +586,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-/* 局部样式：针对组件内部 */
+/* 你的样式完全保持不变，未做任何修改 */
 .pipeline-library {
   min-height: calc(100vh - 60px);
   background-color: #0b0f19;
@@ -699,8 +772,6 @@ export default {
 .text-danger {
   color: #ef4444 !important;
 }
-
-/* 微生物组上传容器样式 */
 .db-upload-container {
   background: rgba(30, 41, 59, 0.4);
   padding: 15px;
@@ -713,7 +784,6 @@ export default {
     line-height: 1.4;
   }
 }
-
 ::v-deep .bio-dark-form {
   .el-form-item__label {
     color: #94a3b8;
@@ -761,7 +831,6 @@ export default {
 </style>
 
 <style>
-/* 🌟 全局样式：必须放在这里才能覆盖 append-to-body 的弹窗和下拉 */
 .bio-dark-dropdown,
 .bio-dark-select-dropdown {
   background-color: #1e293b !important;
@@ -777,8 +846,6 @@ export default {
   background-color: #0f172a !important;
   color: #f8fafc !important;
 }
-
-/* 🌟 核心：这里决定了弹窗的背景颜色 */
 .bio-dark-dialog {
   background-color: #0f172a !important;
   border: 1px solid #1e293b;

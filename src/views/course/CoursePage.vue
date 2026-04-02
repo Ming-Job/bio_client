@@ -161,12 +161,6 @@
                   <h4 class="text-ellipsis" :title="course.title">
                     {{ course.title }}
                   </h4>
-                  <el-rate
-                    v-model="course.rating"
-                    disabled
-                    text-color="#ff9900"
-                    class="course-rating"
-                  />
                 </div>
 
                 <p class="course-description">{{ course.description }}</p>
@@ -249,35 +243,6 @@
               </div>
             </div>
           </div>
-
-          <div class="learning-paths">
-            <div class="section-header">
-              <h3 class="section-title">
-                <i class="el-icon-guide"></i> 推荐学习路径
-              </h3>
-            </div>
-
-            <div class="path-timeline">
-              <el-timeline>
-                <el-timeline-item
-                  v-for="(path, index) in learningPaths"
-                  :key="index"
-                  :color="path.color"
-                  :icon="path.icon"
-                  size="large"
-                  :timestamp="path.level"
-                >
-                  <div
-                    class="path-card"
-                    @click="handleSearchByTitle(path.keyword)"
-                  >
-                    <h4>{{ path.title }}</h4>
-                    <p>{{ path.desc }}</p>
-                  </div>
-                </el-timeline-item>
-              </el-timeline>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -304,7 +269,7 @@ export default {
   data() {
     return {
       loading: false,
-      // 查询参数对象   专门用来保存当前页面的所有检索状态
+      // 查询参数对象  专门用来保存当前页面的所有检索状态
       queryParams: {
         pageNum: 1, // 当前页码
         pageSize: 6, // 每页条数
@@ -314,32 +279,7 @@ export default {
       total: 0,
       courseList: [],
       recentProgress: [],
-      learningPaths: [
-        {
-          level: "Step 1",
-          title: "生信基础技能",
-          desc: "掌握 Linux 与 R 语言基础",
-          color: "#10b981", // 绿色，代表入门安全区
-          icon: "el-icon-monitor",
-          keyword: "基础",
-        },
-        {
-          level: "Step 2",
-          title: "转录组分析初探",
-          desc: "RNA-Seq 核心流程",
-          color: "#3b82f6", // 蓝色，进阶
-          icon: "el-icon-data-analysis",
-          keyword: "RNA",
-        },
-        {
-          level: "Step 3",
-          title: "单细胞多组学",
-          desc: "前沿测序与降维聚类",
-          color: "#8b5cf6", // 紫色，高级、前沿
-          icon: "el-icon-magic-stick",
-          keyword: "单细胞",
-        },
-      ],
+
       // 🌟 2. 存放 3D 相关的变量
       scene: null,
       camera: null,
@@ -1072,9 +1012,6 @@ export default {
           color: #2c3e50;
           line-height: 1.4;
         }
-        .course-rating {
-          margin-bottom: 8px;
-        }
       }
 
       .course-description {
@@ -1136,8 +1073,7 @@ export default {
 }
 
 /* 侧边栏通用区块样式 */
-.my-learning-progress,
-.learning-paths {
+.my-learning-progress {
   background: white;
   border-radius: 12px;
   padding: 24px;
@@ -1190,31 +1126,6 @@ export default {
     font-size: 13px;
     color: #95a5a6;
     padding: 20px 0;
-  }
-}
-
-/* 推荐路径时间轴 */
-.path-timeline {
-  padding-left: 4px;
-  .path-card {
-    background: #f8fafc;
-    padding: 12px 16px;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background 0.3s;
-    &:hover {
-      background: #e8f4fe;
-    }
-    h4 {
-      margin: 0 0 4px 0;
-      font-size: 14px;
-      color: #2c3e50;
-    }
-    p {
-      margin: 0;
-      font-size: 12px;
-      color: #7f8c8d;
-    }
   }
 }
 

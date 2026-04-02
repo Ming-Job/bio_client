@@ -65,6 +65,41 @@
           :index="indexMethod"
         ></el-table-column>
 
+        <el-table-column label="封面" width="110" align="center">
+          <template slot-scope="scope">
+            <el-image
+              style="
+                width: 80px;
+                height: 45px;
+                border-radius: 4px;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+              "
+              :src="getRealCoverUrl(scope.row.imageUrl)"
+              fit="cover"
+              :preview-src-list="
+                scope.row.imageUrl ? [getRealCoverUrl(scope.row.imageUrl)] : []
+              "
+            >
+              <div
+                slot="error"
+                class="image-slot"
+                style="
+                  display: flex;
+                  justify-content: center;
+                  align-items: center;
+                  width: 100%;
+                  height: 100%;
+                  background: #f5f7fa;
+                  color: #909399;
+                  font-size: 14px;
+                "
+              >
+                <i class="el-icon-picture-outline"></i>
+              </div>
+            </el-image>
+          </template>
+        </el-table-column>
+
         <el-table-column
           prop="title"
           label="案例名称"
@@ -191,7 +226,10 @@
                     label="三维洞察 (Structure)"
                     value="structure"
                   ></el-option>
-                  <el-option label=" (Copilot)" value="copilot"></el-option>
+                  <el-option
+                    label="极客副驾 (Copilot)"
+                    value="copilot"
+                  ></el-option>
                 </el-select>
               </el-form-item>
             </el-col>
@@ -207,12 +245,37 @@
                 </el-select>
               </el-form-item>
             </el-col>
+
             <el-col :span="14">
-              <el-form-item label="封面图片路径">
-                <el-input
-                  v-model="form.imageUrl"
-                  placeholder="如：/course/course1.jpg"
-                ></el-input>
+              <el-form-item label="案例封面">
+                <el-upload
+                  class="cover-uploader"
+                  action="javascript:void(0)"
+                  :show-file-list="false"
+                  :before-upload="beforeCoverUpload"
+                  :http-request="handleCoverUpload"
+                  :disabled="submitLoading || uploadingCover"
+                >
+                  <div class="cover-container">
+                    <img
+                      v-if="coverPreviewUrl"
+                      :src="coverPreviewUrl"
+                      class="cover-image"
+                    />
+                    <i v-else class="el-icon-plus cover-uploader-icon"></i>
+
+                    <div class="cover-tip" v-if="!uploadingCover">
+                      <i class="el-icon-camera"></i>
+                    </div>
+
+                    <div class="loading-cover" v-if="uploadingCover">
+                      <i class="el-icon-loading"></i>
+                    </div>
+                  </div>
+                  <div slot="tip" class="el-upload__tip hint-text">
+                    <i class="el-icon-info"></i> 支持 JPG/PNG，建议比例 16:9
+                  </div>
+                </el-upload>
               </el-form-item>
             </el-col>
           </el-row>
@@ -280,6 +343,9 @@
 
 <script>
 import { getAdminCasePage, addCase, updateCase, deleteCase } from "@/api/case";
+// 🌟 核心：直接复用课程的 API 接口！
+import { uploadCourseCover } from "@/api/course";
+import { mapGetters } from "vuex";
 
 export default {
   name: "CaseManagement",
@@ -290,8 +356,13 @@ export default {
       caseList: [],
       total: 0,
       queryParams: { pageNum: 1, pageSize: 10, searchKey: "", category: "" },
+
       dialogVisible: false,
       dialogTitle: "部署新案例",
+
+      coverPreviewUrl: "",
+      uploadingCover: false,
+
       form: {
         id: null,
         title: "",
@@ -317,6 +388,9 @@ export default {
       },
     };
   },
+  computed: {
+    ...mapGetters("user", ["userId"]),
+  },
   created() {
     this.fetchData();
   },
@@ -326,6 +400,14 @@ export default {
         (this.queryParams.pageNum - 1) * this.queryParams.pageSize + index + 1
       );
     },
+
+    getRealCoverUrl(path) {
+      if (!path) return "";
+      if (path.startsWith("http")) return path;
+      const baseUrl = process.env.VUE_APP_BASE_API || "http://localhost:8080";
+      return baseUrl + path;
+    },
+
     async fetchData() {
       this.loading = true;
       try {
@@ -365,6 +447,7 @@ export default {
       const map = { pipeline: "", structure: "success", copilot: "danger" };
       return map[cat] || "info";
     },
+
     handleAdd() {
       this.form = {
         id: null,
@@ -378,17 +461,63 @@ export default {
         tags: "",
         content: "",
       };
+      this.coverPreviewUrl = "";
       this.dialogTitle = "部署新案例算子";
       this.dialogVisible = true;
       this.$nextTick(() => {
         this.$refs.caseForm?.clearValidate();
       });
     },
+
     handleEdit(row) {
       this.form = { ...row };
+      this.coverPreviewUrl = this.getRealCoverUrl(row.imageUrl);
       this.dialogTitle = "调整案例引擎参数";
       this.dialogVisible = true;
     },
+
+    beforeCoverUpload(file) {
+      const isJPG = file.type === "image/jpeg" || file.type === "image/png";
+      const isLt5M = file.size / 1024 / 1024 < 5;
+
+      if (!isJPG) {
+        this.$message.error("封面图片仅支持 JPG/PNG 格式");
+        return false;
+      }
+      if (!isLt5M) {
+        this.$message.error("封面图片大小限 5MB 以内");
+        return false;
+      }
+      return true;
+    },
+
+    // 🌟 核心：直接调用已有的课程上传 API
+    handleCoverUpload(options) {
+      const file = options.file;
+      this.uploadingCover = true;
+
+      const formData = new FormData();
+      // 后端只认名为 cover 的参数
+      formData.append("cover", file);
+
+      // 直接调用课程的 API，完全复用
+      uploadCourseCover(formData)
+        .then((response) => {
+          // 适配后端的 Result 统一返回体： { code: 200, message: "上传成功", data: "..." }
+          if (response.code === 200) {
+            this.form.imageUrl = response.data;
+            this.coverPreviewUrl = this.getRealCoverUrl(response.data);
+            this.$message.success("封面上传成功");
+          } else {
+            this.$message.error(response.message || "封面上传失败");
+          }
+        })
+        .catch(() => this.$message.error("网络卡顿，封面上传中断"))
+        .finally(() => {
+          this.uploadingCover = false;
+        });
+    },
+
     async submitForm() {
       this.$refs.caseForm.validate(async (valid) => {
         if (!valid) return;
@@ -461,11 +590,6 @@ export default {
   font-weight: 600;
   color: #111827;
 }
-.header-left .subtitle {
-  margin: 0;
-  font-size: 13px;
-  color: #6b7280;
-}
 
 .deploy-btn {
   border-radius: 8px;
@@ -526,7 +650,6 @@ export default {
   color: #dc2626;
 }
 
-/* 🌟 核心：操作按钮滑出效果 CSS */
 .row-action-wrapper {
   display: flex;
   justify-content: center;
@@ -542,7 +665,7 @@ export default {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
   text-decoration: none;
-  color: #64748b; /* 初始灰色 */
+  color: #64748b;
 }
 
 .btn-text {
@@ -558,7 +681,6 @@ export default {
   font-size: 16px;
 }
 
-/* 悬停按钮本身时展开文字并着色 */
 .action-btn:hover .btn-text {
   max-width: 60px;
   opacity: 1;
@@ -616,5 +738,87 @@ export default {
 }
 .text-muted {
   color: #9ca3af;
+}
+
+/* 🌟 16:9比例沉浸式上传框样式 */
+.cover-uploader {
+  :deep(.el-upload) {
+    border: 1px dashed #dcdfe6;
+    border-radius: 8px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: 0.2s;
+    background-color: #fbfdff;
+    width: 240px;
+    height: 135px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    &:hover {
+      border-color: #409eff;
+      background-color: #ecf5ff;
+    }
+  }
+}
+
+.cover-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  .cover-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .cover-uploader-icon {
+    font-size: 28px;
+    color: #8c939d;
+  }
+
+  .cover-tip {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-size: 24px;
+    opacity: 0;
+    transition: 0.2s;
+  }
+
+  &:hover .cover-tip {
+    opacity: 1;
+  }
+
+  .loading-cover {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 24px;
+    color: #409eff;
+  }
+}
+
+.hint-text {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #94a3b8;
+  line-height: 1.4;
+  i {
+    margin-right: 3px;
+    color: #cbd5e1;
+  }
 }
 </style>

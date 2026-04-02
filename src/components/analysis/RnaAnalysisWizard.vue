@@ -43,7 +43,7 @@
               <div class="infra-item">
                 <span class="label">参考基因组 (.fa):</span>
                 <span class="value" v-if="pipeline.refFaFileId"
-                  >已就绪 (ID:{{ pipeline.refFaFileId }})</span
+                  >已就绪 ({{ getFileName(pipeline.refFaFileId) }})</span
                 >
                 <el-upload
                   v-else
@@ -63,7 +63,7 @@
               <div class="infra-item" style="margin-top: 10px">
                 <span class="label">基因注释文件 (.gtf):</span>
                 <span class="value" v-if="pipeline.refGtfFileId"
-                  >已就绪 (ID:{{ pipeline.refGtfFileId }})</span
+                  >已就绪 ({{ getFileName(pipeline.refGtfFileId) }})</span
                 >
                 <el-upload
                   v-else
@@ -304,6 +304,12 @@ export default {
     this.initData();
   },
   methods: {
+    // 根据 ID 查找真实文件名
+    getFileName(id) {
+      if (!id) return "";
+      const file = this.myFiles.find((f) => String(f.id) === String(id));
+      return file ? file.name : `未知文件 (ID:${id})`;
+    },
     async initData() {
       const currentUid = this.userId || 6;
       try {
@@ -340,6 +346,7 @@ export default {
             ? f.uploadTime.substring(0, 16).replace("T", " ")
             : "-",
         }));
+        console.log("myfile:", this.myFiles);
       } catch (error) {
         this.$message.error("数据加载失败，请刷新重试");
         console.error("加载接口报错:", error);

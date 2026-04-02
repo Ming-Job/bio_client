@@ -140,7 +140,7 @@
                           size="mini"
                           plain
                           round
-                          @click="goToTool(lesson.relatedToolId)"
+                          @click="goToAnalysisy()"
                           >去实操实验室</el-button
                         >
 
@@ -200,26 +200,6 @@
           <div class="action-promise">
             <span><i class="el-icon-circle-check"></i> 平台专属资源</span>
             <span><i class="el-icon-mobile"></i> 进度云端同步 </span>
-          </div>
-        </el-card>
-
-        <el-card shadow="never" class="instructor-card">
-          <div slot="header" class="card-header">
-            <span>授课讲师</span>
-          </div>
-          <div class="instructor-profile">
-            <el-avatar
-              :size="56"
-              :src="$img(courseInfo.instructorAvatar)"
-              icon="el-icon-user-solid"
-            ></el-avatar>
-            <div class="info">
-              <h4>{{ courseInfo.instructorName }}</h4>
-              <p>特邀高级生信工程师</p>
-            </div>
-          </div>
-          <div class="instructor-desc">
-            参与多项国家级重大科研项目数据分析，精通转录组学、表观遗传学及单细胞多组学数据挖掘，致力于生物信息学工具的开源与普及。
           </div>
         </el-card>
       </div>
@@ -395,13 +375,8 @@ export default {
     },
 
     // 动作：跳转到分析实验室
-    goToTool(toolId) {
-      if (!toolId) {
-        this.$message.warning("该课时暂未绑定特定分析工具");
-        return;
-      }
-      // 携带工具 ID 跳转到你的分析中心页面
-      this.$router.push({ path: "/analysis", query: { toolId: toolId } });
+    goToAnalysisy() {
+      this.$router.push("/analysis/new");
     },
   },
 };

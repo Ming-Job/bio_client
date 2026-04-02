@@ -56,7 +56,6 @@
 
         <!-- 普通用户菜单 -->
 
-        
         <!-- 公共个人设置菜单 -->
         <el-submenu
           index="settings"
@@ -128,43 +127,6 @@
             </el-tooltip>
           </div>
 
-          <!-- 通知中心 -->
-          <el-popover placement="bottom" width="300" trigger="click">
-            <div class="notification-panel">
-              <div class="notification-header">
-                <h4>通知中心</h4>
-                <el-button type="text" size="mini" @click="markAllAsRead">
-                  全部已读
-                </el-button>
-              </div>
-              <div class="notification-list">
-                <div
-                  v-for="(notification, index) in notifications"
-                  :key="index"
-                  class="notification-item"
-                  :class="{ unread: !notification.read }"
-                >
-                  <div class="notification-icon">
-                    <i :class="notification.icon"></i>
-                  </div>
-                  <div class="notification-content">
-                    <div class="notification-title">
-                      {{ notification.title }}
-                    </div>
-                    <div class="notification-time">{{ notification.time }}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <el-badge
-              :value="unreadCount"
-              class="notification-badge"
-              slot="reference"
-            >
-              <i class="el-icon-bell notification-icon"></i>
-            </el-badge>
-          </el-popover>
-
           <!-- 用户信息 -->
           <el-dropdown @command="handleCommand" class="user-dropdown">
             <div class="user-info">
@@ -216,13 +178,6 @@
                 <i class="el-icon-setting"></i>账号设置
               </el-dropdown-item>
               <el-divider></el-divider>
-              <el-dropdown-item command="help" class="dropdown-item">
-                <i class="el-icon-question"></i>帮助中心
-              </el-dropdown-item>
-              <el-dropdown-item command="feedback" class="dropdown-item">
-                <i class="el-icon-chat-dot-round"></i>意见反馈
-              </el-dropdown-item>
-              <el-divider></el-divider>
               <el-dropdown-item command="logout" class="dropdown-item logout">
                 <i class="el-icon-switch-button"></i>退出登录
               </el-dropdown-item>
@@ -243,11 +198,6 @@
       <div class="footer">
         <div class="footer-content">
           <p>© 2025 生物信息科教平台 | {{ userRoleText }}系统</p>
-          <p class="footer-links">
-            <a href="#" @click.prevent="showHelp">帮助中心</a> ·
-            <a href="#" @click.prevent="showFeedback">意见反馈</a> ·
-            <a href="#" @click.prevent="showAbout">关于我们</a>
-          </p>
         </div>
       </div>
     </div>
@@ -460,7 +410,7 @@ export default {
       this.isDarkTheme = !this.isDarkTheme;
       document.body.classList.toggle("dark-theme", this.isDarkTheme);
       this.$message.success(
-        `已切换至${this.isDarkTheme ? "深色" : "浅色"}主题`
+        `已切换至${this.isDarkTheme ? "深色" : "浅色"}主题`,
       );
     },
 
@@ -480,14 +430,14 @@ export default {
     initFullscreenListener() {
       document.addEventListener(
         "fullscreenchange",
-        this.handleFullscreenChange
+        this.handleFullscreenChange,
       );
     },
 
     removeFullscreenListener() {
       document.removeEventListener(
         "fullscreenchange",
-        this.handleFullscreenChange
+        this.handleFullscreenChange,
       );
     },
 
@@ -503,19 +453,6 @@ export default {
     // 系统设置
     showSettings() {
       this.$message.info("系统设置功能开发中...");
-    },
-
-    // 帮助中心
-    showHelp() {
-      this.$message.info("帮助中心功能开发中...");
-    },
-
-    showFeedback() {
-      this.$message.info("意见反馈功能开发中...");
-    },
-
-    showAbout() {
-      this.$message.info("关于我们功能开发中...");
     },
   },
 };
@@ -578,7 +515,6 @@ export default {
 
         <!-- 普通用户菜单 -->
 
-        
         <!-- 公共个人设置菜单 -->
         <el-submenu
           index="settings"
@@ -650,43 +586,6 @@ export default {
             </el-tooltip>
           </div>
 
-          <!-- 通知中心 -->
-          <el-popover placement="bottom" width="300" trigger="click">
-            <div class="notification-panel">
-              <div class="notification-header">
-                <h4>通知中心</h4>
-                <el-button type="text" size="mini" @click="markAllAsRead">
-                  全部已读
-                </el-button>
-              </div>
-              <div class="notification-list">
-                <div
-                  v-for="(notification, index) in notifications"
-                  :key="index"
-                  class="notification-item"
-                  :class="{ unread: !notification.read }"
-                >
-                  <div class="notification-icon">
-                    <i :class="notification.icon"></i>
-                  </div>
-                  <div class="notification-content">
-                    <div class="notification-title">
-                      {{ notification.title }}
-                    </div>
-                    <div class="notification-time">{{ notification.time }}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <el-badge
-              :value="unreadCount"
-              class="notification-badge"
-              slot="reference"
-            >
-              <i class="el-icon-bell notification-icon"></i>
-            </el-badge>
-          </el-popover>
-
           <!-- 用户信息 -->
           <el-dropdown @command="handleCommand" class="user-dropdown">
             <div class="user-info">
@@ -730,19 +629,11 @@ export default {
               >
                 <i class="el-icon-s-home"></i>返回首页
               </el-dropdown-item>
-
               <el-dropdown-item command="profile" class="dropdown-item">
                 <i class="el-icon-user"></i>个人中心
               </el-dropdown-item>
               <el-dropdown-item command="account" class="dropdown-item">
                 <i class="el-icon-setting"></i>账号设置
-              </el-dropdown-item>
-              <el-divider></el-divider>
-              <el-dropdown-item command="help" class="dropdown-item">
-                <i class="el-icon-question"></i>帮助中心
-              </el-dropdown-item>
-              <el-dropdown-item command="feedback" class="dropdown-item">
-                <i class="el-icon-chat-dot-round"></i>意见反馈
               </el-dropdown-item>
               <el-divider></el-divider>
               <el-dropdown-item command="logout" class="dropdown-item logout">
@@ -982,7 +873,7 @@ export default {
       this.isDarkTheme = !this.isDarkTheme;
       document.body.classList.toggle("dark-theme", this.isDarkTheme);
       this.$message.success(
-        `已切换至${this.isDarkTheme ? "深色" : "浅色"}主题`
+        `已切换至${this.isDarkTheme ? "深色" : "浅色"}主题`,
       );
     },
 
@@ -1002,14 +893,14 @@ export default {
     initFullscreenListener() {
       document.addEventListener(
         "fullscreenchange",
-        this.handleFullscreenChange
+        this.handleFullscreenChange,
       );
     },
 
     removeFullscreenListener() {
       document.removeEventListener(
         "fullscreenchange",
-        this.handleFullscreenChange
+        this.handleFullscreenChange,
       );
     },
 
@@ -1603,4 +1494,3 @@ export default {
   }
 }
 </style>
-
