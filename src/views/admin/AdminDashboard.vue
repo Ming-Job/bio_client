@@ -2,13 +2,18 @@
   <div class="dashboard">
     <div class="page-header-simple">
       <h2>管理员仪表盘</h2>
-      <el-tag effect="dark" type="success" size="small"><i class="el-icon-magic-stick"></i> 节点运行正常</el-tag>
+      <el-tag effect="dark" type="success" size="small"
+        ><i class="el-icon-magic-stick"></i> 节点运行正常</el-tag
+      >
     </div>
 
     <el-row :gutter="20">
       <el-col :xs="24" :sm="12" :md="6">
         <div class="stat-card">
-          <div class="stat-icon" style="background: linear-gradient(135deg, #409eff, #2563eb)">
+          <div
+            class="stat-icon"
+            style="background: linear-gradient(135deg, #409eff, #2563eb)"
+          >
             <i class="el-icon-user"></i>
           </div>
           <div class="stat-content">
@@ -20,7 +25,10 @@
 
       <el-col :xs="24" :sm="12" :md="6">
         <div class="stat-card">
-          <div class="stat-icon" style="background: linear-gradient(135deg, #67c23a, #059669)">
+          <div
+            class="stat-icon"
+            style="background: linear-gradient(135deg, #67c23a, #059669)"
+          >
             <i class="el-icon-guide"></i>
           </div>
           <div class="stat-content">
@@ -32,7 +40,10 @@
 
       <el-col :xs="24" :sm="12" :md="6">
         <div class="stat-card">
-          <div class="stat-icon" style="background: linear-gradient(135deg, #e6a23c, #d97706)">
+          <div
+            class="stat-icon"
+            style="background: linear-gradient(135deg, #e6a23c, #d97706)"
+          >
             <i class="el-icon-coin"></i>
           </div>
           <div class="stat-content">
@@ -44,7 +55,10 @@
 
       <el-col :xs="24" :sm="12" :md="6">
         <div class="stat-card">
-          <div class="stat-icon" style="background: linear-gradient(135deg, #f56c6c, #dc2626)">
+          <div
+            class="stat-icon"
+            style="background: linear-gradient(135deg, #f56c6c, #dc2626)"
+          >
             <i class="el-icon-cpu"></i>
           </div>
           <div class="stat-content">
@@ -59,18 +73,32 @@
       <el-col :xs="24" :md="16">
         <div class="chart-card">
           <div class="chart-header">
-            <h3><i class="el-icon-data-line"></i> 平台研究员增长趋势</h3>
+            <h3><i class="el-icon-data-line"></i> 平台用户增长趋势</h3>
             <div class="chart-controls">
-              <el-radio-group v-model="growthPeriod" size="mini" @change="loadUserGrowthChart">
+              <el-radio-group
+                v-model="growthPeriod"
+                size="mini"
+                @change="loadUserGrowthChart"
+              >
                 <el-radio-button label="7d">近 7 天</el-radio-button>
                 <el-radio-button label="30d">近 30 天</el-radio-button>
                 <el-radio-button label="90d">近 90 天</el-radio-button>
               </el-radio-group>
-              <el-button type="text" icon="el-icon-refresh" @click="loadUserGrowthChart" :loading="chartLoading">刷新</el-button>
+              <el-button
+                type="text"
+                icon="el-icon-refresh"
+                @click="loadUserGrowthChart"
+                :loading="chartLoading"
+                >刷新</el-button
+              >
             </div>
           </div>
           <div style="height: 320px">
-            <div v-loading="chartLoading" ref="growthChart" style="height: 100%; width: 100%"></div>
+            <div
+              v-loading="chartLoading"
+              ref="growthChart"
+              style="height: 100%; width: 100%"
+            ></div>
           </div>
         </div>
       </el-col>
@@ -79,10 +107,19 @@
         <div class="chart-card">
           <div class="chart-header">
             <h3><i class="el-icon-pie-chart"></i> 平台课程难度分布</h3>
-            <el-button type="text" icon="el-icon-refresh" @click="loadCourseDistribution">刷新</el-button>
+            <el-button
+              type="text"
+              icon="el-icon-refresh"
+              @click="loadCourseDistribution"
+              >刷新</el-button
+            >
           </div>
           <div style="height: 320px">
-            <div v-loading="pieLoading" ref="pieChart" style="height: 100%; width: 100%"></div>
+            <div
+              v-loading="pieLoading"
+              ref="pieChart"
+              style="height: 100%; width: 100%"
+            ></div>
           </div>
         </div>
       </el-col>
@@ -93,7 +130,11 @@
 <script>
 import * as echarts from "echarts";
 // 🌟 引入了刚刚在 user.js 里新增的 getCourseDistribution 接口
-import { getUserStatistics, getUserGrowthChart, getCourseDistribution } from "@/api/user";
+import {
+  getUserStatistics,
+  getUserGrowthChart,
+  getCourseDistribution,
+} from "@/api/user";
 
 export default {
   name: "AdminDashboard",
@@ -103,13 +144,13 @@ export default {
       courseStats: { total: 0 },
       datasetStats: { total: 0 },
       growthStats: { totalNewUsers: 0 },
-      
+
       growthPeriod: "30d",
       chartData: null,
-      
+
       chartLoading: false,
       pieLoading: false,
-      
+
       growthChartInstance: null,
       pieChartInstance: null,
     };
@@ -131,7 +172,7 @@ export default {
     async initAllData() {
       this.loadUserStatistics();
       this.loadUserGrowthChart();
-      this.loadCourseDistribution(); 
+      this.loadCourseDistribution();
     },
 
     // 1. 真实获取四大核心指标
@@ -139,7 +180,7 @@ export default {
       try {
         const res = await getUserStatistics();
         const responseData = res.success !== undefined ? res : res.data;
-        
+
         if (responseData && responseData.success) {
           this.userStats.total = responseData.data.totalUsers || 0;
           this.courseStats.total = responseData.data.totalCourses || 0;
@@ -159,7 +200,7 @@ export default {
         this.chartLoading = true;
         const res = await getUserGrowthChart(this.growthPeriod);
         const responseData = res.success !== undefined ? res : res.data;
-        
+
         if (responseData && responseData.success) {
           this.chartData = responseData.data;
           this.renderGrowthChart();
@@ -178,36 +219,65 @@ export default {
       if (!this.growthChartInstance) {
         this.growthChartInstance = echarts.init(this.$refs.growthChart);
       }
-      
-      const { dates = [], newUsers = [], totalUsers = [] } = this.chartData || {};
-      
+
+      const {
+        dates = [],
+        newUsers = [],
+        totalUsers = [],
+      } = this.chartData || {};
+
       const option = {
         tooltip: { trigger: "axis" },
         legend: { data: ["单日新增", "累计研究员"], bottom: 0 },
-        grid: { left: "3%", right: "4%", bottom: "10%", top: "8%", containLabel: true },
+        grid: {
+          left: "3%",
+          right: "4%",
+          bottom: "10%",
+          top: "8%",
+          containLabel: true,
+        },
         xAxis: { type: "category", boundaryGap: false, data: dates },
         yAxis: [
-          { type: "value", name: "新增数", position: "left", splitLine: { lineStyle: { type: "dashed", color: "#f0f0f0" } } },
-          { type: "value", name: "累计数", position: "right", splitLine: { show: false } }
+          {
+            type: "value",
+            name: "新增数",
+            position: "left",
+            splitLine: { lineStyle: { type: "dashed", color: "#f0f0f0" } },
+          },
+          {
+            type: "value",
+            name: "累计数",
+            position: "right",
+            splitLine: { show: false },
+          },
         ],
         series: [
           {
-            name: "单日新增", type: "line", smooth: true, symbolSize: 8,
+            name: "单日新增",
+            type: "line",
+            smooth: true,
+            symbolSize: 8,
             data: newUsers,
-            itemStyle: { color: "#3b82f6" }, lineStyle: { width: 3 },
+            itemStyle: { color: "#3b82f6" },
+            lineStyle: { width: 3 },
             areaStyle: {
               color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
                 { offset: 0, color: "rgba(59, 130, 246, 0.4)" },
-                { offset: 1, color: "rgba(59, 130, 246, 0.05)" }
-              ])
-            }
+                { offset: 1, color: "rgba(59, 130, 246, 0.05)" },
+              ]),
+            },
           },
           {
-            name: "累计研究员", type: "line", yAxisIndex: 1, smooth: true, symbolSize: 8,
+            name: "累计研究员",
+            type: "line",
+            yAxisIndex: 1,
+            smooth: true,
+            symbolSize: 8,
             data: totalUsers,
-            itemStyle: { color: "#10b981" }, lineStyle: { width: 3 }
-          }
-        ]
+            itemStyle: { color: "#10b981" },
+            lineStyle: { width: 3 },
+          },
+        ],
       };
       this.growthChartInstance.setOption(option);
     },
@@ -220,7 +290,7 @@ export default {
         this.pieLoading = true;
         const res = await getCourseDistribution();
         const responseData = res.success !== undefined ? res : res.data;
-        
+
         if (responseData && responseData.success) {
           this.renderPieChart(responseData.data);
         } else {
@@ -245,25 +315,33 @@ export default {
 
       const option = {
         tooltip: { trigger: "item", formatter: "{a} <br/>{b} : {c} 门 ({d}%)" },
-        legend: { bottom: "0%", left: "center", itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 12 } },
+        legend: {
+          bottom: "0%",
+          left: "center",
+          itemWidth: 10,
+          itemHeight: 10,
+          textStyle: { fontSize: 12 },
+        },
         series: [
           {
             name: "难度占比",
             type: "pie",
-            radius: ["40%", "70%"], 
+            radius: ["40%", "70%"],
             center: ["50%", "45%"],
             avoidLabelOverlap: false,
             itemStyle: { borderRadius: 5, borderColor: "#fff", borderWidth: 2 },
             label: { show: false, position: "center" },
-            emphasis: { label: { show: true, fontSize: 16, fontWeight: "bold" } },
+            emphasis: {
+              label: { show: true, fontSize: 16, fontWeight: "bold" },
+            },
             labelLine: { show: false },
             data: realPieData,
             // 🌟 颜色微调：初级(绿), 中级(黄), 高级(红), 其他(紫/灰)
-            color: ["#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#64748b"]
-          }
-        ]
+            color: ["#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#64748b"],
+          },
+        ],
       };
-      
+
       this.pieChartInstance.setOption(option);
     },
 
@@ -271,20 +349,29 @@ export default {
     handleResize() {
       if (this.growthChartInstance) this.growthChartInstance.resize();
       if (this.pieChartInstance) this.pieChartInstance.resize();
-    }
-  }
+    },
+  },
 };
 </script>
 
 <style scoped lang="scss">
-.dashboard { padding: 24px; background: #f3f4f6; min-height: 100vh; }
+.dashboard {
+  padding: 24px;
+  background: #f3f4f6;
+  min-height: 100vh;
+}
 
 .page-header-simple {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
-  h2 { margin: 0; font-size: 24px; font-weight: 700; color: #111827; }
+  h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    color: #111827;
+  }
 }
 
 .stat-card {
@@ -307,16 +394,30 @@ export default {
 }
 
 .stat-icon {
-  width: 56px; height: 56px;
+  width: 56px;
+  height: 56px;
   border-radius: 12px;
-  display: flex; align-items: center; justify-content: center;
-  color: white; font-size: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 26px;
   margin-right: 18px;
-  box-shadow: inset 0 -2px 4px rgba(0,0,0,0.2);
+  box-shadow: inset 0 -2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.stat-value { font-size: 28px; font-weight: 800; color: #1f2937; margin-bottom: 4px; font-family: Consolas, monospace;}
-.stat-label { color: #6b7280; font-size: 13px; font-weight: 500; }
+.stat-value {
+  font-size: 28px;
+  font-weight: 800;
+  color: #1f2937;
+  margin-bottom: 4px;
+  font-family: Consolas, monospace;
+}
+.stat-label {
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 500;
+}
 
 .chart-card {
   background: white;
@@ -329,12 +430,26 @@ export default {
 }
 
 .chart-header {
-  display: flex; justify-content: space-between; align-items: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 24px;
-  h3 { margin: 0; color: #111827; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  h3 {
+    margin: 0;
+    color: #111827;
+    font-size: 16px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
 }
 
-.chart-controls { display: flex; align-items: center; gap: 15px; }
+.chart-controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
 
 /* ECharts 渲染速度优化 */
 div[ref] {

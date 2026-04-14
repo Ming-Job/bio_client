@@ -12,8 +12,8 @@
               style="margin-left: 15px; cursor: pointer"
               @click="exitWorkspace"
             >
-              <i class="el-icon-folder-opened"></i> 当前课题 ID:
-              {{ currentProjectId }} <i class="el-icon-close"></i>
+              <i class="el-icon-folder-opened"></i> 当前专属课题:
+              {{ currentProjectName }} <i class="el-icon-close"></i>
             </el-tag>
             <span v-if="username" class="user-badge"
               >{{ username }}，欢迎回来</span
@@ -83,7 +83,7 @@
               </div>
               <div class="action-btn" @click="handleAIAssistant">
                 <div class="icon-wrapper ai"><i class="el-icon-cpu"></i></div>
-                <span>在线分析&绘图</span>
+                <span>代码辅助</span>
               </div>
               <div class="action-btn" @click="openStructureViewer">
                 <div
@@ -307,6 +307,24 @@ export default {
           fileName.endsWith(".mol")
         );
       });
+    },
+
+    // 🌟 新增：根据 currentProjectId 动态去 projectList 里匹配名字
+    currentProjectName() {
+      // 如果还没拿到 ID，或者项目列表还没加载回来，先用 ID 兜底
+      if (!this.currentProjectId || !this.projectList.length) {
+        return `ID: ${this.currentProjectId || "未知"}`;
+      }
+
+      // 去项目列表里找匹配的那个课题
+      const targetProject = this.projectList.find(
+        (p) => String(p.id) === String(this.currentProjectId),
+      );
+
+      // 找到了就显示名字，找不到就原样显示 ID
+      return targetProject
+        ? targetProject.name
+        : `ID: ${this.currentProjectId}`;
     },
   },
   watch: {

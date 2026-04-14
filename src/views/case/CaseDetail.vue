@@ -323,7 +323,7 @@ export default {
       const map = {
         pipeline: "前往工作台开始分析",
         structure: "开启三维结构预览",
-        copilot: "载入参数至副驾",
+        copilot: "载入参数至代码辅助区",
       };
       return map[cat] || "前往实操";
     },
@@ -331,7 +331,7 @@ export default {
       const map = {
         pipeline: "立即开启分析",
         structure: "一键载入至 3D 渲染工作台",
-        copilot: "一键将指令发送至极客副驾",
+        copilot: "进入代码辅助区实操",
       };
       return map[cat] || "立即前往实操工作区";
     },
