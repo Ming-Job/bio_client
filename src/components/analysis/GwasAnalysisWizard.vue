@@ -43,16 +43,31 @@
               <span class="label">参考基因组:</span>
               <span class="value">{{ refFile ? refFile.name : "未选择" }}</span>
             </div>
+
             <div
               class="status-item"
-              :class="{ active: subStep === 1, completed: fqFiles.length > 0 }"
+              :class="{
+                active: subStep === 1,
+                completed:
+                  (subStep === 1 ? tempSelectedFq.length : fqFiles.length) > 0,
+              }"
             >
-              <i class="el-icon-circle-check" v-if="fqFiles.length > 0"></i>
+              <i
+                class="el-icon-circle-check"
+                v-if="
+                  (subStep === 1 ? tempSelectedFq.length : fqFiles.length) > 0
+                "
+              ></i>
               <span class="label">群体测序:</span>
               <span class="value">{{
-                fqFiles.length > 0 ? `已选 ${fqFiles.length} 个文件` : "未选择"
+                (subStep === 1 ? tempSelectedFq.length : fqFiles.length) > 0
+                  ? `已选 ${
+                      subStep === 1 ? tempSelectedFq.length : fqFiles.length
+                    } 个文件`
+                  : "未选择"
               }}</span>
             </div>
+
             <div
               class="status-item"
               :class="{ active: subStep === 2, completed: phenoFile }"
@@ -66,10 +81,20 @@
           </div>
 
           <div class="table-toolbar" v-if="subStep === 1">
-            <div class="toolbar-left">
+            <div
+              class="toolbar-left"
+              style="display: flex; gap: 15px; align-items: center"
+            >
               <span class="filter-tag"
                 ><i class="el-icon-filter"></i> 仅显示 .fq / .fastq</span
               >
+              <span
+                v-if="tempSelectedFq.length > 0"
+                style="font-size: 13px; color: #8b5cf6; font-weight: bold"
+              >
+                <i class="el-icon-check"></i> 当前已勾选
+                {{ tempSelectedFq.length }} 个
+              </span>
             </div>
             <div class="toolbar-right">
               <el-button
@@ -116,12 +141,14 @@
               width="55"
               align="center"
               v-if="subStep === 1"
+              key="selection-col"
             ></el-table-column>
 
             <el-table-column
               width="65"
               align="center"
               v-if="subStep === 0 || subStep === 2"
+              key="radio-col"
             >
               <template slot-scope="scope">
                 <el-radio
@@ -232,7 +259,7 @@ export default {
   name: "GwasAnalysisWizard",
   data() {
     return {
-      currentStep: 0, // 🌟 现在的上限是 1 (0: 数据, 1: 确认)
+      currentStep: 0,
       subStep: 0,
       projectId: null,
       pipelineId: null,
@@ -286,7 +313,7 @@ export default {
       if (this.currentStep === 0) {
         if (this.subStep === 0) return "选好参考，去选测序数据";
         if (this.subStep === 1) return "测序完毕，去选表型";
-        if (this.subStep === 2) return "确认数据，进入任务概览"; // 🌟 修改提示文案
+        if (this.subStep === 2) return "确认数据，进入任务概览";
       }
       return "下一步";
     },
@@ -330,7 +357,6 @@ export default {
           getUserProjects(currentUid),
           getFileList({ userId: currentUid }),
         ]);
-
         let projList = [];
         if (Array.isArray(projRes)) projList = projRes;
         else if (projRes && Array.isArray(projRes.data))
@@ -352,13 +378,11 @@ export default {
         this.pipeline = pList.find(
           (p) => String(p.id) === String(this.pipelineId),
         );
-
         let fList = [];
         if (Array.isArray(fileRes)) fList = fileRes;
         else if (fileRes && Array.isArray(fileRes.data)) fList = fileRes.data;
         else if (fileRes && fileRes.data && Array.isArray(fileRes.data.data))
           fList = fileRes.data.data;
-
         const rawFiles = fList.filter((f) => f.fileSource !== "generate");
         this.myFiles = rawFiles.map((f) => ({
           id: f.id,
@@ -412,7 +436,7 @@ export default {
           this.selectedId = this.phenoFile ? this.phenoFile.id : null;
         } else if (this.subStep === 2) {
           this.phenoFile = this.myFiles.find((f) => f.id === this.selectedId);
-          this.currentStep = 1; // 🌟 选完表型，直接跳到步骤 1 (任务概览)
+          this.currentStep = 1;
         }
       }
     },
@@ -431,7 +455,7 @@ export default {
           this.selectedId = this.refFile ? this.refFile.id : null;
         }
       } else if (this.currentStep === 1) {
-        this.currentStep = 0; // 🌟 从概览退回时，回到数据配置的第 3 小步 (选表型)
+        this.currentStep = 0;
         this.subStep = 2;
       }
     },
@@ -442,15 +466,12 @@ export default {
         ...this.fqFiles.map((f) => f.id),
         this.phenoFile.id,
       ];
-
       const payload = {
         projectId: Number(this.projectId),
         pipelineId: Number(this.pipelineId),
         fileIds: allFileIds,
-        // 🌟 发送一个空的 params 或者保留系统默认配置，防止后端 JSON 解析报 Null 指针
         params: JSON.stringify({ mode: "auto_e2e" }),
       };
-
       try {
         const res = await submitAnalysisTask(payload, this.userId || 6);
         if (res.code === 200 || res.status === 200) {
@@ -467,7 +488,6 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-/* 样式部分完全保持你原来的暗黑极客风，一行没动 */
 .new-analysis-container {
   min-height: calc(100vh - 60px);
   background-color: #0b0f19;
@@ -694,5 +714,25 @@ export default {
   padding: 10px 25px;
   border-radius: 6px;
   font-weight: bold;
+}
+
+::v-deep .el-checkbox__inner {
+  background-color: #1e293b !important;
+  border-color: #475569 !important;
+}
+
+::v-deep .el-checkbox__inner:hover {
+  border-color: #3b82f6 !important;
+}
+
+::v-deep .el-checkbox__input.is-checked .el-checkbox__inner,
+::v-deep .el-checkbox__input.is-indeterminate .el-checkbox__inner {
+  background-color: #3b82f6 !important;
+  border-color: #3b82f6 !important;
+}
+
+::v-deep .el-table__header .el-checkbox {
+  display: inline-flex;
+  align-items: center;
 }
 </style>

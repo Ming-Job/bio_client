@@ -17,8 +17,8 @@
           direction="vertical"
           finish-status="success"
         >
+          <!-- 删除了中间的聚类参数步骤，现在只有两步 -->
           <el-step title="配置数据" description="测序数据与元数据"></el-step>
-          <el-step title="聚类参数" description="OTU相似度与计算资源"></el-step>
           <el-step title="启动执行" description="任务概览"></el-step>
         </el-steps>
       </div>
@@ -147,41 +147,10 @@
           </el-table>
         </div>
 
-        <div v-show="currentStep === 1" class="step-panel">
-          <h3 class="panel-title">步骤 2: VSEARCH 聚类参数配置</h3>
-          <el-form label-position="top">
-            <el-row :gutter="20">
-              <el-col :span="12">
-                <el-form-item label="OTU 聚类相似度 (Identity)">
-                  <el-input-number
-                    v-model="params.percIdentity"
-                    :precision="2"
-                    :step="0.01"
-                    :min="0.9"
-                    :max="1.0"
-                    style="width: 100%"
-                  ></el-input-number>
-                  <div style="font-size: 12px; color: #64748b; margin-top: 5px">
-                    默认 0.97，即 97% 相似度的序列聚为同一个 OTU。
-                  </div>
-                </el-form-item>
-              </el-col>
-            </el-row>
-            <el-form-item label="计算资源分配 (Threads)">
-              <el-slider
-                v-model="params.threads"
-                :min="1"
-                :max="16"
-                show-stops
-              ></el-slider>
-              <div style="font-size: 12px; color: #10b981; margin-top: 5px">
-                💡 提示：对于 16GB 内存轻薄本，建议保留默认 4 线程。
-              </div>
-            </el-form-item>
-          </el-form>
-        </div>
+        <!-- 已经删除了原本的 currentStep === 1 的参数配置面板 -->
 
-        <div v-show="currentStep === 2" class="step-panel">
+        <!-- 将确认面板的步骤索引从 2 改为 1 -->
+        <div v-show="currentStep === 1" class="step-panel">
           <div class="launch-summary">
             <div class="check-icon-large">
               <i class="el-icon-document-checked"></i>
@@ -215,9 +184,10 @@
               </div>
               <div class="summary-item">
                 <span class="label">核心参数:</span>
+                <!-- 依然展示给用户看，让系统显得专业，但参数是固定的默认值 -->
                 <span class="value"
                   >OTU 相似度: {{ params.percIdentity * 100 }}% / 线程:
-                  {{ params.threads }}</span
+                  {{ params.threads }} (默认推荐)</span
                 >
               </div>
             </div>
@@ -231,10 +201,11 @@
             class="dark-btn-cancel"
             >上一步</el-button
           >
+          <!-- 这里也相应修改了显示逻辑，currentStep < 1 时才显示下一步 -->
           <el-button
             type="primary"
             @click="handleNext"
-            v-if="currentStep < 2"
+            v-if="currentStep < 1"
             :disabled="!canProceedNext"
             class="dark-btn-submit"
             >{{ nextBtnText }}</el-button
@@ -242,7 +213,7 @@
           <el-button
             type="success"
             @click="submitTask"
-            v-if="currentStep === 2"
+            v-if="currentStep === 1"
             :disabled="autoDbIds.length !== 2"
             :loading="submitting"
             class="dark-btn-launch"
@@ -273,15 +244,13 @@ export default {
       projectList: [],
 
       selectedId: null,
-
-      // 🌟 静默托管的系统级数据库ID数组
       autoDbIds: [],
-
       tempSelectedFq: [],
       fqFiles: [],
       metaFile: null,
 
       submitting: false,
+      // 保持 params 对象存在，以便提交时带上默认值给后端
       params: { threads: 4, percIdentity: 0.97 },
     };
   },
@@ -316,7 +285,8 @@ export default {
     nextBtnText() {
       if (this.currentStep === 0) {
         if (this.subStep === 0) return "测序锁定，去选分组数据";
-        if (this.subStep === 1) return "数据确认，进入参数配置";
+        // 修改了这块的文字提示，选完元数据后直接去概览
+        if (this.subStep === 1) return "数据确认，生成任务概览";
       }
       return "下一步";
     },
@@ -372,7 +342,6 @@ export default {
           (p) => String(p.id) === String(this.pipelineId),
         );
 
-        // 🌟 初始化时，直接从流水线模板里静默提取管理员配好的两个数据库的 File ID
         if (this.pipeline) {
           if (this.pipeline.refSeqsFileId && this.pipeline.refTaxFileId) {
             this.autoDbIds = [
@@ -415,7 +384,6 @@ export default {
     clearSelection() {
       this.$refs.fileTable.clearSelection();
     },
-
     handleSelectionChange(val) {
       if (this.subStep === 0) this.tempSelectedFq = val;
     },
@@ -431,10 +399,9 @@ export default {
           this.selectedId = this.metaFile ? this.metaFile.id : null;
         } else if (this.subStep === 1) {
           this.metaFile = this.myFiles.find((f) => f.id === this.selectedId);
+          // 选完元数据后，直接将 currentStep 设为 1（跳转到确认面板）
           this.currentStep = 1;
         }
-      } else {
-        this.currentStep++;
       }
     },
     handlePrev() {
@@ -449,12 +416,12 @@ export default {
           });
         }
       } else if (this.currentStep > 0) {
+        // currentStep 是 1 的话，减1就是回到 0
         this.currentStep--;
       }
     },
     async submitTask() {
       this.submitting = true;
-      // 🌟 合并管理员底层的数据库 ID，以及用户自己选的 FQ 和 Meta 的 ID
       const allFileIds = [
         ...this.autoDbIds,
         ...this.fqFiles.map((f) => f.id),
@@ -484,6 +451,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+/* CSS 样式保持完全不变即可 */
 .new-analysis-container {
   min-height: calc(100vh - 60px);
   background-color: #0b0f19;

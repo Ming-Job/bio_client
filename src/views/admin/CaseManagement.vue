@@ -19,7 +19,7 @@
         <div class="search-group">
           <el-input
             v-model="queryParams.searchKey"
-            placeholder="搜索案例标题或描述"
+            placeholder="搜索案例标题"
             prefix-icon="el-icon-search"
             class="custom-input"
             clearable
@@ -34,14 +34,14 @@
             @change="handleSearch"
           >
             <el-option
-              label="智能分析流 (Pipeline)"
+              label="端到端分析流 (Pipeline)"
               value="pipeline"
             ></el-option>
             <el-option
               label="三维洞察 (Structure)"
               value="structure"
             ></el-option>
-            <el-option label="极客副驾 (Copilot)" value="copilot"></el-option>
+            <el-option label="代码辅助 (Copilot)" value="copilot"></el-option>
           </el-select>
         </div>
 
@@ -219,17 +219,14 @@
               <el-form-item label="案例类别" prop="category">
                 <el-select v-model="form.category" style="width: 100%">
                   <el-option
-                    label="智能分析流 (Pipeline)"
+                    label="端到端分析流 (Pipeline)"
                     value="pipeline"
                   ></el-option>
                   <el-option
                     label="三维洞察 (Structure)"
                     value="structure"
                   ></el-option>
-                  <el-option
-                    label="极客副驾 (Copilot)"
-                    value="copilot"
-                  ></el-option>
+                  <el-option label="代码辅助" value="copilot"></el-option>
                 </el-select>
               </el-form-item>
             </el-col>
@@ -437,9 +434,9 @@ export default {
     },
     getCategoryName(cat) {
       const map = {
-        pipeline: "智能分析流",
+        pipeline: "端到端分析流",
         structure: "三维洞察",
-        copilot: "极客副驾",
+        copilot: "代码辅助",
       };
       return map[cat] || cat;
     },
@@ -462,7 +459,7 @@ export default {
         content: "",
       };
       this.coverPreviewUrl = "";
-      this.dialogTitle = "部署新案例算子";
+      this.dialogTitle = "部署新案例";
       this.dialogVisible = true;
       this.$nextTick(() => {
         this.$refs.caseForm?.clearValidate();
@@ -491,7 +488,7 @@ export default {
       return true;
     },
 
-    // 🌟 核心：直接调用已有的课程上传 API
+    // 直接调用已有的课程上传 API
     handleCoverUpload(options) {
       const file = options.file;
       this.uploadingCover = true;

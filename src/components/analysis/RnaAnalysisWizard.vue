@@ -167,27 +167,27 @@
 
         <div v-show="currentStep === 2" class="step-panel">
           <h3 class="panel-title">步骤 3: 端到端任务确认</h3>
-          <el-form label-position="top">
-            <el-form-item label="单样本基础算力分配 (CPU Threads / Sample)">
-              <el-slider
-                v-model="threads"
-                :min="1"
-                :max="8"
-                show-stops
-              ></el-slider>
-              <div style="font-size: 12px; color: #10b981; margin-top: 5px">
-                💡
-                提示：本系统将采用队列排队机制，按顺序逐个处理样本的比对定量，最后自动合并执行
-                DESeq2。
-              </div>
-            </el-form-item>
-          </el-form>
+
+          <div
+            style="
+              font-size: 13px;
+              color: #10b981;
+              margin-bottom: 20px;
+              background: rgba(16, 185, 129, 0.1);
+              padding: 15px;
+              border-radius: 8px;
+            "
+          >
+            💡
+            提示：本系统将采用队列排队机制，按顺序逐个处理样本的比对定量，最后自动合并执行
+            DESeq2。
+          </div>
 
           <div class="launch-summary">
             <div class="summary-details">
               <div class="summary-item">
-                <span class="label">归属项目:</span
-                ><span class="value">{{ projectName }}</span>
+                <span class="label">归属项目:</span>
+                <span class="value">{{ projectName }}</span>
               </div>
               <div class="summary-item">
                 <span class="label">对比阵列:</span>
@@ -207,8 +207,10 @@
                 >
               </div>
               <div class="summary-item">
-                <span class="label">资源分配:</span
-                ><span class="value">{{ threads }} 线程</span>
+                <span class="label">算力分配:</span>
+                <span class="value" style="color: #64748b"
+                  >系统统一调度 (默认 4 线程)</span
+                >
               </div>
             </div>
           </div>
@@ -235,7 +237,7 @@
             v-if="currentStep === 2"
             :loading="submitting"
             class="dark-btn-launch"
-            >挂载并点火执行</el-button
+            >挂载并执行流水线</el-button
           >
         </div>
       </div>

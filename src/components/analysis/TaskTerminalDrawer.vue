@@ -39,8 +39,8 @@
               </div>
             </div>
 
-            <h4 class="section-title">
-              <i class="el-icon-setting"></i> 运算参数 (Parameters)
+            <!-- <h4 class="section-title">
+              <i class="el-icon-setting"></i> 默认运算参数 (Parameters)
             </h4>
             <div
               class="params-box"
@@ -55,7 +55,7 @@
                 <span class="param-val">{{ val }}</span>
               </div>
             </div>
-            <div v-else class="empty-hint">采用默认计算参数</div>
+            <div v-else class="empty-hint">采用默认计算参数</div> -->
 
             <h4 class="section-title" style="margin-top: 24px">
               <i class="el-icon-paperclip"></i> 挂载输入源 (Inputs)
@@ -275,7 +275,6 @@ export default {
 
       chartInstance: null,
       hasVolcanoData: null,
-      // 🌟 新增标记：是否有 16S 丰度图数据
       hasTaxaData: null,
     };
   },
@@ -356,7 +355,7 @@ export default {
 
           this.scrollToBottom();
 
-          // 🌟 核心判断：当任务完成时，拉取对应图表数据
+          // 当任务完成时，拉取对应图表数据
           if (
             this.task.status === "COMPLETED" ||
             this.task.status === "FAILED"
@@ -367,7 +366,7 @@ export default {
               if (this.isRnaTask && !this.chartInstance) {
                 this.fetchVolcanoData();
               } else if (this.isMicrobiomeTask && !this.chartInstance) {
-                // 🌟 如果是 16S 任务，自动拉取后端解析的物种丰度数据
+                // 如果是 16S 任务，自动拉取后端解析的物种丰度数据
                 this.fetchTaxaData();
               }
             }
@@ -380,7 +379,7 @@ export default {
     },
 
     // ==========================================
-    // 🌟 RNA-Seq 火山图渲染区 (保持原样)
+    // RNA-Seq 火山图渲染区
     // ==========================================
     async fetchVolcanoData() {
       this.chartLoading = true;
@@ -441,7 +440,7 @@ export default {
           },
         },
         xAxis: {
-          name: "Log2 Fold Change",
+          name: "Log2FC",
           nameTextStyle: { color: "#94a3b8" },
           splitLine: {
             show: true,
@@ -519,8 +518,9 @@ export default {
     },
 
     // ==========================================
-    // 🌟 新增：16S 堆叠柱状图渲染区
+    // 16S 堆叠柱状图渲染区
     // ==========================================
+
     async fetchTaxaData() {
       this.chartLoading = true;
       try {
@@ -587,7 +587,7 @@ export default {
         legend: {
           type: "scroll",
           orient: "vertical",
-          right: "0%", // 🌟 死死贴住最右侧
+          right: "0%",
           top: 20,
           bottom: 20,
           textStyle: { color: "#94a3b8", fontSize: 11 },
@@ -596,9 +596,9 @@ export default {
         },
         grid: {
           left: "5%",
-          right: "40%", // 🌟 核心修改：把画板主体往左边疯狂挤，给图例留出 40% 的黄金地段！
-          bottom: "15%", // 🌟 底部留出 15% 的高度，防止两行的 X 轴文字被裁切
-          top: "5%",
+          right: "40%",
+          bottom: "15%",
+          top: "12%",
           containLabel: true,
         },
         xAxis: {
@@ -607,8 +607,9 @@ export default {
           axisLabel: {
             color: "#94a3b8",
             interval: 0,
-            rotate: 25, // 微微倾斜 25 度最优雅
-            align: "center", // 让样本名和分组名居中对齐
+            rotate: 45,
+            align: "right",
+            margin: 12,
           },
           axisLine: { lineStyle: { color: "#334155" } },
         },
@@ -641,7 +642,7 @@ export default {
     },
 
     // ==========================================
-    // 🌟 通用生命周期与控制逻辑
+    // 通用生命周期与控制逻辑
     // ==========================================
     disposeChart() {
       if (this.chartInstance) {
@@ -681,8 +682,16 @@ export default {
       return timeStr ? timeStr : "-";
     },
     formatSize(bytes) {
+      if (bytes === 0) return "0 B";
       if (!bytes) return "未知大小";
-      return (bytes / (1024 * 1024)).toFixed(2) + " MB";
+
+      const k = 1024;
+      const sizes = ["B", "KB", "MB", "GB", "TB", "PB"];
+      // 利用对数计算该文件所属的量级索引
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+      // 按所属量级进行换算，并保留两位小数
+      return (bytes / Math.pow(k, i)).toFixed(2) + " " + sizes[i];
     },
     downloadFile(file) {
       const downloadUrl = `/api/files/download/${file.id}?userId=${this.activeUserId}`;
@@ -709,16 +718,12 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-/* =========== 这里是核心修改区 =========== */
-
-/* 自定义极客风暗黑滚动条 */
 .custom-scrollbar {
-  /* 假设单个文件 item 大概是 45px，5 个大约是 225px。留出稍微多一点余量 */
   max-height: 240px;
   overflow-y: auto;
-  padding-right: 6px; /* 留出滚动条呼吸空间 */
+  padding-right: 6px;
 }
-/* Webkit 浏览器的滚动条样式 */
+
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
 }
@@ -734,7 +739,6 @@ export default {
   background: #475569;
 }
 
-/* 控制一下输出面板，因为通常会多一点，给个 300px 高度 */
 .result-files-area.custom-scrollbar {
   max-height: 280px;
 }

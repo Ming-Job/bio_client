@@ -18,7 +18,7 @@ export function getDashboard(userId, projectId) {
   return request({
     url: '/api/analysis/dashboard',
     method: 'get',
-    params: { projectId: projectId }, // 会变成 /dashboard?projectId=1
+    params: { projectId: projectId },
     headers: { 'userId': userId } 
   })
 }
@@ -28,10 +28,10 @@ export function getDashboard(userId, projectId) {
  */
 export function getRecentFiles(userId, projectId) {
   return request({
-    url: '/api/files/recent',  // 🌟 核心修复：把中间的 /analysis 删掉，认准正统接口！
+    url: '/api/files/recent', 
     method: 'get',
     params: { 
-      userId: userId,          // 🌟 顺手把 params 补全，和之前 file.js 里一样
+      userId: userId,         
       projectId: projectId 
     }
   })

@@ -330,7 +330,7 @@ export default {
     getBigButtonText(cat) {
       const map = {
         pipeline: "立即开启分析",
-        structure: "一键载入至 3D 渲染工作台",
+        structure: "进入三维结构预览",
         copilot: "进入代码辅助区实操",
       };
       return map[cat] || "立即前往实操工作区";

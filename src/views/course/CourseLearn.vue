@@ -52,21 +52,46 @@
           >
             <el-card shadow="never" class="article-card">
               <h2 class="article-title">{{ currentLesson.title }}</h2>
-              
-              <div v-if="isDocument(currentLesson.content)" class="document-view" style="text-align: center; padding: 20px 0;">
-                <i class="el-icon-document" style="font-size: 48px; color: #3b82f6; margin-bottom: 16px; display: block;"></i>
-                <h3 style="margin-top: 0; margin-bottom: 24px; color: #334155;">课件已就绪</h3>
-                
-                <el-button type="primary" icon="el-icon-view" @click="downloadArticleFile(currentLesson.content)" round>
+
+              <div
+                v-if="isDocument(currentLesson.content)"
+                class="document-view"
+                style="text-align: center; padding: 20px 0"
+              >
+                <i
+                  class="el-icon-document"
+                  style="
+                    font-size: 48px;
+                    color: #3b82f6;
+                    margin-bottom: 16px;
+                    display: block;
+                  "
+                ></i>
+                <h3 style="margin-top: 0; margin-bottom: 24px; color: #334155">
+                  课件已就绪
+                </h3>
+
+                <el-button
+                  type="primary"
+                  icon="el-icon-view"
+                  @click="downloadArticleFile(currentLesson.content)"
+                  round
+                >
                   点击在新窗口预览 / 下载课件
                 </el-button>
 
-                <iframe 
-                  v-if="currentLesson.content.toLowerCase().endsWith('.pdf')" 
-                  :src="$img(currentLesson.content)" 
-                  width="100%" 
-                  height="600px" 
-                  style="margin-top: 30px; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                <iframe
+                  v-if="currentLesson.content.toLowerCase().endsWith('.pdf')"
+                  :src="$img(currentLesson.content)"
+                  width="100%"
+                  height="600px"
+                  style="
+                    margin-top: 30px;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+                  "
+                >
                 </iframe>
               </div>
 
@@ -108,11 +133,10 @@
                 <el-button
                   type="primary"
                   size="large"
-                  @click="goToTool(currentLesson.relatedToolId)"
+                  @click="goToAnalysisPage()"
                 >
-                  <i class="el-icon-data-analysis"></i> 启动云端分析实验室
+                  <i class="el-icon-data-analysis"></i> 进入分析工作台实操
                 </el-button>
-                <el-button plain size="large">下载示例实验数据</el-button>
               </div>
             </div>
           </div>
@@ -312,7 +336,7 @@ export default {
       currentLesson: null,
       completedLessonIds: [],
       userProgress: 0,
-      
+
       aiDrawerVisible: false,
       userInput: "",
       aiThinking: false,
@@ -323,7 +347,7 @@ export default {
             "你好！我是你的专属生信 AI 助教。在学习中遇到不懂的名词（如 PCA、UMAP）或者跑不动代码，都可以随时发给我帮你排错哦！",
         },
       ],
-      
+
       drawerWidth: 400,
       isResizing: false,
       startX: 0,
@@ -350,7 +374,9 @@ export default {
     // 🌟 1. 新增：判断 content 是不是一个上传的文件路径
     isDocument(content) {
       if (!content) return false;
-      return content.startsWith('/document/') || /\.(pdf|ppt|pptx)$/i.test(content);
+      return (
+        content.startsWith("/document/") || /\.(pdf|ppt|pptx)$/i.test(content)
+      );
     },
 
     // 🌟 2. 新增：预览或下载文档
@@ -466,19 +492,14 @@ export default {
       this.$router.push(`/course/detail/${this.courseId}`);
     },
 
-    goToTool(toolId) {
-      if (!toolId) {
-        this.$message.warning("该课时暂未绑定特定分析工具");
-        return;
-      }
-      this.$message.success("正在为您准备云端分析环境...");
+    goToAnalysisPage() {
+      this.$router.push({ name: "NewAnalysis" });
     },
 
     renderMarkdown(text) {
       if (!text) return "";
       return marked.parse(text);
     },
-
     async sendMessage() {
       if (!this.userInput.trim() || this.aiThinking) return;
 
@@ -493,17 +514,31 @@ export default {
       this.scrollToBottom();
 
       try {
-        const payload = this.chatHistory.slice(0, -1).map((msg) => ({
+        // 🌟 1. 提取历史记录
+        const historyMessages = this.chatHistory.slice(0, -1).map((msg) => ({
           role: msg.role,
           content: msg.content,
         }));
+
+        // 🌟 2. 动态获取当前正在学的【课程名称】和【章节名称】作为上下文
+        const courseName = this.courseInfo ? this.courseInfo.title : "未知课程";
+        const lessonName = this.currentLesson
+          ? this.currentLesson.title
+          : "未知章节";
+        const currentContext = `当前课程：${courseName}，当前章节：${lessonName}`;
+
+        // 🌟 3. 重新组装 payload，变成一个包含上下文的对象
+        const payload = {
+          courseContext: currentContext,
+          historyMessages: historyMessages,
+        };
 
         const response = await fetch("/api/ai/chat/stream", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(payload), // 发送拼装好的对象
         });
 
         if (!response.ok) throw new Error("网络请求失败");
@@ -514,10 +549,10 @@ export default {
         let isStreamDone = false;
         while (!isStreamDone) {
           const { done, value } = await reader.read();
-          isStreamDone = done; 
+          isStreamDone = done;
 
           if (isStreamDone) {
-            break; 
+            break;
           }
 
           const textChunk = decoder.decode(value, { stream: true });
@@ -550,8 +585,8 @@ export default {
 
     startResize(e) {
       this.isResizing = true;
-      this.startX = e.clientX; 
-      this.startWidth = this.drawerWidth; 
+      this.startX = e.clientX;
+      this.startWidth = this.drawerWidth;
 
       document.addEventListener("mousemove", this.doResize);
       document.addEventListener("mouseup", this.stopResize);
@@ -565,9 +600,9 @@ export default {
       const deltaX = this.startX - e.clientX;
       let newWidth = this.startWidth + deltaX;
 
-      if (newWidth < 350) newWidth = 350; 
+      if (newWidth < 350) newWidth = 350;
       if (newWidth > window.innerWidth * 0.8)
-        newWidth = window.innerWidth * 0.8; 
+        newWidth = window.innerWidth * 0.8;
 
       this.drawerWidth = newWidth;
     },
@@ -589,7 +624,7 @@ export default {
   width: 100vw;
   display: flex;
   flex-direction: column;
-  background-color: #0f172a; 
+  background-color: #0f172a;
   overflow: hidden;
 
   position: fixed;
@@ -637,17 +672,17 @@ export default {
 .learn-body {
   flex: 1;
   display: flex;
-  overflow: hidden; 
+  overflow: hidden;
 }
 
 .content-area {
   flex: 1;
-  background-color: #000; 
+  background-color: #000;
   display: flex;
   justify-content: center;
   align-items: center;
   position: relative;
-  overflow-y: auto; 
+  overflow-y: auto;
 
   .content-wrapper {
     width: 100%;
@@ -665,8 +700,8 @@ export default {
     .video-content-desc {
       width: 100%;
       max-width: 1000px;
-      margin: 0 auto 24px auto; 
-      color: #cbd5e1; 
+      margin: 0 auto 24px auto;
+      color: #cbd5e1;
 
       .lesson-title {
         font-size: 20px;
@@ -703,11 +738,11 @@ export default {
       background: #000;
       border-radius: 12px;
       overflow: hidden;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); 
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 
       .video-player {
         width: 100%;
-        max-height: 70vh; 
+        max-height: 70vh;
         outline: none;
         background: #000;
       }
@@ -773,7 +808,7 @@ export default {
     .pdf-container {
       flex: 1;
       width: 100%;
-      background: #e2e8f0; 
+      background: #e2e8f0;
       border-radius: 8px;
       overflow: hidden;
 
@@ -908,9 +943,9 @@ export default {
         }
       }
       .completed-icon {
-        color: #10b981; 
+        color: #10b981;
         font-size: 16px;
-        margin-left: auto; 
+        margin-left: auto;
       }
     }
   }
@@ -949,15 +984,15 @@ export default {
 
 .drawer-drag-handle {
   position: absolute;
-  top: -60px; 
-  left: 0; 
-  width: 10px; 
-  height: 120vh; 
-  cursor: ew-resize; 
+  top: -60px;
+  left: 0;
+  width: 10px;
+  height: 120vh;
+  cursor: ew-resize;
   background-color: transparent;
-  z-index: 9999; 
+  z-index: 9999;
   transition: background-color 0.2s;
-  transform: translateX(-5px); 
+  transform: translateX(-5px);
 
   &:hover,
   &:active {
@@ -1014,7 +1049,7 @@ export default {
       padding: 12px 16px;
       font-size: 14px;
       line-height: 1.6;
-      white-space: pre-wrap; 
+      white-space: pre-wrap;
 
       &.thinking {
         color: #94a3b8;
@@ -1091,7 +1126,7 @@ export default {
   }
 
   pre {
-    background-color: #282c34 !important; 
+    background-color: #282c34 !important;
     border-radius: 6px;
     padding: 12px;
     overflow: auto;
@@ -1099,7 +1134,7 @@ export default {
     margin-bottom: 12px;
 
     code {
-      background-color: transparent; 
+      background-color: transparent;
       padding: 0;
       color: #abb2bf;
       font-size: 13px;

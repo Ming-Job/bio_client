@@ -8,8 +8,8 @@
       <!-- 头部 -->
       <div class="login-header">
         <div class="logo">
-          <img src="@/assets/images/logo.png" alt="生物信息教育平台" />
-          <h1>生物信息教育平台</h1>
+          <img src="@/assets/images/logo.png" alt="生物信息科教平台" />
+          <h1>生物信息科教平台</h1>
         </div>
       </div>
 
@@ -392,7 +392,7 @@ export default {
           // 准备登录数据
           const loginData = prepareLoginData(
             this.loginForm.username,
-            this.loginForm.password
+            this.loginForm.password,
           );
 
           console.log("登录请求数据:", {
@@ -437,7 +437,7 @@ export default {
               if (this.rememberMe) {
                 localStorage.setItem(
                   "rememberedUsername",
-                  this.loginForm.username
+                  this.loginForm.username,
                 );
               } else {
                 localStorage.removeItem("rememberedUsername");
